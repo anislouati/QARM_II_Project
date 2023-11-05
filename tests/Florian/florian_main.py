@@ -30,6 +30,9 @@ security_monthly_data_filter = security_monthly_data_filter[['GVKEY','DATADATE',
 
 
 
+
+
+
 security_monthly_data_filter_2 = security_monthly_data_filter.loc[(security_monthly_data_filter['DATADATE'] < '1992-01-01')]
 n = security_monthly_data_filter_2['GVKEY'].nunique()
 
