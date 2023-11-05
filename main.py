@@ -1,13 +1,8 @@
 # Import packages
 import pandas as pd
 import numpy as np
-
 from pathlib import Path
-from scripts.parameters import paths
-import pandas as pd
-import numpy as np
-
-
+from scripts.classes import paths
 
 
 
@@ -19,23 +14,3 @@ security_monthly_data = pd.read_sas(file_data_2)
 
 #file_data_3 = Path.joinpath(paths.get('data'), 'CRSP_Security_Files_Monthly_Stock.sas7bdat')
 #security_monthly_data = pd.read_sas(file_data_3)
-
-'''
-security_monthly_data_filter = security_monthly_data.sort_values(by=['GVKEY', 'DATADATE'])
-security_monthly_data_filter = security_monthly_data_filter.loc[(security_monthly_data_filter['DATADATE'] >= '1990-01-01')]
-security_monthly_data_filter = security_monthly_data_filter.loc[(security_monthly_data_filter['CSHTRM']*security_monthly_data_filter['PRCCM'] >= 100000000)]
-security_monthly_data_filter = security_monthly_data_filter.loc[(security_monthly_data_filter['EXCHG'].isin([11,14]))]
-security_monthly_data_filter = security_monthly_data_filter.loc[(security_monthly_data_filter['FIC'] == bytes('USA', 'utf-8'))]
-
-security_monthly_data_filter = security_monthly_data_filter[['GVKEY','DATADATE', 'TIC', 'CONML', 'SECSTAT','GGROUP', 'GIND', 'GSECTOR', 'GSUBIND', 'IPODATE', 'CSHOQ', 'CSHTRM', 'PRCCM', 'TRT1M']]
-
-
-
-
-security_monthly_data_filter_2 = security_monthly_data_filter.loc[(security_monthly_data_filter['DATADATE'] < '1992-01-01')]
-n = security_monthly_data_filter_2['GVKEY'].nunique()
-
-n = security_monthly_data_filter['GVKEY'].nunique()
-name = pd.DataFrame(np.unique(security_monthly_data_filter[['CONML']]))
-
-'''
