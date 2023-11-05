@@ -12,5 +12,5 @@ paths.update({'data': Path.joinpath(paths.get('main'), 'data'),
 paths_florian = {'main': Path.joinpath(Path.cwd(), 'tests\Florian')}
 
 paths_florian.update({'output': Path.joinpath(paths_florian.get('main'), 'output'),
-              'scripts': Path.joinpath(paths_florian.get('main'), 'scripts')})
+                      'scripts': Path.joinpath(paths_florian.get('main'), 'scripts')})
 

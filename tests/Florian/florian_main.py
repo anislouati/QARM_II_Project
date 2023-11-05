@@ -1,6 +1,6 @@
 from pathlib import Path
-from tests.Florian.scripts.parameters import paths
-from tests.Florian.scripts.parameters import paths_florian
+from tests.Florian.scripts.florian_parameters import paths
+from tests.Florian.scripts.florian_parameters import paths_florian
 import pandas as pd
 import numpy as np
 
