@@ -6,7 +6,6 @@ import numpy as np
 
 
 
-
 #file_data_1 = Path.joinpath(paths.get('Data'), 'crsp_compustat_merged_fundamentals_quarterly.sas7bdat')
 #fundamentals_quarterly_data = pd.read_sas(file_data_1)
 
