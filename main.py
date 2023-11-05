@@ -1,3 +1,7 @@
+# Import packages
+import pandas as pd
+import numpy as np
+
 from pathlib import Path
 from scripts.parameters import paths
 import pandas as pd
