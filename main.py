@@ -1,16 +1,16 @@
 # Import packages
-import pandas as pd
-import numpy as np
 from pathlib import Path
-from scripts.classes import paths
+import numpy as np
+import pandas as pd
 
 
 
-#file_data_1 = Path.joinpath(paths.get('Data'), 'crsp_compustat_merged_fundamentals_quarterly.sas7bdat')
-#fundamentals_quarterly_data = pd.read_sas(file_data_1)
+# Project directories paths
+paths = {'main': Path.cwd()}
+paths.update({'data': Path.joinpath(paths.get('main'), 'data'),
+              'output': Path.joinpath(paths.get('main'), 'output'),
+              'scripts': Path.joinpath(paths.get('main'), 'scripts')})
 
-file_data_2 = Path.joinpath(paths.get('data'), 'crsp_compustat_merged_security_monthly.sas7bdat')
-security_monthly_data = pd.read_sas(file_data_2)
-
-#file_data_3 = Path.joinpath(paths.get('data'), 'crsp_security_files_monthly_stock.sas7bdat')
-#security_monthly_data = pd.read_sas(file_data_3)
+# Import raw data
+df_fundamentals_quarterly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compustat_merged_fundamentals_quarterly.sas7bdat'))
+df_security_monthly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compustat_merged_security_monthly.sas7bdat'))
