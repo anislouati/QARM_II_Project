@@ -22,4 +22,3 @@ def tab_summary(df_data):
                                'Median': df_data.median(),
                                'Max': df_data.max()})
     return df_summary
-
