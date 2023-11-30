@@ -141,11 +141,15 @@ df_summary_3 = fn.tab_summary(df_3)
 
 # %%
 # **************************************************
-# ***                 Metrics                    ***
+# ***           Score Computations               ***
 # **************************************************
 
+# *** Value Score ***
 
-# Quality Metrics
+
+# *** Quality Score ***
+
+
 
 
 
