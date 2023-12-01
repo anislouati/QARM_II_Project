@@ -68,6 +68,8 @@ ls_permnos = df_fundamentals_quarterly['PERMNO'].unique().tolist()
 df_security_monthly = df_security_monthly[df_security_monthly['PERMNO'].isin(ls_permnos)]
 df_stock_monthly = df_stock_monthly[df_stock_monthly['PERMNO'].isin(ls_permnos)]
 
+
+
 # New Variable: df_fundamentals_quarterly
 
 df_fundamentals_quarterly['CAPXQ'] = df_fundamentals_quarterly['CAPXY']
@@ -215,19 +217,19 @@ df_fundamentals_quarterly_test_2 = df_fundamentals_quarterly_test_1.loc[df_funda
 
 # Profitability
 
-df_fundamentals_quarterly['BE'] = df_fundamentals_quarterly['ATQ'] - df_fundamentals_quarterly['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
+df_data['BE'] = df_data['ATQ'] - df_data['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
 
-df_fundamentals_quarterly['GPOA'] = (df_fundamentals_quarterly['REVTQ'] - df_fundamentals_quarterly['COGSQ']) / df_fundamentals_quarterly['ATQ']
+df_data['GPOA'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['ATQ']
 
-df_fundamentals_quarterly['ROE'] = df_fundamentals_quarterly['NIQ'] / df_fundamentals_quarterly['BE']
+df_data['ROE'] = df_data['NIQ'] / df_data['BE']
 
-df_fundamentals_quarterly['ROA'] = df_fundamentals_quarterly['NIQ'] / df_fundamentals_quarterly['ATQ']
+df_data['ROA'] = df_data['NIQ'] / df_data['ATQ']
 
-df_fundamentals_quarterly['CFOA'] = (df_fundamentals_quarterly['NIQ'] + df_fundamentals_quarterly['DPQ'] - df_fundamentals_quarterly['D_WC'] - df_fundamentals_quarterly['CAPXQ'] ) / df_fundamentals_quarterly['ATQ']
+df_data['CFOA'] = (df_data['NIQ'] + df_data['DPQ'] - df_data['D_WC'] - df_data['CAPXQ']) / df_data['ATQ']
 
-df_fundamentals_quarterly['GMAR'] = (df_fundamentals_quarterly['REVTQ'] - df_fundamentals_quarterly['COGSQ']) / df_fundamentals_quarterly['REVTQ']
+df_data['GMAR'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['REVTQ']
 
-df_fundamentals_quarterly['ACC'] = - (df_fundamentals_quarterly['D_WC'] - df_fundamentals_quarterly['DPQ']) / df_fundamentals_quarterly['ATQ']
+df_data['ACC'] = - (df_data['D_WC'] - df_data['DPQ']) / df_data['ATQ']
 
 
 # Growth
