@@ -141,9 +141,63 @@ df_stock_monthly_test = df_stock_monthly.loc[df_stock_monthly['PERMCO'] == 10001
 
 # *** Value Score ***
 
+'''
+df_fundamentals_quarterly_test_0 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('AAPL', 'utf-8')]
+
+df_fundamentals_quarterly_test = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compustat_merged_fundamentals_quarterly.sas7bdat'))
+
+ls_selected_cols_1_test = ['GVKEY', 'LPERMNO', 'LPERMCO', 'DATADATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'REVTY', 'OANCFY', 'CAPXY']
+df_fundamentals_quarterly_test_1 = df_fundamentals_quarterly_test[ls_selected_cols_1_test]
+
+df_fundamentals_quarterly_test_2 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('AAPL', 'utf-8')]
+
+# NB: yearly variable
+'''
+
 
 # *** Quality Score ***
 
+# Profitability
+
+df_fundamentals_quarterly['BE'] = df_fundamentals_quarterly['ATQ'] - df_fundamentals_quarterly['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
+
+#df_fundamentals_quarterly['CAPXQ'] = df_fundamentals_quarterly.where(df_fundamentals_quarterly['QTR'] == 4, df_fundamentals_quarterly['CAPXY'], False)
+#df_fundamentals_quarterly['CAPXQ'] = [df_fundamentals_quarterly['CAPXY'][i] if df_fundamentals_quarterly['QTR'][i] == 4 else None for i in df_fundamentals_quarterly['CAPXY'].index]
+
+df_fundamentals_quarterly['CAPXQ'] = df_fundamentals_quarterly['CAPXY']
+
+j = 0
+for i in df_fundamentals_quarterly['CAPXQ'].index:
+    if j == 0:
+        if df_fundamentals_quarterly['QTR'][i] != 4:
+            df_fundamentals_quarterly['CAPXQ'][i] = None
+
+    if j != 0:
+        if df_fundamentals_quarterly['QTR'][i] != 4:
+            if df_fundamentals_quarterly['PERMNO'][i] == df_fundamentals_quarterly['PERMNO'][df_fundamentals_quarterly['CAPXQ'].index[j-1]]:
+                df_fundamentals_quarterly['CAPXQ'][i] = df_fundamentals_quarterly['CAPXY'][i] - df_fundamentals_quarterly['CAPXY'][df_fundamentals_quarterly['CAPXQ'].index[j-1]]
+            else: df_fundamentals_quarterly['CAPXQ'][i] = None
+
+    j = j + 1
+
+
+
+df_fundamentals_quarterly['GPOA'] = (df_fundamentals_quarterly['REVTQ'] - df_fundamentals_quarterly['COGSQ']) / df_fundamentals_quarterly['ATQ']
+
+df_fundamentals_quarterly['ROE'] = df_fundamentals_quarterly['NIQ'] / df_fundamentals_quarterly['BE']
+
+df_fundamentals_quarterly['ROA'] = df_fundamentals_quarterly['NIQ'] / df_fundamentals_quarterly['ATQ']
+
+df_fundamentals_quarterly['CFOA'] =
+
+df_fundamentals_quarterly['GMAR'] = (df_fundamentals_quarterly['REVTQ'] - df_fundamentals_quarterly['COGSQ']) / df_fundamentals_quarterly['REVTQ']
+
+df_fundamentals_quarterly['ACC'] =
+
+
+# Growth
+
+# Safety
 
 
 
