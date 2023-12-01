@@ -68,6 +68,58 @@ ls_permnos = df_fundamentals_quarterly['PERMNO'].unique().tolist()
 df_security_monthly = df_security_monthly[df_security_monthly['PERMNO'].isin(ls_permnos)]
 df_stock_monthly = df_stock_monthly[df_stock_monthly['PERMNO'].isin(ls_permnos)]
 
+# New Variable: df_fundamentals_quarterly
+
+df_fundamentals_quarterly['CAPXQ'] = df_fundamentals_quarterly['CAPXY']
+
+df_fundamentals_quarterly['D_WC'] = df_fundamentals_quarterly['WCAPQ']
+
+j = 0
+temp_index = df_fundamentals_quarterly.index
+# i = temp_index[j]
+for i in tqdm(temp_index):
+
+    # CAPXQ
+    if j == 0:
+        if df_fundamentals_quarterly.loc[i,'QTR'] != 4:
+            df_fundamentals_quarterly.loc[i, 'CAPXQ'] = None
+
+    if j != 0:
+        if df_fundamentals_quarterly.loc[i,'QTR'] != 4:
+            if df_fundamentals_quarterly.loc[i,'PERMNO'] == df_fundamentals_quarterly.loc[temp_index[j-1], 'PERMNO']:
+                df_fundamentals_quarterly.loc[i, 'CAPXQ'] = df_fundamentals_quarterly.loc[i, 'CAPXY'] - df_fundamentals_quarterly.loc[temp_index[j-1], 'CAPXY']
+            else:
+                df_fundamentals_quarterly.loc[i, 'CAPXQ'] = None
+
+
+    # D_WC
+    if j == 0:
+        df_fundamentals_quarterly.loc[i, 'D_WC'] = None
+
+    if j != 0:
+        if df_fundamentals_quarterly.loc[i, 'PERMNO'] == df_fundamentals_quarterly.loc[temp_index[j - 1], 'PERMNO']:
+
+            if df_fundamentals_quarterly.loc[i, 'YEAR'] == df_fundamentals_quarterly.loc[temp_index[j - 1], 'YEAR']:
+                if df_fundamentals_quarterly.loc[i, 'QTR'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'QTR'] == 1:
+                    df_fundamentals_quarterly.loc[i, 'D_WC'] = df_fundamentals_quarterly.loc[i, 'WCAPQ'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'WCAPQ']
+
+            elif df_fundamentals_quarterly.loc[i, 'YEAR'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'YEAR'] == 1:
+                if df_fundamentals_quarterly.loc[temp_index[j - 1], 'QTR'] == 4:
+                    df_fundamentals_quarterly.loc[i, 'D_WC'] = df_fundamentals_quarterly.loc[i, 'WCAPQ'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'WCAPQ']
+
+            else:
+                df_fundamentals_quarterly.loc[i, 'D_WC'] = None
+        else:
+            df_fundamentals_quarterly.loc[i, 'D_WC'] = None
+
+    j = j + 1
+
+
+
+
+
+
+
 # Merge datasets
 df_fundamentals_quarterly['MERGEKEY'] = df_fundamentals_quarterly['PERMNO'].astype(str) + '_' + df_fundamentals_quarterly['YEAR'].astype(str) + '_' + df_fundamentals_quarterly['QTR'].astype(str)
 df_security_monthly['MERGEKEY'] = df_security_monthly['PERMNO'].astype(str) + '_' + df_security_monthly['YEAR'].astype(str) + '_' + df_security_monthly['QTR'].astype(str)
@@ -87,6 +139,10 @@ df_summary_1 = fn.tab_summary(df_1)
 
 
 
+
+
+
+# %%
 # Compute additional variables
 df_data['SHROUT'] = df_data['SHROUT']*1000
 df_data['VOL'] = df_data['VOL']*100
@@ -155,93 +211,11 @@ df_fundamentals_quarterly_test_2 = df_fundamentals_quarterly_test_1.loc[df_funda
 # NB: yearly variable
 '''
 
-
 # *** Quality Score ***
 
 # Profitability
 
 df_fundamentals_quarterly['BE'] = df_fundamentals_quarterly['ATQ'] - df_fundamentals_quarterly['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
-
-df_fundamentals_quarterly['CAPXQ'] = df_fundamentals_quarterly['CAPXY']
-
-j = 0
-temp_index = df_fundamentals_quarterly.index
-# i = temp_index[j]
-for i in tqdm(temp_index):
-    if j == 0:
-        if df_fundamentals_quarterly.loc[i,'QTR'] != 4:
-            df_fundamentals_quarterly.loc[i, 'CAPXQ'] = None
-
-    if j != 0:
-        if df_fundamentals_quarterly.loc[i,'QTR'] != 4:
-            if df_fundamentals_quarterly.loc[i,'PERMNO'] == df_fundamentals_quarterly.loc[temp_index[j-1], 'PERMNO']:
-                df_fundamentals_quarterly.loc[i, 'CAPXQ'] = df_fundamentals_quarterly.loc[i, 'CAPXY'] - df_fundamentals_quarterly.loc[temp_index[j-1], 'CAPXY']
-            else:
-                df_fundamentals_quarterly.loc[i, 'CAPXQ'] = None
-    j = j + 1
-
-
-'''
-j = 0
-for i in tqdm(df_fundamentals_quarterly['CAPXQ'].index):
-    if j == 0:
-        if df_fundamentals_quarterly['QTR'][i] != 4:
-            df_fundamentals_quarterly['CAPXQ'][i] = None
-
-    if j != 0:
-        if df_fundamentals_quarterly['QTR'][i] != 4:
-            if df_fundamentals_quarterly['PERMNO'][i] == df_fundamentals_quarterly['PERMNO'][df_fundamentals_quarterly['CAPXQ'].index[j-1]]:
-                df_fundamentals_quarterly['CAPXQ'][i] = df_fundamentals_quarterly['CAPXY'][i] - df_fundamentals_quarterly['CAPXY'][df_fundamentals_quarterly['CAPXQ'].index[j-1]]
-            else:
-                df_fundamentals_quarterly['CAPXQ'][i] = None
-    j = j + 1
-'''
-
-
-'''
-for i in tqdm(range(len(df_fundamentals_quarterly['CAPXQ']))):
-    if i == 0:
-        if df_fundamentals_quarterly.iloc[i]['QTR'] != 4:
-            df_fundamentals_quarterly.iloc[i]['CAPXQ'] = None
-
-    if i != 0:
-        if df_fundamentals_quarterly.iloc[i]['QTR'] != 4:
-            if df_fundamentals_quarterly.iloc[i]['PERMNO'] == df_fundamentals_quarterly.iloc[i-1]['PERMNO']:
-                df_fundamentals_quarterly.iloc[i]['CAPXQ'] = df_fundamentals_quarterly.iloc[i]['CAPXY'] - df_fundamentals_quarterly.iloc[i-1]['CAPXY']
-            else:
-                df_fundamentals_quarterly.iloc[i]['CAPXQ'] = None
-'''
-
-df_fundamentals_quarterly['D_WC'] = df_fundamentals_quarterly['WCAPQ']
-
-j = 0
-temp_index = df_fundamentals_quarterly.index
-# i = temp_index[j]
-for i in tqdm(temp_index):
-    if j == 0:
-        df_fundamentals_quarterly.loc[i, 'D_WC'] = None
-
-    if j != 0:
-        if df_fundamentals_quarterly.loc[i, 'PERMNO'] == df_fundamentals_quarterly.loc[temp_index[j - 1], 'PERMNO']:
-
-            if df_fundamentals_quarterly.loc[i, 'YEAR'] == df_fundamentals_quarterly.loc[temp_index[j - 1], 'YEAR']:
-                if df_fundamentals_quarterly.loc[i, 'QTR'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'QTR'] == 1:
-                    df_fundamentals_quarterly.loc[i, 'D_WC'] = df_fundamentals_quarterly.loc[i, 'WCAPQ'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'WCAPQ']
-
-            elif df_fundamentals_quarterly.loc[i, 'YEAR'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'YEAR'] == 1:
-                if df_fundamentals_quarterly.loc[temp_index[j - 1], 'QTR'] == 4:
-                    df_fundamentals_quarterly.loc[i, 'D_WC'] = df_fundamentals_quarterly.loc[i, 'WCAPQ'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'WCAPQ']
-
-            else:
-                df_fundamentals_quarterly.loc[i, 'D_WC'] = None
-        else:
-            df_fundamentals_quarterly.loc[i, 'D_WC'] = None
-    j = j + 1
-
-
-
-
-
 
 df_fundamentals_quarterly['GPOA'] = (df_fundamentals_quarterly['REVTQ'] - df_fundamentals_quarterly['COGSQ']) / df_fundamentals_quarterly['ATQ']
 
@@ -259,6 +233,9 @@ df_fundamentals_quarterly['ACC'] = - (df_fundamentals_quarterly['D_WC'] - df_fun
 # Growth
 
 # Safety
+
+
+
 
 
 
