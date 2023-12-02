@@ -203,25 +203,31 @@ df_data['g_ROE'] = df_data['ROE']
 df_data['g_ROA'] = df_data['ROA']
 df_data['g_CFOA'] = df_data['CFOA']
 df_data['g_GMAR'] = df_data['GMAR']
-df_data['g_ACC'] = df_data['ACC']
 
 
 j = 0
 n = 5
-idx_tmp = df_fundamentals_quarterly.index
+idx_tmp = df_data.index
 for i in tqdm(idx_tmp):
 
-    if j < n*4:
+    if j < (n*4*3+1):
         df_data.loc[i, 'g_GPOA'] = None
 
-    if j >= n*4:
-        if df_fundamentals_quarterly.loc[i, 'PERMNO'] == df_fundamentals_quarterly.loc[idx_tmp[j-1], 'PERMNO']:
-            df_fundamentals_quarterly.loc[i, 'g_GPOA'] = (df_fundamentals_quarterly.loc[i, 'GPOA'] - df_fundamentals_quarterly.loc[idx_tmp[j-n*4], 'GPOA']) / df_fundamentals_quarterly.loc[idx_tmp[j-n*4], 'GPOA']
+    if j >= (n*4*3+1):
+        if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j-n*4*3+1], 'PERMNO']:
+            if df_data.loc[i, 'YEAR'] - df_data.loc[idx_tmp[j-n*4*3+1], 'YEAR'] == 5:
+                if df_data.loc[i, 'QTR'] == df_data.loc[idx_tmp[j - n * 4*3+1], 'QTR']:
+                    df_data.loc[i, 'g_GPOA'] = (df_data.loc[i, 'GPOA'] - df_data.loc[idx_tmp[j-n*4*3+1], 'GPOA']) / df_data.loc[idx_tmp[j-n*4*3+1], 'GPOA']
+                else:
+                    df_data.loc[i, 'g_GPOA'] = None
+            else:
+                df_data.loc[i, 'g_GPOA'] = None
         else:
-            df_fundamentals_quarterly.loc[i, 'g_GPOA'] = None
+            df_data.loc[i, 'g_GPOA'] = None
 
     j += 1
 
+zzz = df_data[['DATADATE', 'PERMNO', 'QTR, 'GPOA', 'g_GPOA']]
 
 # Safety
 
@@ -250,16 +256,16 @@ df_fundamentals_quarterly_test_4 = df_fundamentals_quarterly.loc[df_fundamentals
 df_fundamentals_quarterly_test_5 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('WMT', 'utf-8')]
 '''
 
-'''
+
 df_fundamentals_quarterly_test = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compustat_merged_fundamentals_quarterly.sas7bdat'))
 
-ls_selected_cols_1_test = ['GVKEY', 'LPERMNO', 'LPERMCO', 'DATADATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'REVTY', 'OANCFY', 'CAPXY', 'FQTR','XINTQ', 'XINTY' , 'INTPNY', 'NIITY', 'FINXINTQ']
+ls_selected_cols_1_test = ['GVKEY', 'LPERMNO', 'LPERMCO', 'DATADATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'REVTY', 'OANCFY', 'CAPXY', 'FQTR','DILADQ']
 df_fundamentals_quarterly_test_1 = df_fundamentals_quarterly_test[ls_selected_cols_1_test]
 
 df_fundamentals_quarterly_test_6 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('GOOGL', 'utf-8')]
 df_fundamentals_quarterly_test_7 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('AAPL', 'utf-8')]
 df_fundamentals_quarterly_test_8 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('WMT', 'utf-8')]
-'''
+
 
 '''
 
