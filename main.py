@@ -4,6 +4,7 @@ from scripts.functions import paths
 import pandas as pd
 import scripts.functions as fn
 from tqdm import tqdm
+import pickle
 
 # Project settings
 pd.set_option('display.width', 400)
@@ -57,7 +58,7 @@ df_security_monthly = df_security_monthly[(df_security_monthly['YEAR'] >= min_ye
 df_stock_monthly = df_stock_monthly[(df_stock_monthly['YEAR'] >= min_year) & (df_stock_monthly['YEAR'] <= max_year)]
 
 # Filter stock exchanges (11: NYSE, 12: AMEX, 14: NASDAQ-NMS)
-df_fundamentals_quarterly = df_fundamentals_quarterly[df_fundamentals_quarterly['EXCHG'].isin([11., 12., 14.])]
+df_fundamentals_quarterly = df_fundamentals_quarterly[df_fundamentals_quarterly['EXCHG'].isin([11, 12, 14])]
 ls_permnos = df_fundamentals_quarterly['PERMNO'].unique().tolist()
 df_security_monthly = df_security_monthly[df_security_monthly['PERMNO'].isin(ls_permnos)]
 df_stock_monthly = df_stock_monthly[df_stock_monthly['PERMNO'].isin(ls_permnos)]
@@ -67,13 +68,9 @@ df_fundamentals_quarterly = df_fundamentals_quarterly.sort_values(by=['PERMNO', 
 df_security_monthly = df_security_monthly.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
 df_stock_monthly = df_stock_monthly.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
-# Compute additional variables [1]
+# Create additional variables
 df_fundamentals_quarterly['CAPXQ'] = df_fundamentals_quarterly['CAPXY']
 df_fundamentals_quarterly['WCAPCHQ'] = df_fundamentals_quarterly['WCAPQ']  # D_WC
-
-
-
-
 
 j = 0
 idx_tmp = df_fundamentals_quarterly.index
@@ -111,7 +108,6 @@ for i in tqdm(idx_tmp):
 
     j += 1
 
-
 # Merge datasets
 df_fundamentals_quarterly['MERGEKEY'] = df_fundamentals_quarterly['PERMNO'].astype(str) + '_' + df_fundamentals_quarterly['YEAR'].astype(str) + '_' + df_fundamentals_quarterly['QTR'].astype(str)
 df_security_monthly['MERGEKEY'] = df_security_monthly['PERMNO'].astype(str) + '_' + df_security_monthly['YEAR'].astype(str) + '_' + df_security_monthly['QTR'].astype(str)
@@ -125,25 +121,23 @@ df_stock_monthly = df_stock_monthly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR
 df_data = pd.merge(df_tmp, df_stock_monthly, on='MERGEKEY', how='inner')
 df_data = df_data.drop(columns=['MERGEKEY'])
 
+# Checkpoint data
+df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
+    df_data = pickle.load(f)
 
+# Modify/Create variables
+df_data['TRT1M'] = df_data['TRT1M'] / 100  # Expressed in percentage points
+df_data['VOL'] = df_data['VOL'] * 100  # Expressed in hundreds shares for monthly data
+df_data['DVOL'] = df_data['PRCCM'] * df_data['VOL'] / (10**6)  # Dollar volume expressed in millions
+df_data['SPRDPCT'] = (df_data['ASK'] - df_data['BID']) / df_data['ASK']  # Percentage bid-ask spread
 
-
-
-
-
-
-
-
-
-
-
-# Compute additional variables [2]
-df_data['VOL'] = df_data['VOL']*100
-df_data['MID'] = (df_data['ASK'] + df_data['BID']) / 2
-df_data['SPREADPCT'] = (df_data['ASK'] - df_data['BID']) / df_data['ASK']
-df_data['DVOL'] = df_data['MID'] * df_data['VOL']
-
-
+# Filter out illiquid stocks
+min_dvol = 100
+s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
+df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
+df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
+ls_permnos = df_tmp['PERMNO'].unique().tolist()
 
 # Filter out illiquid stocks
 s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
@@ -151,13 +145,7 @@ df = pd.DataFrame(s_max_dvols)
 df = df[df['DVOL'] >= 100000000]
 ls_gvkeys = df.index.to_list()
 
-# Filter out illiquid stocks
-s_max_dvols = df_stock_monthly.groupby('PERMCO')['DVOL'].max()
-df = pd.DataFrame(s_max_dvols)
-df = df[df['DolVol'] >= 100000000]
-ls_gvkeys = df.index.to_list()
-
-
+print('hello')
 # Sort final data
 # df_data = df_data.reindex(columns=())
 df_data = df_data.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
@@ -165,14 +153,11 @@ df_data = df_data.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True])
 # Summarize data
 df_1 = df_data.drop(columns=['GVKEY', 'PERMNO', 'DATADATE', 'CONM', 'TIC', 'GSECTOR', 'LOC'])
 df_summary_1 = fn.tab_summary(df_1)
+print('world')
 
+# Missing values management [...]
 
-
-
-
-
-# %%
-
+df_data['LOC'].values_count()
 
 '''
 df_security_monthly_test = df_security_monthly.loc[df_security_monthly['PERMCO'] == 45483]
@@ -185,8 +170,6 @@ print(df_security_monthly['PERMNO'].nunique())
 '''
 
 
-
-# Missing values management [...]
 
 
 # %%
