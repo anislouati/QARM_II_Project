@@ -24,7 +24,7 @@ df_stock_monthly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_security_f
 # Filter selected cols
 ls_selected_cols_1 = ['GVKEY', 'LPERMNO', 'DATADATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'ACTQ', 'ATQ',
                       'CEQQ', 'CHEQ', 'COGSQ', 'CSTKQ', 'DLCQ', 'DLTTQ', 'DPQ', 'EPSFXQ', 'LCTQ', 'LTQ',
-                      'MIBTQ', 'NIQ', 'PIQ', 'PSTKQ', 'REQ', 'REVTQ', 'TXPQ', 'WCAPQ', 'CAPXY']
+                      'MIBTQ', 'NIQ', 'PIQ', 'PSTKQ', 'REQ', 'REVTQ', 'TXPQ', 'WCAPQ', 'CAPXY', 'FQTR']
 df_fundamentals_quarterly = df_fundamentals_quarterly[ls_selected_cols_1]
 df_fundamentals_quarterly.rename(columns={'LPERMNO': 'PERMNO'}, inplace=True)
 
@@ -77,11 +77,11 @@ idx_tmp = df_fundamentals_quarterly.index
 for i in tqdm(idx_tmp):
     # CAPXQ
     if j == 0:
-        if df_fundamentals_quarterly.loc[i, 'QTR'] != 4:
+        if df_fundamentals_quarterly.loc[i, 'FQTR'] != 1:
             df_fundamentals_quarterly.loc[i, 'CAPXQ'] = None
 
     if j != 0:
-        if df_fundamentals_quarterly.loc[i, 'QTR'] != 4:
+        if df_fundamentals_quarterly.loc[i, 'FQTR'] != 1:
             if df_fundamentals_quarterly.loc[i, 'PERMNO'] == df_fundamentals_quarterly.loc[idx_tmp[j-1], 'PERMNO']:
                 df_fundamentals_quarterly.loc[i, 'CAPXQ'] = df_fundamentals_quarterly.loc[i, 'CAPXY'] - df_fundamentals_quarterly.loc[idx_tmp[j-1], 'CAPXY']
             else:
@@ -168,7 +168,7 @@ df_fundamentals_quarterly_test_2 = df_fundamentals_quarterly.groupby(by=['TIC'])
 print(df_security_monthly['PERMCO'].nunique())
 print(df_security_monthly['PERMNO'].nunique())
 '''
-'''
+
 df_fundamentals_quarterly_test_3 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('GOOGL', 'utf-8')]
 df_fundamentals_quarterly_test_4 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('AAPL', 'utf-8')]
 df_fundamentals_quarterly_test_5 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('WMT', 'utf-8')]
@@ -181,7 +181,7 @@ df_fundamentals_quarterly_test_1 = df_fundamentals_quarterly_test[ls_selected_co
 df_fundamentals_quarterly_test_6 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('GOOGL', 'utf-8')]
 df_fundamentals_quarterly_test_7 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('AAPL', 'utf-8')]
 df_fundamentals_quarterly_test_8 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('WMT', 'utf-8')]
-'''
+
 
 
 # %%
