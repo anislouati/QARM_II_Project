@@ -22,13 +22,14 @@ df_security_monthly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compust
 df_stock_monthly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_security_files_monthly_stock.sas7bdat'))
 
 # Filter selected cols
-ls_selected_cols_1 = ['GVKEY', 'LPERMNO', 'DATADATE', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'ACTQ',
-                      'ATQ', 'CEQQ', 'CHEQ', 'COGSQ', 'CSTKQ', 'DLCQ', 'DLTTQ', 'DPQ', 'EPSFXQ', 'LCTQ',
-                      'LTQ', 'MIBTQ', 'NIQ', 'PIQ', 'PSTKQ', 'REQ', 'REVTQ', 'TXPQ', 'WCAPQ', 'XINTQ', 'CAPXY']
+ls_selected_cols_1 = ['LPERMNO', 'DATADATE', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC',
+                      'ACTQ', 'ATQ', 'CEQQ', 'CHEQ', 'COGSQ', 'CSTKQ', 'DLCQ', 'DLTTQ', 'DPQ', 'EPSFXQ',
+                      'LCTQ', 'LTQ', 'MIBTQ', 'NIQ', 'PIQ', 'PSTKQ', 'REQ', 'REVTQ', 'TXPQ', 'WCAPQ',
+                      'XINTQ', 'CAPXY']
 df_fundamentals_quarterly = df_fundamentals_quarterly[ls_selected_cols_1]
 df_fundamentals_quarterly.rename(columns={'LPERMNO': 'PERMNO'}, inplace=True)
 
-ls_selected_cols_2 = ['GVKEY', 'LPERMNO', 'DATADATE', 'CSHOQ', 'CSHTRM', 'PRCCM', 'TRT1M']
+ls_selected_cols_2 = ['LPERMNO', 'DATADATE', 'CSHOQ', 'CSHTRM', 'PRCCM', 'TRT1M']
 df_security_monthly = df_security_monthly[ls_selected_cols_2]
 df_security_monthly.rename(columns={'LPERMNO': 'PERMNO'}, inplace=True)
 
@@ -111,18 +112,13 @@ for i in tqdm(idx_tmp):
 # Merge datasets
 df_fundamentals_quarterly['KEYQ'] = df_fundamentals_quarterly['PERMNO'].astype(str) + '_' + df_fundamentals_quarterly['YEAR'].astype(str) + '_' + df_fundamentals_quarterly['QTR'].astype(str)
 df_security_monthly['KEYQ'] = df_security_monthly['PERMNO'].astype(str) + '_' + df_security_monthly['YEAR'].astype(str) + '_' + df_security_monthly['QTR'].astype(str)
-df_security_monthly = df_security_monthly.drop(columns=['GVKEY', 'PERMNO', 'DATADATE', 'YEAR', 'QTR'])
+df_security_monthly = df_security_monthly.drop(columns=['PERMNO', 'DATADATE', 'YEAR', 'QTR'])
 df_tmp = pd.merge(df_fundamentals_quarterly, df_security_monthly, on='KEYQ', how='inner')
 
 df_tmp['KEYM'] = df_tmp['PERMNO'].astype(str) + '_' + df_tmp['YEAR'].astype(str) + '_' + df_tmp['MTH'].astype(str)
 df_stock_monthly['KEYM'] = df_stock_monthly['PERMNO'].astype(str) + '_' + df_stock_monthly['YEAR'].astype(str) + '_' + df_stock_monthly['MTH'].astype(str)
 df_stock_monthly = df_stock_monthly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH'])
 df_data = pd.merge(df_tmp, df_stock_monthly, on='KEYM', how='inner')
-
-# Checkpoint data
-# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
-    df_data = pickle.load(f)
 
 # Modify/Create variables
 s_mean_cshoq = df_data.groupby('KEYQ')['CSHOQ'].mean()
@@ -138,7 +134,7 @@ df_data['VOL'] = df_data['VOL'] * 100  # Expressed in hundreds shares (monthly d
 df_data['DVOL'] = df_data['PRCCM'] * df_data['VOL'] / (10**6)  # Dollar volume expressed in millions
 df_data['SPRDPCT'] = (df_data['ASK'] - df_data['BID']) / df_data['ASK']  # Percentage bid-ask spread
 
-# Filter out illiquid stocks
+# Filter out illiquid stocks (max dollar volume < $100mil.)
 min_dvol = 100
 s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
 df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
@@ -146,18 +142,27 @@ df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
 ls_permnos = df_tmp['PERMNO'].unique().tolist()
 df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 
+# Checkpoint data
+ls_selected_cols = ['PERMNO', 'DATADATE', 'FQTR', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM',
+                    'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'ACTQ', 'ATQ', 'CEQQ', 'CHEQ', 'COGSQ',
+                    'CSTKQ', 'DLCQ', 'DLTTQ', 'DPQ', 'EPSFXQ', 'LCTQ', 'LTQ', 'MIBTQ', 'NIQ', 'PIQ',
+                    'PSTKQ', 'REQ', 'REVTQ', 'TXPQ', 'WCAPQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ',
+                    'CSHOQ', 'CSHTRM', 'PRCCM', 'TRT1M',
+                    'BID', 'ASK', 'VOL', 'DVOL', 'SPRDPCT']
+df_data = df_data[ls_selected_cols]
+df_data.rename(columns={'DATADATE': 'DATE'}, inplace=True)
+df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
-# Sort and export final data
-# df_data = df_data.reindex(columns=())
-df_data = df_data.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
+df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
+    df_data = pickle.load(f)
 
 # Summarize final data
-df_1 = df_data.drop(columns=['GVKEY', 'PERMNO', 'DATADATE', 'CONM', 'TIC', 'GSECTOR', 'LOC'])
+df_1 = df_data.drop(columns=['PERMNO', 'DATE', 'FQTR', 'QTR', 'MTH', 'KEYQ', 'KEYM',
+                             'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC'])
 df_summary_1 = fn.tab_summary(df_1)
-print('world')
 
 # Missing values management [...]
-
 # TODO: value variables
 # TODO: create market equity (ME)
 
@@ -167,37 +172,29 @@ print('world')
 
 # %%
 # **************************************************
-# ***           Score Computations               ***
+# *** Branch: SCORE COMPUTATIONS                 ***
 # **************************************************
 
-df_data['BE'] = df_data['ATQ'] - df_data['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
-
+# %%
 # *** Value Score ***
 
+df_data['ME'] = df_data['PRCCM'] * df_data['CSHOQ']
 
-
+# %%
 # *** Quality Score ***
 
 # Profitability
-
 df_data['BE'] = df_data['ATQ'] - df_data['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
-
 df_data['GPOA'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['ATQ']
-
 df_data['ROE'] = df_data['NIQ'] / df_data['BE']
-
 df_data['ROA'] = df_data['NIQ'] / df_data['ATQ']
-
 df_data['CFOA'] = (df_data['NIQ'] + df_data['DPQ'] - df_data['WCAPCHQ'] - df_data['CAPXQ']) / df_data['ATQ']
-
 df_data['GMAR'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['REVTQ']
-
 df_data['ACC'] = - (df_data['WCAPCHQ'] - df_data['DPQ']) / df_data['ATQ']
 
 
 
 # Growth
-
 df_data['g_GPOA'] = df_data['GPOA']
 df_data['g_ROE'] = df_data['ROE']
 df_data['g_ROA'] = df_data['ROA']
@@ -239,7 +236,7 @@ df_data['AZSCORE'] = (1.2*df_data['WCAPQ'] + 1.4*df_data['REQ'] + 3.3*(df_data['
 
 # %%
 # **************************************************
-# *** Branch: Comments                           ***
+# *** Branch: COMMENTS                           ***
 # **************************************************
 
 '''
