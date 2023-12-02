@@ -1,7 +1,6 @@
 # Import packages
 from pathlib import Path
 from scripts.functions import paths
-import numpy as np
 import pandas as pd
 import scripts.functions as fn
 from tqdm import tqdm
@@ -68,58 +67,45 @@ ls_permnos = df_fundamentals_quarterly['PERMNO'].unique().tolist()
 df_security_monthly = df_security_monthly[df_security_monthly['PERMNO'].isin(ls_permnos)]
 df_stock_monthly = df_stock_monthly[df_stock_monthly['PERMNO'].isin(ls_permnos)]
 
-
-
-# New Variable: df_fundamentals_quarterly
-
+# Compute additional variables [1]
 df_fundamentals_quarterly['CAPXQ'] = df_fundamentals_quarterly['CAPXY']
-
-df_fundamentals_quarterly['D_WC'] = df_fundamentals_quarterly['WCAPQ']
+df_fundamentals_quarterly['WCAPCHQ'] = df_fundamentals_quarterly['WCAPQ']  # D_WC
 
 j = 0
-temp_index = df_fundamentals_quarterly.index
-# i = temp_index[j]
-for i in tqdm(temp_index):
-
+idx_tmp = df_fundamentals_quarterly.index
+for i in tqdm(idx_tmp):
     # CAPXQ
     if j == 0:
-        if df_fundamentals_quarterly.loc[i,'QTR'] != 4:
+        if df_fundamentals_quarterly.loc[i, 'QTR'] != 4:
             df_fundamentals_quarterly.loc[i, 'CAPXQ'] = None
 
     if j != 0:
-        if df_fundamentals_quarterly.loc[i,'QTR'] != 4:
-            if df_fundamentals_quarterly.loc[i,'PERMNO'] == df_fundamentals_quarterly.loc[temp_index[j-1], 'PERMNO']:
-                df_fundamentals_quarterly.loc[i, 'CAPXQ'] = df_fundamentals_quarterly.loc[i, 'CAPXY'] - df_fundamentals_quarterly.loc[temp_index[j-1], 'CAPXY']
+        if df_fundamentals_quarterly.loc[i, 'QTR'] != 4:
+            if df_fundamentals_quarterly.loc[i, 'PERMNO'] == df_fundamentals_quarterly.loc[idx_tmp[j-1], 'PERMNO']:
+                df_fundamentals_quarterly.loc[i, 'CAPXQ'] = df_fundamentals_quarterly.loc[i, 'CAPXY'] - df_fundamentals_quarterly.loc[idx_tmp[j-1], 'CAPXY']
             else:
                 df_fundamentals_quarterly.loc[i, 'CAPXQ'] = None
 
-
-    # D_WC
+    # WCAPCHQ
     if j == 0:
-        df_fundamentals_quarterly.loc[i, 'D_WC'] = None
+        df_fundamentals_quarterly.loc[i, 'WCAPCHQ'] = None
 
     if j != 0:
-        if df_fundamentals_quarterly.loc[i, 'PERMNO'] == df_fundamentals_quarterly.loc[temp_index[j - 1], 'PERMNO']:
+        if df_fundamentals_quarterly.loc[i, 'PERMNO'] == df_fundamentals_quarterly.loc[idx_tmp[j-1], 'PERMNO']:
+            if df_fundamentals_quarterly.loc[i, 'YEAR'] == df_fundamentals_quarterly.loc[idx_tmp[j-1], 'YEAR']:
+                if df_fundamentals_quarterly.loc[i, 'QTR'] - df_fundamentals_quarterly.loc[idx_tmp[j-1], 'QTR'] == 1:
+                    df_fundamentals_quarterly.loc[i, 'WCAPCHQ'] = df_fundamentals_quarterly.loc[i, 'WCAPQ'] - df_fundamentals_quarterly.loc[idx_tmp[j-1], 'WCAPQ']
 
-            if df_fundamentals_quarterly.loc[i, 'YEAR'] == df_fundamentals_quarterly.loc[temp_index[j - 1], 'YEAR']:
-                if df_fundamentals_quarterly.loc[i, 'QTR'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'QTR'] == 1:
-                    df_fundamentals_quarterly.loc[i, 'D_WC'] = df_fundamentals_quarterly.loc[i, 'WCAPQ'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'WCAPQ']
-
-            elif df_fundamentals_quarterly.loc[i, 'YEAR'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'YEAR'] == 1:
-                if df_fundamentals_quarterly.loc[temp_index[j - 1], 'QTR'] == 4:
-                    df_fundamentals_quarterly.loc[i, 'D_WC'] = df_fundamentals_quarterly.loc[i, 'WCAPQ'] - df_fundamentals_quarterly.loc[temp_index[j - 1], 'WCAPQ']
+            elif df_fundamentals_quarterly.loc[i, 'YEAR'] - df_fundamentals_quarterly.loc[idx_tmp[j-1], 'YEAR'] == 1:
+                if df_fundamentals_quarterly.loc[idx_tmp[j-1], 'QTR'] == 4:
+                    df_fundamentals_quarterly.loc[i, 'WCAPCHQ'] = df_fundamentals_quarterly.loc[i, 'WCAPQ'] - df_fundamentals_quarterly.loc[idx_tmp[j-1], 'WCAPQ']
 
             else:
-                df_fundamentals_quarterly.loc[i, 'D_WC'] = None
+                df_fundamentals_quarterly.loc[i, 'WCAPCHQ'] = None
         else:
-            df_fundamentals_quarterly.loc[i, 'D_WC'] = None
+            df_fundamentals_quarterly.loc[i, 'WCAPCHQ'] = None
 
-    j = j + 1
-
-
-
-
-
+    j += 1
 
 
 # Merge datasets
@@ -135,6 +121,39 @@ df_stock_monthly = df_stock_monthly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR
 df_data = pd.merge(df_tmp, df_stock_monthly, on='MERGEKEY', how='inner')
 df_data = df_data.drop(columns=['MERGEKEY'])
 
+# Sort merged data
+# df_data = df_data.reindex(columns=())
+df_data = df_data.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
+
+
+
+
+
+
+
+
+
+
+
+# Compute additional variables
+df_data['VOL'] = df_data['VOL']*100
+df_data['MID'] = (df_data['ASK'] + df_data['BID']) / 2
+df_data['SPREADPCT'] = (df_data['ASK'] - df_data['BID']) / df_data['ASK']
+df_data['DVOL'] = df_data['MID'] * df_data['VOL']
+
+
+
+# Filter out illiquid stocks
+s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
+df = pd.DataFrame(s_max_dvols)
+df = df[df['DVOL'] >= 100000000]
+ls_gvkeys = df.index.to_list()
+
+
+
+
+
+
 # Summarize data
 df_1 = df_data.drop(columns=['GVKEY', 'PERMNO', 'DATADATE', 'CONM', 'TIC', 'GSECTOR', 'LOC'])
 df_summary_1 = fn.tab_summary(df_1)
@@ -145,24 +164,15 @@ df_summary_1 = fn.tab_summary(df_1)
 
 
 # %%
-# Compute additional variables
-df_data['SHROUT'] = df_data['SHROUT']*1000
-df_data['VOL'] = df_data['VOL']*100
-df_data['MID'] = (df_data['ASK'] + df_data['BID']) / 2
-df_data['SPREADPCT'] = (df_data['ASK'] - df_data['BID']) / df_data['ASK']
-df_data['DVOL'] = df_data['MID'] * df_data['VOL']
+
+
+
 
 '''
-
+df_security_monthly_test = df_security_monthly.loc[df_security_monthly['PERMCO'] == 10001]
+df_stock_monthly_test = df_stock_monthly.loc[df_stock_monthly['PERMCO'] == 10001]
 '''
 
-# Filter out illiquid stocks
-s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
-df = pd.DataFrame(s_max_dvols)
-df = df[df['DVOL'] >= 100000000]
-ls_gvkeys = df.index.to_list()
-
-'''
 # Filter out illiquid stocks
 s_max_dvols = df_stock_monthly.groupby('PERMCO')['DVOL'].max()
 df = pd.DataFrame(s_max_dvols)
@@ -186,11 +196,6 @@ df_stock_monthly['DVOL'] = df_stock_monthly['MID'] * df_stock_monthly['VOL']
 
 
 # Missing values management [...]
-
-'''
-df_security_monthly_test = df_security_monthly.loc[df_security_monthly['PERMCO'] == 10001]
-df_stock_monthly_test = df_stock_monthly.loc[df_stock_monthly['PERMCO'] == 10001]
-'''
 
 
 # %%
@@ -225,21 +230,14 @@ df_data['ROE'] = df_data['NIQ'] / df_data['BE']
 
 df_data['ROA'] = df_data['NIQ'] / df_data['ATQ']
 
-df_data['CFOA'] = (df_data['NIQ'] + df_data['DPQ'] - df_data['D_WC'] - df_data['CAPXQ']) / df_data['ATQ']
+df_data['CFOA'] = (df_data['NIQ'] + df_data['DPQ'] - df_data['WCAPCHQ'] - df_data['CAPXQ']) / df_data['ATQ']
 
 df_data['GMAR'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['REVTQ']
 
-df_data['ACC'] = - (df_data['D_WC'] - df_data['DPQ']) / df_data['ATQ']
+df_data['ACC'] = - (df_data['WCAPCHQ'] - df_data['DPQ']) / df_data['ATQ']
 
 
 # Growth
 
 # Safety
-
-
-
-
-
-
-
-
+'''
