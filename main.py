@@ -22,9 +22,9 @@ df_security_monthly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compust
 df_stock_monthly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_security_files_monthly_stock.sas7bdat'))
 
 # Filter selected cols
-ls_selected_cols_1 = ['GVKEY', 'LPERMNO', 'DATADATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'ACTQ', 'ATQ',
-                      'CEQQ', 'CHEQ', 'COGSQ', 'CSTKQ', 'DLCQ', 'DLTTQ', 'DPQ', 'EPSFXQ', 'LCTQ', 'LTQ',
-                      'MIBTQ', 'NIQ', 'PIQ', 'PSTKQ', 'REQ', 'REVTQ', 'TXPQ', 'WCAPQ', 'CAPXY', 'FQTR', 'XINTQ']
+ls_selected_cols_1 = ['GVKEY', 'LPERMNO', 'DATADATE', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'ACTQ',
+                      'ATQ', 'CEQQ', 'CHEQ', 'COGSQ', 'CSTKQ', 'DLCQ', 'DLTTQ', 'DPQ', 'EPSFXQ', 'LCTQ',
+                      'LTQ', 'MIBTQ', 'NIQ', 'PIQ', 'PSTKQ', 'REQ', 'REVTQ', 'TXPQ', 'WCAPQ', 'XINTQ', 'CAPXY']
 df_fundamentals_quarterly = df_fundamentals_quarterly[ls_selected_cols_1]
 df_fundamentals_quarterly.rename(columns={'LPERMNO': 'PERMNO'}, inplace=True)
 
@@ -108,9 +108,6 @@ for i in tqdm(idx_tmp):
 
     j += 1
 
-df_fundamentals_quarterly['XINTQ'] = df_fundamentals_quarterly['XINTQ'].fillna(0) # Fill the na with 0 for the interest expense variable
-
-
 # Merge datasets
 df_fundamentals_quarterly['KEYQ'] = df_fundamentals_quarterly['PERMNO'].astype(str) + '_' + df_fundamentals_quarterly['YEAR'].astype(str) + '_' + df_fundamentals_quarterly['QTR'].astype(str)
 df_security_monthly['KEYQ'] = df_security_monthly['PERMNO'].astype(str) + '_' + df_security_monthly['YEAR'].astype(str) + '_' + df_security_monthly['QTR'].astype(str)
@@ -122,19 +119,20 @@ df_stock_monthly['KEYM'] = df_stock_monthly['PERMNO'].astype(str) + '_' + df_sto
 df_stock_monthly = df_stock_monthly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH'])
 df_data = pd.merge(df_tmp, df_stock_monthly, on='KEYM', how='inner')
 
-
-
 # Checkpoint data
-df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
-
 
 # Modify/Create variables
 s_mean_cshoq = df_data.groupby('KEYQ')['CSHOQ'].mean()
 df_tmp = pd.DataFrame(s_mean_cshoq).reset_index(drop=False)
+df_tmp.rename(columns={'CSHOQ': 'CSHOQ_NEW'}, inplace=True)
+df_data = pd.merge(df_tmp, df_data, on='KEYQ', how='inner')
+df_data['CSHOQ'] = df_data['CSHOQ_NEW']
+df_data = df_data.drop(columns=['CSHOQ_NEW'])
 
-
+df_data['XINTQ'] = df_data['XINTQ'].fillna(0)  # Fill missing values with 0 for the interest expense
 df_data['TRT1M'] = df_data['TRT1M'] / 100  # Expressed in percentage points
 df_data['VOL'] = df_data['VOL'] * 100  # Expressed in hundreds shares (monthly data)
 df_data['DVOL'] = df_data['PRCCM'] * df_data['VOL'] / (10**6)  # Dollar volume expressed in millions
@@ -146,19 +144,14 @@ s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
 df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
 df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
 ls_permnos = df_tmp['PERMNO'].unique().tolist()
+df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 
-# Filter out illiquid stocks
-s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
-df = pd.DataFrame(s_max_dvols)
-df = df[df['DVOL'] >= 100000000]
-ls_gvkeys = df.index.to_list()
 
-print('hello')
-# Sort final data
+# Sort and export final data
 # df_data = df_data.reindex(columns=())
 df_data = df_data.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
 
-# Summarize data
+# Summarize final data
 df_1 = df_data.drop(columns=['GVKEY', 'PERMNO', 'DATADATE', 'CONM', 'TIC', 'GSECTOR', 'LOC'])
 df_summary_1 = fn.tab_summary(df_1)
 print('world')
@@ -166,11 +159,7 @@ print('world')
 # Missing values management [...]
 
 # TODO: value variables
-# TODO: common shares outstanding fill
 # TODO: create market equity (ME)
-
-
-
 
 
 
