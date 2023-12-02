@@ -70,7 +70,7 @@ df_stock_monthly = df_stock_monthly.sort_values(by=['PERMNO', 'DATE'], ascending
 
 # Create additional variables
 df_fundamentals_quarterly['CAPXQ'] = df_fundamentals_quarterly['CAPXY']
-df_fundamentals_quarterly['WCAPCHQ'] = df_fundamentals_quarterly['WCAPQ']  # D_WC
+df_fundamentals_quarterly['WCAPCHQ'] = df_fundamentals_quarterly['WCAPQ']
 
 j = 0
 idx_tmp = df_fundamentals_quarterly.index
@@ -112,26 +112,31 @@ df_fundamentals_quarterly['XINTQ'] = df_fundamentals_quarterly['XINTQ'].fillna(0
 
 
 # Merge datasets
-df_fundamentals_quarterly['MERGEKEY'] = df_fundamentals_quarterly['PERMNO'].astype(str) + '_' + df_fundamentals_quarterly['YEAR'].astype(str) + '_' + df_fundamentals_quarterly['QTR'].astype(str)
-df_security_monthly['MERGEKEY'] = df_security_monthly['PERMNO'].astype(str) + '_' + df_security_monthly['YEAR'].astype(str) + '_' + df_security_monthly['QTR'].astype(str)
+df_fundamentals_quarterly['KEYQ'] = df_fundamentals_quarterly['PERMNO'].astype(str) + '_' + df_fundamentals_quarterly['YEAR'].astype(str) + '_' + df_fundamentals_quarterly['QTR'].astype(str)
+df_security_monthly['KEYQ'] = df_security_monthly['PERMNO'].astype(str) + '_' + df_security_monthly['YEAR'].astype(str) + '_' + df_security_monthly['QTR'].astype(str)
 df_security_monthly = df_security_monthly.drop(columns=['GVKEY', 'PERMNO', 'DATADATE', 'YEAR', 'QTR'])
-df_tmp = pd.merge(df_fundamentals_quarterly, df_security_monthly, on='MERGEKEY', how='inner')
-df_tmp = df_tmp.drop(columns=['MERGEKEY'])
+df_tmp = pd.merge(df_fundamentals_quarterly, df_security_monthly, on='KEYQ', how='inner')
 
-df_tmp['MERGEKEY'] = df_tmp['PERMNO'].astype(str) + '_' + df_tmp['YEAR'].astype(str) + '_' + df_tmp['MTH'].astype(str)
-df_stock_monthly['MERGEKEY'] = df_stock_monthly['PERMNO'].astype(str) + '_' + df_stock_monthly['YEAR'].astype(str) + '_' + df_stock_monthly['MTH'].astype(str)
+df_tmp['KEYM'] = df_tmp['PERMNO'].astype(str) + '_' + df_tmp['YEAR'].astype(str) + '_' + df_tmp['MTH'].astype(str)
+df_stock_monthly['KEYM'] = df_stock_monthly['PERMNO'].astype(str) + '_' + df_stock_monthly['YEAR'].astype(str) + '_' + df_stock_monthly['MTH'].astype(str)
 df_stock_monthly = df_stock_monthly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH'])
-df_data = pd.merge(df_tmp, df_stock_monthly, on='MERGEKEY', how='inner')
-df_data = df_data.drop(columns=['MERGEKEY'])
+df_data = pd.merge(df_tmp, df_stock_monthly, on='KEYM', how='inner')
+
+
 
 # Checkpoint data
 df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
+
 # Modify/Create variables
+s_mean_cshoq = df_data.groupby('KEYQ')['CSHOQ'].mean()
+df_tmp = pd.DataFrame(s_mean_cshoq).reset_index(drop=False)
+
+
 df_data['TRT1M'] = df_data['TRT1M'] / 100  # Expressed in percentage points
-df_data['VOL'] = df_data['VOL'] * 100  # Expressed in hundreds shares for monthly data
+df_data['VOL'] = df_data['VOL'] * 100  # Expressed in hundreds shares (monthly data)
 df_data['DVOL'] = df_data['PRCCM'] * df_data['VOL'] / (10**6)  # Dollar volume expressed in millions
 df_data['SPRDPCT'] = (df_data['ASK'] - df_data['BID']) / df_data['ASK']  # Percentage bid-ask spread
 
@@ -160,7 +165,54 @@ print('world')
 
 # Missing values management [...]
 
-df_data['LOC'].values_count()
+# TODO: value variables
+# TODO: common shares outstanding fill
+# TODO: create market equity (ME)
+
+
+
+
+
+
+
+
+# %%
+# **************************************************
+# ***           Score Computations               ***
+# **************************************************
+
+# *** Value Score ***
+
+
+
+# *** Quality Score ***
+
+# Profitability
+
+df_data['BE'] = df_data['ATQ'] - df_data['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
+
+df_data['GPOA'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['ATQ']
+
+df_data['ROE'] = df_data['NIQ'] / df_data['BE']
+
+df_data['ROA'] = df_data['NIQ'] / df_data['ATQ']
+
+df_data['CFOA'] = (df_data['NIQ'] + df_data['DPQ'] - df_data['WCAPCHQ'] - df_data['CAPXQ']) / df_data['ATQ']
+
+df_data['GMAR'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['REVTQ']
+
+df_data['ACC'] = - (df_data['WCAPCHQ'] - df_data['DPQ']) / df_data['ATQ']
+
+
+# Growth
+
+# Safety
+
+
+# %%
+# **************************************************
+# *** Branch: Comments                           ***
+# **************************************************
 
 '''
 df_security_monthly_test = df_security_monthly.loc[df_security_monthly['PERMCO'] == 45483]
@@ -170,8 +222,7 @@ df_fundamentals_quarterly_test_4 = df_fundamentals_quarterly.loc[df_fundamentals
 df_fundamentals_quarterly_test_2 = df_fundamentals_quarterly.groupby(by=['TIC']).groups.keys()
 print(df_security_monthly['PERMCO'].nunique())
 print(df_security_monthly['PERMNO'].nunique())
-'''
-'''
+
 df_fundamentals_quarterly_test_3 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('GOOGL', 'utf-8')]
 df_fundamentals_quarterly_test_4 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('AAPL', 'utf-8')]
 df_fundamentals_quarterly_test_5 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('WMT', 'utf-8')]
@@ -195,6 +246,7 @@ df_fundamentals_quarterly_test_8 = df_fundamentals_quarterly_test_1.loc[df_funda
 # **************************************************
 
 # *** Value Score ***
+'''
 
 '''
 df_fundamentals_quarterly_test_0 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('AAPL', 'utf-8')]
