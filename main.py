@@ -181,6 +181,8 @@ print('world')
 # ***           Score Computations               ***
 # **************************************************
 
+df_data['BE'] = df_data['ATQ'] - df_data['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
+
 # *** Value Score ***
 
 
@@ -204,9 +206,40 @@ df_data['GMAR'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['REVTQ']
 df_data['ACC'] = - (df_data['WCAPCHQ'] - df_data['DPQ']) / df_data['ATQ']
 
 
+
 # Growth
 
+df_data['g_GPOA'] = df_data['GPOA']
+df_data['g_ROE'] = df_data['ROE']
+df_data['g_ROA'] = df_data['ROA']
+df_data['g_CFOA'] = df_data['CFOA']
+df_data['g_GMAR'] = df_data['GMAR']
+df_data['g_ACC'] = df_data['ACC']
+
+
+j = 0
+n = 5
+idx_tmp = df_fundamentals_quarterly.index
+for i in tqdm(idx_tmp):
+
+    if j < n*4:
+        df_data.loc[i, 'g_GPOA'] = None
+
+    if j >= n*4:
+        if df_fundamentals_quarterly.loc[i, 'PERMNO'] == df_fundamentals_quarterly.loc[idx_tmp[j-1], 'PERMNO']:
+            df_fundamentals_quarterly.loc[i, 'g_GPOA'] = (df_fundamentals_quarterly.loc[i, 'GPOA'] - df_fundamentals_quarterly.loc[idx_tmp[j-n*4], 'GPOA']) / df_fundamentals_quarterly.loc[idx_tmp[j-n*4], 'GPOA']
+        else:
+            df_fundamentals_quarterly.loc[i, 'g_GPOA'] = None
+
+    j += 1
+
+
 # Safety
+
+df_data['LEV'] = (df_data['DLTTQ'] + df_data['DLCQ']) / df_data['ATQ']
+
+df_data['AZSCORE'] = (1.2*df_data['WCAPQ'] + 1.4*df_data['REQ'] + 3.3*(df_data['PIQ'] + df_data['XINTQ']) + 0.6*df_data['ME'] + df_data['REVTQ']) / df_data['ATQ']
+
 
 
 # %%
@@ -239,6 +272,7 @@ df_fundamentals_quarterly_test_7 = df_fundamentals_quarterly_test_1.loc[df_funda
 df_fundamentals_quarterly_test_8 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('WMT', 'utf-8')]
 '''
 
+'''
 
 # %%
 # **************************************************
@@ -246,9 +280,9 @@ df_fundamentals_quarterly_test_8 = df_fundamentals_quarterly_test_1.loc[df_funda
 # **************************************************
 
 # *** Value Score ***
-'''
 
-'''
+
+
 df_fundamentals_quarterly_test_0 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('AAPL', 'utf-8')]
 
 df_fundamentals_quarterly_test = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compustat_merged_fundamentals_quarterly.sas7bdat'))
@@ -260,7 +294,7 @@ df_fundamentals_quarterly_test_2 = df_fundamentals_quarterly_test_1.loc[df_funda
 
 # NB: yearly variable
 '''
-
+'''
 # *** Quality Score ***
 
 # Profitability
@@ -284,10 +318,11 @@ df_data['ACC'] = - (df_data['WCAPCHQ'] - df_data['DPQ']) / df_data['ATQ']
 
 
 
+
 # Safety
 
 df_data['LEV'] = (df_data['DLTTQ'] + df_data['DLCQ']) / df_data['ATQ']
 
 df_data['AZSCORE'] = (1.2*df_data['WCAPQ'] + 1.4*df_data['REQ'] + 3.3*(df_data['PIQ'] + df_data['XINTQ']) + 0.6*df_data['ME'] + df_data['REVTQ']) / df_data['ATQ']
 
-
+'''
