@@ -34,11 +34,6 @@ df_security_monthly.rename(columns={'LPERMNO': 'PERMNO'}, inplace=True)
 ls_selected_cols_3 = ['PERMNO', 'DATE', 'BID', 'ASK', 'VOL']
 df_stock_monthly = df_stock_monthly[ls_selected_cols_3]
 
-# Sort raw data
-df_fundamentals_quarterly = df_fundamentals_quarterly.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
-df_security_monthly = df_security_monthly.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
-df_stock_monthly = df_stock_monthly.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
-
 # Create year, quarter and month cols
 df_fundamentals_quarterly['YEAR'] = df_fundamentals_quarterly['DATADATE'].dt.year.astype(float)
 df_fundamentals_quarterly['QTR'] = df_fundamentals_quarterly['DATADATE'].dt.quarter.astype(float)
@@ -67,9 +62,18 @@ ls_permnos = df_fundamentals_quarterly['PERMNO'].unique().tolist()
 df_security_monthly = df_security_monthly[df_security_monthly['PERMNO'].isin(ls_permnos)]
 df_stock_monthly = df_stock_monthly[df_stock_monthly['PERMNO'].isin(ls_permnos)]
 
+# Sort data and reset index
+df_fundamentals_quarterly = df_fundamentals_quarterly.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
+df_security_monthly = df_security_monthly.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
+df_stock_monthly = df_stock_monthly.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
+
 # Compute additional variables [1]
 df_fundamentals_quarterly['CAPXQ'] = df_fundamentals_quarterly['CAPXY']
 df_fundamentals_quarterly['WCAPCHQ'] = df_fundamentals_quarterly['WCAPQ']  # D_WC
+
+
+
+
 
 j = 0
 idx_tmp = df_fundamentals_quarterly.index
@@ -121,9 +125,6 @@ df_stock_monthly = df_stock_monthly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR
 df_data = pd.merge(df_tmp, df_stock_monthly, on='MERGEKEY', how='inner')
 df_data = df_data.drop(columns=['MERGEKEY'])
 
-# Sort merged data
-# df_data = df_data.reindex(columns=())
-df_data = df_data.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
 
 
 
@@ -135,7 +136,8 @@ df_data = df_data.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True])
 
 
 
-# Compute additional variables
+
+# Compute additional variables [2]
 df_data['VOL'] = df_data['VOL']*100
 df_data['MID'] = (df_data['ASK'] + df_data['BID']) / 2
 df_data['SPREADPCT'] = (df_data['ASK'] - df_data['BID']) / df_data['ASK']
@@ -149,10 +151,16 @@ df = pd.DataFrame(s_max_dvols)
 df = df[df['DVOL'] >= 100000000]
 ls_gvkeys = df.index.to_list()
 
+# Filter out illiquid stocks
+s_max_dvols = df_stock_monthly.groupby('PERMCO')['DVOL'].max()
+df = pd.DataFrame(s_max_dvols)
+df = df[df['DolVol'] >= 100000000]
+ls_gvkeys = df.index.to_list()
 
 
-
-
+# Sort final data
+# df_data = df_data.reindex(columns=())
+df_data = df_data.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
 
 # Summarize data
 df_1 = df_data.drop(columns=['GVKEY', 'PERMNO', 'DATADATE', 'CONM', 'TIC', 'GSECTOR', 'LOC'])
@@ -166,19 +174,7 @@ df_summary_1 = fn.tab_summary(df_1)
 # %%
 
 
-
-
 '''
-df_security_monthly_test = df_security_monthly.loc[df_security_monthly['PERMCO'] == 10001]
-df_stock_monthly_test = df_stock_monthly.loc[df_stock_monthly['PERMCO'] == 10001]
-'''
-
-# Filter out illiquid stocks
-s_max_dvols = df_stock_monthly.groupby('PERMCO')['DVOL'].max()
-df = pd.DataFrame(s_max_dvols)
-df = df[df['DolVol'] >= 100000000]
-ls_gvkeys = df.index.to_list()
-
 df_security_monthly_test = df_security_monthly.loc[df_security_monthly['PERMCO'] == 45483]
 df_stock_monthly_test = df_stock_monthly.loc[df_stock_monthly['PERMCO'] == 45483]
 df_fundamentals_quarterly_test_3 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('GOOGL', 'utf-8')]
@@ -186,11 +182,6 @@ df_fundamentals_quarterly_test_4 = df_fundamentals_quarterly.loc[df_fundamentals
 df_fundamentals_quarterly_test_2 = df_fundamentals_quarterly.groupby(by=['TIC']).groups.keys()
 print(df_security_monthly['PERMCO'].nunique())
 print(df_security_monthly['PERMNO'].nunique())
-
-# Compute additional variables
-df_stock_monthly['MID'] = (df_stock_monthly['ASK'] + df_stock_monthly['BID']) / 2
-df_stock_monthly['SPREADPCT'] = (df_stock_monthly['ASK'] - df_stock_monthly['BID']) / df_stock_monthly['ASK']
-df_stock_monthly['DVOL'] = df_stock_monthly['MID'] * df_stock_monthly['VOL']
 '''
 
 
@@ -240,4 +231,3 @@ df_data['ACC'] = - (df_data['WCAPCHQ'] - df_data['DPQ']) / df_data['ATQ']
 # Growth
 
 # Safety
-'''
