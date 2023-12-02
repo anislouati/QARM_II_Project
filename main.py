@@ -24,7 +24,7 @@ df_stock_monthly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_security_f
 # Filter selected cols
 ls_selected_cols_1 = ['GVKEY', 'LPERMNO', 'DATADATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'ACTQ', 'ATQ',
                       'CEQQ', 'CHEQ', 'COGSQ', 'CSTKQ', 'DLCQ', 'DLTTQ', 'DPQ', 'EPSFXQ', 'LCTQ', 'LTQ',
-                      'MIBTQ', 'NIQ', 'PIQ', 'PSTKQ', 'REQ', 'REVTQ', 'TXPQ', 'WCAPQ', 'CAPXY', 'FQTR']
+                      'MIBTQ', 'NIQ', 'PIQ', 'PSTKQ', 'REQ', 'REVTQ', 'TXPQ', 'WCAPQ', 'CAPXY', 'FQTR', 'XINTQ']
 df_fundamentals_quarterly = df_fundamentals_quarterly[ls_selected_cols_1]
 df_fundamentals_quarterly.rename(columns={'LPERMNO': 'PERMNO'}, inplace=True)
 
@@ -108,6 +108,9 @@ for i in tqdm(idx_tmp):
 
     j += 1
 
+df_fundamentals_quarterly['XINTQ'] = df_fundamentals_quarterly['XINTQ'].fillna(0) # Fill the na with 0 for the interest expense variable
+
+
 # Merge datasets
 df_fundamentals_quarterly['MERGEKEY'] = df_fundamentals_quarterly['PERMNO'].astype(str) + '_' + df_fundamentals_quarterly['YEAR'].astype(str) + '_' + df_fundamentals_quarterly['QTR'].astype(str)
 df_security_monthly['MERGEKEY'] = df_security_monthly['PERMNO'].astype(str) + '_' + df_security_monthly['YEAR'].astype(str) + '_' + df_security_monthly['QTR'].astype(str)
@@ -168,20 +171,22 @@ df_fundamentals_quarterly_test_2 = df_fundamentals_quarterly.groupby(by=['TIC'])
 print(df_security_monthly['PERMCO'].nunique())
 print(df_security_monthly['PERMNO'].nunique())
 '''
-
+'''
 df_fundamentals_quarterly_test_3 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('GOOGL', 'utf-8')]
 df_fundamentals_quarterly_test_4 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('AAPL', 'utf-8')]
 df_fundamentals_quarterly_test_5 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('WMT', 'utf-8')]
+'''
 
+'''
 df_fundamentals_quarterly_test = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compustat_merged_fundamentals_quarterly.sas7bdat'))
 
-ls_selected_cols_1_test = ['GVKEY', 'LPERMNO', 'LPERMCO', 'DATADATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'REVTY', 'OANCFY', 'CAPXY', 'FQTR']
+ls_selected_cols_1_test = ['GVKEY', 'LPERMNO', 'LPERMCO', 'DATADATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'REVTY', 'OANCFY', 'CAPXY', 'FQTR','XINTQ', 'XINTY' , 'INTPNY', 'NIITY', 'FINXINTQ']
 df_fundamentals_quarterly_test_1 = df_fundamentals_quarterly_test[ls_selected_cols_1_test]
 
 df_fundamentals_quarterly_test_6 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('GOOGL', 'utf-8')]
 df_fundamentals_quarterly_test_7 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('AAPL', 'utf-8')]
 df_fundamentals_quarterly_test_8 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('WMT', 'utf-8')]
-
+'''
 
 
 # %%
@@ -225,6 +230,12 @@ df_data['ACC'] = - (df_data['WCAPCHQ'] - df_data['DPQ']) / df_data['ATQ']
 
 # Growth
 
+
+
 # Safety
+
+df_data['LEV'] = (df_data['DLTTQ'] + df_data['DLCQ']) / df_data['ATQ']
+
+df_data['AZSCORE'] = (1.2*df_data['WCAPQ'] + 1.4*df_data['REQ'] + 3.3*(df_data['PIQ'] + df_data['XINTQ']) + 0.6*df_data['ME'] + df_data['REVTQ']) / df_data['ATQ']
 
 
