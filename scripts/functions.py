@@ -5,9 +5,9 @@ from tqdm import tqdm
 
 # Project directories paths (README: modify if necessary!)
 paths = {'main': Path.cwd()}
-paths.update({'data': Path.joinpath(paths.get('main'), 'data'),
-              'output': Path.joinpath(paths.get('main'), 'output'),
-              'scripts': Path.joinpath(paths.get('main'), 'scripts')})
+paths.update({'data': Path.joinpath(paths.get('main'), 'data')})
+paths.update({'output': Path.joinpath(paths.get('main'), 'output')})
+paths.update({'scripts': Path.joinpath(paths.get('main'), 'scripts')})
 
 
 # %%

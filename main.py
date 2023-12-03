@@ -14,7 +14,6 @@ pd.set_option('display.width', 400)
 pd.set_option('display.max_columns', 10)
 
 
-
 # %%
 # **************************************************
 # *** Branch: DATA MANAGEMENT                    ***
@@ -68,17 +67,17 @@ df_fundamentals_quarterly = fn.preprocessing_2(df_fundamentals_quarterly)
 df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
-
 # Checkpoint data
-#df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
-#df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
-#df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
+df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
+df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
+df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as f:
     df_fundamentals_quarterly = pickle.load(f)
 with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as f:
     df_security_monthly = pickle.load(f)
 with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'rb') as f:
     df_stock_monthly = pickle.load(f)
+
 
 # Merge datasets
 df_fundamentals_quarterly = df_fundamentals_quarterly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYM'])
