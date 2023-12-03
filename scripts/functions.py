@@ -1,7 +1,8 @@
 # Import packages
+from datetime import datetime
 from pathlib import Path
-import pandas as pd
 from tqdm import tqdm
+import pandas as pd
 
 # Project directories paths (README: modify if necessary!)
 paths = {'main': Path.cwd()}
@@ -70,6 +71,35 @@ def preprocessing_3(df_data):
     print('Rows deleted: {}'.format(len(ls_drops)))
     print('Preprocessed dataset size: {}'.format(len(df_out)))
     print('Unique keys (KEYM): {}'.format(len(s_tmp[s_tmp == 1])))
+    return df_out
+
+
+def preprocess_4(df_data):
+    df_out = df_data
+    ls_permnos = df_out['PERMNO'].unique().tolist()
+
+    s_dates = df_out['DATE']
+    dt_min, dt_max = s_dates.min(), s_dates.max()
+    df_dates = pd.DataFrame(pd.date_range(start=datetime(dt_min.year - 1, 1, 1), end=datetime(dt_max.year + 1, 12, 31), freq='BM').rename('DATE'))
+    df_dates['YEAR'] = df_dates['DATE'].dt.year.astype(float)
+    df_dates['MTH'] = df_dates['DATE'].dt.month.astype(float)
+
+    ls_dfs = []
+    for permno in tqdm(ls_permnos):
+        s_tmp = df_out[df_out['PERMNO'] == permno]['DATE']
+        dt_start, dt_end = s_tmp.min(), s_tmp.max()
+        pos_start = df_dates.index[(df_dates['YEAR'] == dt_start.year) & (df_dates['MTH'] == dt_start.month)].tolist()[0]
+        pos_end = df_dates.index[(df_dates['YEAR'] == dt_end.year) & (df_dates['MTH'] == dt_end.month)].tolist()[0]
+
+        df_tmp = df_dates.loc[pos_start:pos_end, ['DATE']]
+        df_tmp['PERMNO'] = permno
+        df_tmp = preprocessing_1(df_tmp)
+        df_tmp = df_tmp[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM']]
+        df_tmp = df_tmp[~df_tmp['KEYM'].isin(df_data[df_data['PERMNO'] == permno]['KEYM'])]
+        ls_dfs += [df_tmp]
+
+    ls_dfs = [df_out] + ls_dfs
+    df_out = pd.concat(ls_dfs, axis=0, ignore_index=True)
     return df_out
 
 

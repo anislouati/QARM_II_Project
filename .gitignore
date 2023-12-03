@@ -2,3 +2,6 @@
 /data/crsp_compustat_merged_security_monthly.sas7bdat
 /data/crsp_security_files_monthly_stock.sas7bdat
 /data/df_data.pkl
+/data/df_fundamentals_quarterly.pkl
+/data/df_security_monthly.pkl
+/data/df_stock_monthly.pkl
