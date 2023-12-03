@@ -1,5 +1,8 @@
 # Import packages
 from pathlib import Path
+
+import numpy as np
+
 from scripts.functions import paths
 import pandas as pd
 import scripts.functions as fn
@@ -179,12 +182,19 @@ df_summary_1 = fn.tab_summary(df_1)
 # *** Value Score ***
 
 df_data['ME'] = df_data['PRCCM'] * df_data['CSHOQ']
+df_data['BE'] = df_data['ATQ'] - df_data['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
 
-# %%
+df_data['BE/ME'] = df_data['BE'] / df_data['ME'] # book-to-market equity
+
+df_data['E/P'] = (df_data['NIQ'] / df_data['CSHOQ']) / df_data['PRCCM'] # earning-to-price
+
+df_data['CF/P'] = ((df_data['NIQ'] + df_data['DPQ'] - df_data['WCAPCHQ'] - df_data['CAPXQ']) / df_data['CSHOQ']) / df_data['PRCCM'] # cash flow-to-price
+
+
 # *** Quality Score ***
 
 # Profitability
-df_data['BE'] = df_data['ATQ'] - df_data['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
+
 df_data['GPOA'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['ATQ']
 df_data['ROE'] = df_data['NIQ'] / df_data['BE']
 df_data['ROA'] = df_data['NIQ'] / df_data['ATQ']
@@ -192,6 +202,27 @@ df_data['CFOA'] = (df_data['NIQ'] + df_data['DPQ'] - df_data['WCAPCHQ'] - df_dat
 df_data['GMAR'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['REVTQ']
 df_data['ACC'] = - (df_data['WCAPCHQ'] - df_data['DPQ']) / df_data['ATQ']
 
+
+# TODO : LTM function
+j = 0
+idx_tmp = df_data.index
+df_data['LTM_REVTQ'] = df_data['REVTQ']
+for i in tqdm(idx_tmp):
+    if j < (4 * 3):
+        df_data.loc[i,'LTM_REVTQ'] == None
+    if j >=(4 * 3):
+        if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j - (4 * 3)], 'PERMNO']:
+            df_data.loc[i, 'LTM_REVTQ'] = pd.array([df_data.loc[idx_tmp[j - (4 * 3)], 'REVTQ'],
+                                               df_data.loc[idx_tmp[j - (3 * 3)], 'REVTQ'],
+                                               df_data.loc[idx_tmp[j - (2 * 3)], 'REVTQ'],
+                                               df_data.loc[idx_tmp[j - (1 * 3)], 'REVTQ']]).sum(skipna= False)
+        else:
+            df_data.loc[i, 'LTM_REVTQ'] == None
+
+    j = j+1
+
+#pd.array([1,2,None]).sum(skipna= False)
+df_data_test_4 = df_data.loc[df_data['TIC'] == bytes('AAPL', 'utf-8')]
 
 
 # Growth
@@ -207,24 +238,49 @@ n = 5
 idx_tmp = df_data.index
 for i in tqdm(idx_tmp):
 
-    if j < (n*4*3+1):
+    if j < (n*4*3):
         df_data.loc[i, 'g_GPOA'] = None
+        df_data.loc[i, 'g_ROE'] = None
+        df_data.loc[i, 'g_ROA'] = None
+        df_data.loc[i, 'g_CFOA'] = None
+        df_data.loc[i, 'g_GMAR'] = None
 
-    if j >= (n*4*3+1):
-        if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j-n*4*3+1], 'PERMNO']:
-            if df_data.loc[i, 'YEAR'] - df_data.loc[idx_tmp[j-n*4*3+1], 'YEAR'] == 5:
-                if df_data.loc[i, 'QTR'] == df_data.loc[idx_tmp[j - n * 4*3+1], 'QTR']:
-                    df_data.loc[i, 'g_GPOA'] = (df_data.loc[i, 'GPOA'] - df_data.loc[idx_tmp[j-n*4*3+1], 'GPOA']) / df_data.loc[idx_tmp[j-n*4*3+1], 'GPOA']
+    if j >= (n*4*3):
+        if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j-(n*4*3)], 'PERMNO']:
+            if df_data.loc[i, 'YEAR'] - df_data.loc[idx_tmp[j-(n*4*3)], 'YEAR'] == 5:
+                if df_data.loc[i, 'QTR'] == df_data.loc[idx_tmp[j - (n*4*3)], 'QTR']:
+                    df_data.loc[i, 'g_GPOA'] = (df_data.loc[i, 'GPOA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'GPOA']) / df_data.loc[idx_tmp[j-(n*4*3)], 'GPOA']
+                    df_data.loc[i, 'g_ROE'] = (df_data.loc[i, 'ROE'] - df_data.loc[idx_tmp[j-(n*4*3)], 'ROE']) / df_data.loc[idx_tmp[j-(n*4*3)], 'ROE']
+                    df_data.loc[i, 'g_ROA'] = (df_data.loc[i, 'ROA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'ROA']) / df_data.loc[idx_tmp[j-(n*4*3)], 'ROA']
+                    df_data.loc[i, 'g_CFOA'] = (df_data.loc[i, 'CFOA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'CFOA']) / df_data.loc[idx_tmp[j-(n*4*3)], 'CFOA']
+                    df_data.loc[i, 'g_GMAR'] = (df_data.loc[i, 'GMAR'] - df_data.loc[idx_tmp[j-(n*4*3)], 'GMAR']) / df_data.loc[idx_tmp[j-(n*4*3)], 'GMAR']
+
                 else:
                     df_data.loc[i, 'g_GPOA'] = None
+                    df_data.loc[i, 'g_ROE'] = None
+                    df_data.loc[i, 'g_ROA'] = None
+                    df_data.loc[i, 'g_CFOA'] = None
+                    df_data.loc[i, 'g_GMAR'] = None
             else:
                 df_data.loc[i, 'g_GPOA'] = None
+                df_data.loc[i, 'g_ROE'] = None
+                df_data.loc[i, 'g_ROA'] = None
+                df_data.loc[i, 'g_CFOA'] = None
+                df_data.loc[i, 'g_GMAR'] = None
         else:
             df_data.loc[i, 'g_GPOA'] = None
+            df_data.loc[i, 'g_ROE'] = None
+            df_data.loc[i, 'g_ROA'] = None
+            df_data.loc[i, 'g_CFOA'] = None
+            df_data.loc[i, 'g_GMAR'] = None
 
     j += 1
 
-zzz = df_data[['DATADATE', 'PERMNO', 'QTR, 'GPOA', 'g_GPOA']]
+'''
+zzz = df_data[['DATADATE', 'PERMNO','YEAR','QTR', 'GPOA', 'g_GPOA']]
+df_data.iloc[0][['DATADATE', 'PERMNO','YEAR','QTR']]
+df_data.iloc[0 + n*4*3+1][['DATADATE', 'PERMNO','YEAR','QTR']]
+'''
 
 # Safety
 
@@ -253,7 +309,7 @@ df_fundamentals_quarterly_test_4 = df_fundamentals_quarterly.loc[df_fundamentals
 df_fundamentals_quarterly_test_5 = df_fundamentals_quarterly.loc[df_fundamentals_quarterly['TIC'] == bytes('WMT', 'utf-8')]
 '''
 
-
+'''
 df_fundamentals_quarterly_test = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compustat_merged_fundamentals_quarterly.sas7bdat'))
 
 ls_selected_cols_1_test = ['GVKEY', 'LPERMNO', 'LPERMCO', 'DATADATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'REVTY', 'OANCFY', 'CAPXY', 'FQTR','DILADQ']
@@ -262,7 +318,7 @@ df_fundamentals_quarterly_test_1 = df_fundamentals_quarterly_test[ls_selected_co
 df_fundamentals_quarterly_test_6 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('GOOGL', 'utf-8')]
 df_fundamentals_quarterly_test_7 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('AAPL', 'utf-8')]
 df_fundamentals_quarterly_test_8 = df_fundamentals_quarterly_test_1.loc[df_fundamentals_quarterly_test_1['TIC'] == bytes('WMT', 'utf-8')]
-
+'''
 
 '''
 
@@ -317,4 +373,33 @@ df_data['LEV'] = (df_data['DLTTQ'] + df_data['DLCQ']) / df_data['ATQ']
 
 df_data['AZSCORE'] = (1.2*df_data['WCAPQ'] + 1.4*df_data['REQ'] + 3.3*(df_data['PIQ'] + df_data['XINTQ']) + 0.6*df_data['ME'] + df_data['REVTQ']) / df_data['ATQ']
 
+'''
+
+
+'''
+j = 0
+n = 5
+idx_tmp = df_data.index
+for i in tqdm(idx_tmp):
+
+    if j <= (n*4*3):
+        df_data.loc[i, 'g_GPOA'] = None
+
+    if j >= (n*4*3+1):
+        #PERMNO_tpm = df_data.loc[i, 'PERMNO']
+        #YEAR_tpm = df_data.loc[i, 'YEAR']
+        #MTH_tpm = df_data.loc[i, 'MTH']
+
+        GPOA = df_data.loc[i, 'GPOA']
+        GPOA_t_5 = df_data[-62:i].loc[(df_data['PERMNO'] == df_data.loc[i, 'PERMNO']) & (df_data['YEAR'] == df_data.loc[i, 'YEAR'] - 5) & (df_data['MTH'] == df_data.loc[i, 'MTH'])]['GPOA']
+
+    j += 1
+
+
+PERMNO_tpm = df_data.loc[100, 'PERMNO']
+YEAR_tpm = df_data.loc[100, 'YEAR']
+MTH_tpm = df_data.loc[100, 'MTH']
+
+yy = df_data.loc[(df_data['PERMNO'] == PERMNO_tpm) & (df_data['YEAR'] == YEAR_tpm) & (df_data['MTH'] == MTH_tpm)]['GPOA']
+yyy = df_data.loc[(df_data['PERMNO'] == PERMNO_tpm) & (df_data['YEAR'] == YEAR_tpm - 5) & (df_data['MTH'] == MTH_tpm)]
 '''
