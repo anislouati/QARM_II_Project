@@ -30,33 +30,32 @@ ls_selected_cols_1 = ['LPERMNO', 'DATADATE', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GS
                       'LCTQ', 'LTQ', 'MIBTQ', 'NIQ', 'PIQ', 'PSTKQ', 'REQ', 'REVTQ', 'TXPQ', 'WCAPQ',
                       'XINTQ', 'CAPXY']
 df_fundamentals_quarterly = df_fundamentals_quarterly[ls_selected_cols_1]
-df_fundamentals_quarterly.rename(columns={'LPERMNO': 'PERMNO'}, inplace=True)
+df_fundamentals_quarterly.rename(columns={'LPERMNO': 'PERMNO', 'DATADATE': 'DATE'}, inplace=True)
 
 ls_selected_cols_2 = ['LPERMNO', 'DATADATE', 'CSHOQ', 'CSHTRM', 'PRCCM', 'TRT1M']
 df_security_monthly = df_security_monthly[ls_selected_cols_2]
-df_security_monthly.rename(columns={'LPERMNO': 'PERMNO'}, inplace=True)
+df_security_monthly.rename(columns={'LPERMNO': 'PERMNO', 'DATADATE': 'DATE'}, inplace=True)
 
 ls_selected_cols_3 = ['PERMNO', 'DATE', 'BID', 'ASK', 'VOL']
 df_stock_monthly = df_stock_monthly[ls_selected_cols_3]
+df_stock_monthly['KEYM'].value_counts()
+# Add key variables/identifiers
+def preprocessing_1(df_data):
+    df_out = df_data
+    df_out['YEAR'] = df_out['DATE'].dt.year.astype(float)
+    df_out['QTR'] = df_out['DATE'].dt.quarter.astype(float)
+    df_out['MTH'] = df_out['DATE'].dt.month.astype(float)
+    df_out['KEYQ'] = df_out['PERMNO'].astype(str) + '_' + df_out['YEAR'].astype(str) + '_' + df_out['QTR'].astype(str)
+    df_out['KEYM'] = df_out['PERMNO'].astype(str) + '_' + df_out['YEAR'].astype(str) + '_' + df_out['MTH'].astype(str)
+    return df_out
 
-# Create year, quarter and month cols
-df_fundamentals_quarterly['YEAR'] = df_fundamentals_quarterly['DATADATE'].dt.year.astype(float)
-df_fundamentals_quarterly['QTR'] = df_fundamentals_quarterly['DATADATE'].dt.quarter.astype(float)
-ls_selected_cols_1 = df_fundamentals_quarterly.columns.to_list()
-
-df_security_monthly['YEAR'] = df_security_monthly['DATADATE'].dt.year.astype(float)
-df_security_monthly['QTR'] = df_security_monthly['DATADATE'].dt.quarter.astype(float)
-df_security_monthly['MTH'] = df_security_monthly['DATADATE'].dt.month.astype(float)
-ls_selected_cols_2 = df_security_monthly.columns.to_list()
-
-df_stock_monthly['YEAR'] = df_stock_monthly['DATE'].dt.year.astype(float)
-df_stock_monthly['QTR'] = df_stock_monthly['DATE'].dt.quarter.astype(float)
-df_stock_monthly['MTH'] = df_stock_monthly['DATE'].dt.month.astype(float)
-ls_selected_cols_3 = df_stock_monthly.columns.to_list()
+df_fundamentals_quarterly = preprocessing_1(df_fundamentals_quarterly)
+df_security_monthly = preprocessing_1(df_security_monthly)
+df_stock_monthly = preprocessing_1(df_stock_monthly)
 
 # Filter dates (min_year-max_year)
 min_year = 1990
-max_year = 2023
+max_year = 2022
 df_fundamentals_quarterly = df_fundamentals_quarterly[(df_fundamentals_quarterly['YEAR'] >= min_year) & (df_fundamentals_quarterly['YEAR'] <= max_year)]
 df_security_monthly = df_security_monthly[(df_security_monthly['YEAR'] >= min_year) & (df_security_monthly['YEAR'] <= max_year)]
 df_stock_monthly = df_stock_monthly[(df_stock_monthly['YEAR'] >= min_year) & (df_stock_monthly['YEAR'] <= max_year)]
@@ -68,9 +67,78 @@ df_security_monthly = df_security_monthly[df_security_monthly['PERMNO'].isin(ls_
 df_stock_monthly = df_stock_monthly[df_stock_monthly['PERMNO'].isin(ls_permnos)]
 
 # Sort data and reset index
-df_fundamentals_quarterly = df_fundamentals_quarterly.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
-df_security_monthly = df_security_monthly.sort_values(by=['PERMNO', 'DATADATE'], ascending=[True, True]).reset_index(drop=True)
+df_fundamentals_quarterly = df_fundamentals_quarterly.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
+df_security_monthly = df_security_monthly.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 df_stock_monthly = df_stock_monthly.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
+
+# Checkpoint data
+# df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
+# df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
+# df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as f:
+    df_fundamentals_quarterly = pickle.load(f)
+with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as f:
+    df_security_monthly = pickle.load(f)
+with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'rb') as f:
+    df_stock_monthly = pickle.load(f)
+
+# Delete row duplicates
+def preprocessing_2(df_data):
+    df_out = df_data
+    idx_tmp = df_out.index
+    ls_pos = []
+    for i in tqdm(range(len(idx_tmp) - 1)):
+        if df_out.loc[idx_tmp[i], 'KEYQ'] == df_out.loc[idx_tmp[i+1], 'KEYQ']:
+            ls_pos += [idx_tmp[i]]
+
+    ls_drops = []
+
+            ls_drops += [idx_tmp[i]]
+            j = 1
+            while df_out.loc[idx_tmp[i-j] != 4]:
+                ls_drops += [idx_tmp[i-j]]
+                j -= 1
+            k = 1
+            while df_out.loc[idx_tmp[i+k] != 1]:
+                ls_drops += [idx_tmp[i+k]]
+                k +=
+            j = 0
+
+            j, k = 0
+
+        # if df_out.loc[idx_tmp[i], :].equals(df_out.loc[idx_tmp[i+1], :]):
+            ls_drops += [idx_tmp[i]]  # Drop the precedent ==> last remains
+            count += 1
+    df_drops = df_out.loc[ls_drops, :]
+    print(len(df_drops['PERMNO'].unique().tolist()))
+    df_out = df_out.drop(ls_drops)
+    print(ls_drops)
+    print('Row duplicates deleted: {}'.format(count))
+    return df_out
+
+def pre
+df_fundamentals_quarterly = preprocessing_2(df_fundamentals_quarterly)
+df_security_monthly = preprocessing_2(df_security_monthly, key='KEYM')
+df_stock_monthly = preprocessing_2(df_stock_monthly, key='KEYM')
+
+# Check eliminate duplicates
+df_stock_monthly['KEYQ'].value_counts()
+s_tmp = df_stock_monthly['KEYM'].value_counts()
+s_tmp = s_tmp[s_tmp > 1]
+print(s_tmp)
+df = pd.DataFrame(s_tmp)
+df = df.reset_index()
+df['Split'] = df['KEYM'].str.split('_').get(0)
+df['No'] = df['Split'].
+len(df_fundamentals_quarterly[df_fundamentals_quarterly['KEYM'].isin(s_tmp.index.to_list())]['PERMNO'].unique().tolist())
+
+
+
+df_fundamentals_quarterly[df_fundamentals_quarterly['FQTR'] != df_fundamentals_quarterly['QTR']]
+
+
+
+
 
 # Create additional variables
 df_fundamentals_quarterly['CAPXQ'] = df_fundamentals_quarterly['CAPXY']
@@ -115,7 +183,7 @@ for i in tqdm(idx_tmp):
 # Merge datasets
 df_fundamentals_quarterly['KEYQ'] = df_fundamentals_quarterly['PERMNO'].astype(str) + '_' + df_fundamentals_quarterly['YEAR'].astype(str) + '_' + df_fundamentals_quarterly['QTR'].astype(str)
 df_security_monthly['KEYQ'] = df_security_monthly['PERMNO'].astype(str) + '_' + df_security_monthly['YEAR'].astype(str) + '_' + df_security_monthly['QTR'].astype(str)
-df_security_monthly = df_security_monthly.drop(columns=['PERMNO', 'DATADATE', 'YEAR', 'QTR'])
+df_security_monthly = df_security_monthly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR'])
 df_tmp = pd.merge(df_fundamentals_quarterly, df_security_monthly, on='KEYQ', how='inner')
 
 df_tmp['KEYM'] = df_tmp['PERMNO'].astype(str) + '_' + df_tmp['YEAR'].astype(str) + '_' + df_tmp['MTH'].astype(str)
@@ -146,14 +214,13 @@ ls_permnos = df_tmp['PERMNO'].unique().tolist()
 df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 
 # Checkpoint data
-ls_selected_cols = ['PERMNO', 'DATADATE', 'FQTR', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM',
+ls_selected_cols = ['PERMNO', 'DATE', 'FQTR', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM',
                     'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'ACTQ', 'ATQ', 'CEQQ', 'CHEQ', 'COGSQ',
                     'CSTKQ', 'DLCQ', 'DLTTQ', 'DPQ', 'EPSFXQ', 'LCTQ', 'LTQ', 'MIBTQ', 'NIQ', 'PIQ',
                     'PSTKQ', 'REQ', 'REVTQ', 'TXPQ', 'WCAPQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ',
                     'CSHOQ', 'CSHTRM', 'PRCCM', 'TRT1M',
                     'BID', 'ASK', 'VOL', 'DVOL', 'SPRDPCT']
 df_data = df_data[ls_selected_cols]
-df_data.rename(columns={'DATADATE': 'DATE'}, inplace=True)
 df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
 df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
@@ -168,9 +235,30 @@ df_summary_1 = fn.tab_summary(df_1)
 # Missing values management [...]
 # TODO: value variables
 # TODO: create market equity (ME)
+# TODO: clean duplicates by permno and date, drop precedent if equal
+# TODO: fundamentals_quarterly, if problem of change in FQTR, remove above until previous 4, and remove below unitl next 1 ==> check 1234 is preserved
 
+df = df_data['KEYM'].value_counts()
+print(df[])
+ls_keym = df_data['KEYM'].unique().tolist()
+print(len())
+dic_data = {}
+l
+dic_os_data = {}
+n = 150
+for i in tqdm(range(len(df_rtns_1m_s2) - n), desc='OS Windows'):
+    dic_temp = {}
+    df_rtns_1m_t = df_rtns_1m_s2.iloc[i:i + n, :]
+    df_rtns_1m_t, s_mean_1m, df_covmat_1m = fn.get_mean_covmat_3(df_rtns_1m_t)
+    df_rtns_1m_t_1 = df_rtns_1m_s2.loc[:, [col for col in df_rtns_1m_s2.columns if col in df_rtns_1m_t.columns]]
+    df_rtns_1m_t_1 = df_rtns_1m_t_1.iloc[i + n, :]
+    date_t_1 = df_rtns_1m_s2.index[i + n]
 
-
+    dic_temp['df_rtns_1m_t'] = df_rtns_1m_t
+    dic_temp['df_rtns_1m_t_1'] = df_rtns_1m_t_1
+    dic_temp['s_mean_1m'] = s_mean_1m
+    dic_temp['df_covmat_1m'] = df_covmat_1m
+    dic_os_data[date_t_1] = dic_temp
 
 
 # %%
@@ -276,6 +364,7 @@ for i in tqdm(idx_tmp):
 
     j += 1
 
+zzz = df_data[['DATADATE', 'PERMNO', 'QTR', 'GPOA', 'g_GPOA']]
 '''
 zzz = df_data[['DATADATE', 'PERMNO','YEAR','QTR', 'GPOA', 'g_GPOA']]
 df_data.iloc[0][['DATADATE', 'PERMNO','YEAR','QTR']]
@@ -346,19 +435,12 @@ df_fundamentals_quarterly_test_2 = df_fundamentals_quarterly_test_1.loc[df_funda
 # *** Quality Score ***
 
 # Profitability
-
 df_data['BE'] = df_data['ATQ'] - df_data['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
-
 df_data['GPOA'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['ATQ']
-
 df_data['ROE'] = df_data['NIQ'] / df_data['BE']
-
 df_data['ROA'] = df_data['NIQ'] / df_data['ATQ']
-
 df_data['CFOA'] = (df_data['NIQ'] + df_data['DPQ'] - df_data['WCAPCHQ'] - df_data['CAPXQ']) / df_data['ATQ']
-
 df_data['GMAR'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['REVTQ']
-
 df_data['ACC'] = - (df_data['WCAPCHQ'] - df_data['DPQ']) / df_data['ATQ']
 
 
@@ -368,11 +450,8 @@ df_data['ACC'] = - (df_data['WCAPCHQ'] - df_data['DPQ']) / df_data['ATQ']
 
 
 # Safety
-
 df_data['LEV'] = (df_data['DLTTQ'] + df_data['DLCQ']) / df_data['ATQ']
-
 df_data['AZSCORE'] = (1.2*df_data['WCAPQ'] + 1.4*df_data['REQ'] + 3.3*(df_data['PIQ'] + df_data['XINTQ']) + 0.6*df_data['ME'] + df_data['REVTQ']) / df_data['ATQ']
-
 '''
 
 
