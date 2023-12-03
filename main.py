@@ -70,9 +70,9 @@ df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
 
 # Checkpoint data
-# df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
-# df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
-# df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
+#df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
+#df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
+#df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as f:
     df_fundamentals_quarterly = pickle.load(f)
 with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as f:
@@ -144,6 +144,7 @@ pd_delta_months['check'] = delta_months - months_count
 s_tmp = pd_delta_months['check'].value_counts()
 print(s_tmp[s_tmp != 0])
 df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+# %%
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
@@ -155,44 +156,38 @@ with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
 
 # Create additional variables
 # TODO: redo on df_data
-df_fundamentals_quarterly['CAPXQ'] = df_fundamentals_quarterly['CAPXY']
-df_fundamentals_quarterly['WCAPCHQ'] = df_fundamentals_quarterly['WCAPQ']
+df_data['CAPXQ'] = df_data['CAPXY']
+df_data['WCAPCHQ'] = df_data['WCAPQ']
 
 j = 0
-idx_tmp = df_fundamentals_quarterly.index
+idx_tmp = df_data.index
 for i in tqdm(idx_tmp):
     # CAPXQ
-    if j == 0:
-        if df_fundamentals_quarterly.loc[i, 'FQTR'] != 1:
-            df_fundamentals_quarterly.loc[i, 'CAPXQ'] = None
+    if j < (3*1):
+        if df_data.loc[i, 'FQTR'] != 1:
+            df_data.loc[i, 'CAPXQ'] = None
 
-    if j != 0:
-        if df_fundamentals_quarterly.loc[i, 'FQTR'] != 1:
-            if df_fundamentals_quarterly.loc[i, 'PERMNO'] == df_fundamentals_quarterly.loc[idx_tmp[j-1], 'PERMNO']:
-                df_fundamentals_quarterly.loc[i, 'CAPXQ'] = df_fundamentals_quarterly.loc[i, 'CAPXY'] - df_fundamentals_quarterly.loc[idx_tmp[j-1], 'CAPXY']
+    if j >= 3:
+        if df_data.loc[i, 'FQTR'] != 1:
+            if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j-3], 'PERMNO']:
+                df_data.loc[i, 'CAPXQ'] = df_data.loc[i, 'CAPXY'] - df_data.loc[idx_tmp[j-3], 'CAPXY']
             else:
-                df_fundamentals_quarterly.loc[i, 'CAPXQ'] = None
+                df_data.loc[i, 'CAPXQ'] = None
 
     # WCAPCHQ
-    if j == 0:
-        df_fundamentals_quarterly.loc[i, 'WCAPCHQ'] = None
+    if j < 3:
+        df_data.loc[i, 'WCAPCHQ'] = None
 
-    if j != 0:
-        if df_fundamentals_quarterly.loc[i, 'PERMNO'] == df_fundamentals_quarterly.loc[idx_tmp[j-1], 'PERMNO']:
-            if df_fundamentals_quarterly.loc[i, 'YEAR'] == df_fundamentals_quarterly.loc[idx_tmp[j-1], 'YEAR']:
-                if df_fundamentals_quarterly.loc[i, 'QTR'] - df_fundamentals_quarterly.loc[idx_tmp[j-1], 'QTR'] == 1:
-                    df_fundamentals_quarterly.loc[i, 'WCAPCHQ'] = df_fundamentals_quarterly.loc[i, 'WCAPQ'] - df_fundamentals_quarterly.loc[idx_tmp[j-1], 'WCAPQ']
-
-            elif df_fundamentals_quarterly.loc[i, 'YEAR'] - df_fundamentals_quarterly.loc[idx_tmp[j-1], 'YEAR'] == 1:
-                if df_fundamentals_quarterly.loc[idx_tmp[j-1], 'QTR'] == 4:
-                    df_fundamentals_quarterly.loc[i, 'WCAPCHQ'] = df_fundamentals_quarterly.loc[i, 'WCAPQ'] - df_fundamentals_quarterly.loc[idx_tmp[j-1], 'WCAPQ']
-
-            else:
-                df_fundamentals_quarterly.loc[i, 'WCAPCHQ'] = None
+    if j >= 3:
+        if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j-3], 'PERMNO']:
+            df_data.loc[i, 'WCAPCHQ'] = df_data.loc[i, 'WCAPQ'] - df_data.loc[idx_tmp[j-3], 'WCAPQ']
         else:
-            df_fundamentals_quarterly.loc[i, 'WCAPCHQ'] = None
+            df_data.loc[i, 'WCAPCHQ'] = None
 
     j += 1
+'''
+df_data_test = df_data[['PERMNO','FQTR','YEAR','QTR','MTH','CAPXY','CAPXQ','WCAPCHQ','WCAPQ']]
+'''
 
 # Modify/Create variables
 s_mean_cshoq = df_data.groupby('KEYQ')['CSHOQ'].mean()
@@ -256,6 +251,9 @@ for i in tqdm(range(len(df_rtns_1m_s2) - n), desc='OS Windows'):
 # **************************************************
 
 # %%
+
+
+
 # *** Value Score ***
 
 df_data['ME'] = df_data['PRCCM'] * df_data['CSHOQ']
