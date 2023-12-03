@@ -142,6 +142,8 @@ pd_delta_months['check'] = delta_months - months_count
 
 s_tmp = pd_delta_months['check'].value_counts()
 print(s_tmp[s_tmp != 0])
+
+
 df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 # %%
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
@@ -252,6 +254,36 @@ for i in tqdm(range(len(df_rtns_1m_s2) - n), desc='OS Windows'):
 # %%
 
 
+def get_LTM(variables):
+    j = 0
+    idx_tmp = df_data.index
+    for v in variables:
+        df_data[v + '_LTM'] = df_data[v]
+    for i in tqdm(idx_tmp):
+        for v in variables:
+            if j < (3 * 3):
+                df_data.loc[i, v + '_LTM'] = None
+            if j >= (3 * 3):
+                if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j - (3 * 3)], 'PERMNO']:
+                    df_data.loc[i, v + '_LTM'] = pd.array([df_data.loc[idx_tmp[j - (3 * 3)], v],
+                                                            df_data.loc[idx_tmp[j - (2 * 3)], v],
+                                                            df_data.loc[idx_tmp[j - (1 * 3)], v],
+                                                            df_data.loc[idx_tmp[j - (0 * 3)], v]]).sum(skipna=False)
+                else:
+                    df_data.loc[i, v + '_LTM'] = None
+
+        j = j + 1
+
+
+get_LTM(['REVTQ','NIQ','COGSQ','DPQ','WCAPCHQ','CAPXQ'])
+
+
+df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+# %%
+with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
+    df_data = pickle.load(f)
+
+# TODO: LTM score
 
 # *** Value Score ***
 
@@ -277,35 +309,12 @@ df_data['GMAR'] = (df_data['REVTQ'] - df_data['COGSQ']) / df_data['REVTQ']
 df_data['ACC'] = - (df_data['WCAPCHQ'] - df_data['DPQ']) / df_data['ATQ']
 
 
-# TODO : LTM function
-j = 0
-idx_tmp = df_data.index
-df_data['LTM_REVTQ'] = df_data['REVTQ']
-for i in tqdm(idx_tmp):
-    if j < (4 * 3):
-        df_data.loc[i,'LTM_REVTQ'] == None
-    if j >=(4 * 3):
-        if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j - (4 * 3)], 'PERMNO']:
-            df_data.loc[i, 'LTM_REVTQ'] = pd.array([df_data.loc[idx_tmp[j - (4 * 3)], 'REVTQ'],
-                                               df_data.loc[idx_tmp[j - (3 * 3)], 'REVTQ'],
-                                               df_data.loc[idx_tmp[j - (2 * 3)], 'REVTQ'],
-                                               df_data.loc[idx_tmp[j - (1 * 3)], 'REVTQ']]).sum(skipna= False)
-        else:
-            df_data.loc[i, 'LTM_REVTQ'] == None
-
-    j = j+1
-
-#pd.array([1,2,None]).sum(skipna= False)
-df_data_test_4 = df_data.loc[df_data['TIC'] == bytes('AAPL', 'utf-8')]
-
-
 # Growth
 df_data['g_GPOA'] = df_data['GPOA']
 df_data['g_ROE'] = df_data['ROE']
 df_data['g_ROA'] = df_data['ROA']
 df_data['g_CFOA'] = df_data['CFOA']
 df_data['g_GMAR'] = df_data['GMAR']
-
 
 j = 0
 n = 5
@@ -321,26 +330,12 @@ for i in tqdm(idx_tmp):
 
     if j >= (n*4*3):
         if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j-(n*4*3)], 'PERMNO']:
-            if df_data.loc[i, 'YEAR'] - df_data.loc[idx_tmp[j-(n*4*3)], 'YEAR'] == 5:
-                if df_data.loc[i, 'QTR'] == df_data.loc[idx_tmp[j - (n*4*3)], 'QTR']:
-                    df_data.loc[i, 'g_GPOA'] = (df_data.loc[i, 'GPOA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'GPOA']) / df_data.loc[idx_tmp[j-(n*4*3)], 'GPOA']
-                    df_data.loc[i, 'g_ROE'] = (df_data.loc[i, 'ROE'] - df_data.loc[idx_tmp[j-(n*4*3)], 'ROE']) / df_data.loc[idx_tmp[j-(n*4*3)], 'ROE']
-                    df_data.loc[i, 'g_ROA'] = (df_data.loc[i, 'ROA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'ROA']) / df_data.loc[idx_tmp[j-(n*4*3)], 'ROA']
-                    df_data.loc[i, 'g_CFOA'] = (df_data.loc[i, 'CFOA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'CFOA']) / df_data.loc[idx_tmp[j-(n*4*3)], 'CFOA']
-                    df_data.loc[i, 'g_GMAR'] = (df_data.loc[i, 'GMAR'] - df_data.loc[idx_tmp[j-(n*4*3)], 'GMAR']) / df_data.loc[idx_tmp[j-(n*4*3)], 'GMAR']
+            df_data.loc[i, 'g_GPOA'] = (df_data.loc[i, 'GPOA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'GPOA']) / df_data.loc[idx_tmp[j-(n*4*3)], 'GPOA']
+            df_data.loc[i, 'g_ROE'] = (df_data.loc[i, 'ROE'] - df_data.loc[idx_tmp[j-(n*4*3)], 'ROE']) / df_data.loc[idx_tmp[j-(n*4*3)], 'ROE']
+            df_data.loc[i, 'g_ROA'] = (df_data.loc[i, 'ROA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'ROA']) / df_data.loc[idx_tmp[j-(n*4*3)], 'ROA']
+            df_data.loc[i, 'g_CFOA'] = (df_data.loc[i, 'CFOA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'CFOA']) / df_data.loc[idx_tmp[j-(n*4*3)], 'CFOA']
+            df_data.loc[i, 'g_GMAR'] = (df_data.loc[i, 'GMAR'] - df_data.loc[idx_tmp[j-(n*4*3)], 'GMAR']) / df_data.loc[idx_tmp[j-(n*4*3)], 'GMAR']
 
-                else:
-                    df_data.loc[i, 'g_GPOA'] = None
-                    df_data.loc[i, 'g_ROE'] = None
-                    df_data.loc[i, 'g_ROA'] = None
-                    df_data.loc[i, 'g_CFOA'] = None
-                    df_data.loc[i, 'g_GMAR'] = None
-            else:
-                df_data.loc[i, 'g_GPOA'] = None
-                df_data.loc[i, 'g_ROE'] = None
-                df_data.loc[i, 'g_ROA'] = None
-                df_data.loc[i, 'g_CFOA'] = None
-                df_data.loc[i, 'g_GMAR'] = None
         else:
             df_data.loc[i, 'g_GPOA'] = None
             df_data.loc[i, 'g_ROE'] = None
@@ -350,7 +345,7 @@ for i in tqdm(idx_tmp):
 
     j += 1
 
-zzz = df_data[['DATADATE', 'PERMNO', 'QTR', 'GPOA', 'g_GPOA']]
+zzz = df_data[['DATE', 'PERMNO', 'QTR', 'GPOA', 'g_GPOA', 'ROE','g_ROE', 'ROA', 'g_ROA', 'CFOA', 'g_CFOA', 'g_GMAR']]
 '''
 zzz = df_data[['DATADATE', 'PERMNO','YEAR','QTR', 'GPOA', 'g_GPOA']]
 df_data.iloc[0][['DATADATE', 'PERMNO','YEAR','QTR']]
@@ -519,4 +514,30 @@ for i in tqdm(idx_tmp):
                     #print(idx_tmp[j])
     j = j + 1
 ls = list(set(df_fundamentals_quarterly.loc[list_check_FQTR, 'PERMNO'].to_list()))
+'''
+
+
+'''
+j = 0
+idx_tmp = df_data.index
+df_data['LTM_REVTQ'] = df_data['REVTQ']
+for i in tqdm(idx_tmp):
+    if j < (3 * 3):
+        df_data.loc[i,'LTM_REVTQ'] == None
+    if j >=(3 * 3):
+        if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j - (3 * 3)], 'PERMNO']:
+            df_data.loc[i, 'LTM_REVTQ'] = pd.array([df_data.loc[idx_tmp[j - (3 * 3)], 'REVTQ'],
+                                               df_data.loc[idx_tmp[j - (2 * 3)], 'REVTQ'],
+                                               df_data.loc[idx_tmp[j - (1 * 3)], 'REVTQ'],
+                                               df_data.loc[idx_tmp[j - (0 * 3)], 'REVTQ']]).sum(skipna= False)
+        else:
+            df_data.loc[i, 'LTM_REVTQ'] == None
+
+    j = j+1
+'''
+
+'''
+#pd.array([1,2,None]).sum(skipna= False)
+df_data_test_4 = df_data.loc[df_data['TIC'] == bytes('AAPL', 'utf-8')]
+df_data_test_5 = df_data_test_4[['PERMNO','FQTR','YEAR','QTR','MTH','REVTQ','REVTQ_LTM','NIQ', 'NIQ_LTM']]
 '''
