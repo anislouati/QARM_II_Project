@@ -472,3 +472,53 @@ yyy = df_data.loc[(df_data['PERMNO'] == PERMNO_tpm) & (df_data['YEAR'] == YEAR_t
 
 
 '''
+
+
+'''
+# Preprocess data ()
+def preprocess_4(df_data):
+    df_out = df_data
+    ls_permnos = df_out['PERMNO'].unique().tolist()
+
+    df_dates = pd.DataFrame(pd.date_range(start=datetime(1989, 1, 1), end=datetime(2023, 12, 31), freq='BM').rename('DATE'))
+    df_dates['YEAR'] = df_dates['DATE'].dt.year.astype(float)
+    df_dates['QTR'] = df_dates['DATE'].dt.quarter.astype(float)
+    df_dates['MTH'] = df_dates['DATE'].dt.month.astype(float)
+
+    dic_dfs = {}
+    for permno in tqdm(ls_permnos):
+        s_dates = df_out[df_out['PERMNO'] == permno]['DATE']
+        dt_start, dt_end = s_dates.min(), s_dates.max()
+        pos_start = df_dates.index[(df_dates['YEAR'] == dt_start.year) & (df_dates['MTH'] == dt_start.month)].tolist()[0]
+        pos_end = df_dates.index[(df_dates['YEAR'] == dt_end.year) & (df_dates['MTH'] == dt_end.month)].tolist()[0]
+
+        df_tmp = df_dates.loc[pos_start:pos_end, ['DATE']]
+        df_tmp['PERMNO'] = permno
+        df_tmp = fn.preprocessing_1(df_tmp)
+        df_tmp = df_tmp[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM']]
+        dic_dfs[permno] = df_tmp
+
+    return dic_dfs
+
+dic_dfs = preprocess_4(df_data)
+
+df_test = pd.DataFrame.from_dict(dic_dfs, orient='index')
+
+# Check FQTR pattern
+j = 0
+idx_tmp = df_fundamentals_quarterly.index
+list_check_FQTR = []
+for i in tqdm(idx_tmp):
+    if j != 0:
+        if df_fundamentals_quarterly.loc[i, 'PERMNO'] == df_fundamentals_quarterly.loc[idx_tmp[j - 1], 'PERMNO']:
+            if df_fundamentals_quarterly.loc[i, 'FQTR'] == 1:
+                if df_fundamentals_quarterly.loc[i, 'FQTR'] - df_fundamentals_quarterly.loc[idx_tmp[j - 1], 'FQTR'] != -3:
+                    list_check_FQTR.append(idx_tmp[j])
+                    #print(idx_tmp[j])
+            if df_fundamentals_quarterly.loc[i, 'FQTR'] in [2,3,4]:
+                if df_fundamentals_quarterly.loc[i, 'FQTR'] - df_fundamentals_quarterly.loc[idx_tmp[j - 1], 'FQTR'] != 1:
+                    list_check_FQTR.append(idx_tmp[j])
+                    #print(idx_tmp[j])
+    j = j + 1
+ls = list(set(df_fundamentals_quarterly.loc[list_check_FQTR, 'PERMNO'].to_list()))
+'''
