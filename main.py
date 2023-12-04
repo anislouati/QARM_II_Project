@@ -32,11 +32,11 @@ ls_selected_cols_1 = ['LPERMNO', 'DATADATE', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GS
 df_fundamentals_quarterly = df_fundamentals_quarterly[ls_selected_cols_1]
 df_fundamentals_quarterly.rename(columns={'LPERMNO': 'PERMNO', 'DATADATE': 'DATE'}, inplace=True)
 
-ls_selected_cols_2 = ['LPERMNO', 'DATADATE', 'CSHOQ', 'CSHTRM', 'PRCCM', 'TRT1M']
+ls_selected_cols_2 = ['LPERMNO', 'DATADATE', 'PRCCM', 'TRT1M']
 df_security_monthly = df_security_monthly[ls_selected_cols_2]
 df_security_monthly.rename(columns={'LPERMNO': 'PERMNO', 'DATADATE': 'DATE'}, inplace=True)
 
-ls_selected_cols_3 = ['PERMNO', 'DATE', 'BID', 'ASK', 'VOL']
+ls_selected_cols_3 = ['PERMNO', 'DATE', 'BID', 'ASK', 'VOL', 'SHROUT']
 df_stock_monthly = df_stock_monthly[ls_selected_cols_3]
 
 # Preprocess data (add keys/identifiers)
@@ -85,8 +85,47 @@ df_tmp = pd.merge(df_fundamentals_quarterly, df_security_monthly, on='KEYQ', how
 df_stock_monthly = df_stock_monthly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ'])
 df_data = pd.merge(df_stock_monthly, df_tmp, on='KEYM', how='inner')
 
+
+
+#%%
+
+
+
+
+def preprocessing_4(df_data):
+    df_out = df_data
+    ls_permnos = df_out['PERMNO'].unique().tolist()
+
+    df_dates = pd.DataFrame({'DATE': pd.Series(df_out['DATE'].unique().tolist())})
+    df_dates['YEAR'] = df_dates['DATE'].dt.year.astype(float)
+    df_dates['MTH'] = df_dates['DATE'].dt.month.astype(float)
+    df_dates = df_dates.sort_values(by=['YEAR', 'MTH'], ascending=[True, True]).reset_index(drop=True)
+
+    # Fill missing dates with nans
+    ls_dfs = []
+    for permno in tqdm(ls_permnos, desc='Preprocessing (4)'):
+        s_tmp = df_out[df_out['PERMNO'] == permno]['DATE']
+        dt_start, dt_end = s_tmp.min(), s_tmp.max()
+        pos_start = df_dates.index[(df_dates['YEAR'] == dt_start.year) & (df_dates['MTH'] == dt_start.month)].tolist()[0]
+        pos_end = df_dates.index[(df_dates['YEAR'] == dt_end.year) & (df_dates['MTH'] == dt_end.month)].tolist()[0]
+
+        df_tmp = df_dates.loc[pos_start:pos_end, ['DATE']]
+        df_tmp['PERMNO'] = permno
+        df_tmp = fn.preprocessing_1(df_tmp)
+        df_tmp = df_tmp[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM']]
+        df_tmp = df_tmp[~df_tmp['KEYM'].isin(df_data[df_data['PERMNO'] == permno]['KEYM'])]
+        ls_dfs += [df_tmp]
+
+    ls_dfs = [df_out] + ls_dfs
+    df_out = pd.concat(ls_dfs, axis=0, ignore_index=True)
+    return df_out
+
+
+
+
+print(len(df_data['DATE'].unique().tolist()))
 # Preprocess data (fill missing dates with nans)
-df_data = fn.preprocess_4(df_data)
+df_data = preprocessing_4(df_data)
 ls_selected_cols = ['PERMNO', 'DATE', 'FQTR', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM',
                     'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC', 'ACTQ', 'ATQ', 'CEQQ', 'CHEQ', 'COGSQ',
                     'CSTKQ', 'DLCQ', 'DLTTQ', 'DPQ', 'EPSFXQ', 'LCTQ', 'LTQ', 'MIBTQ', 'NIQ', 'PIQ',
@@ -97,8 +136,6 @@ df_data = df_data[ls_selected_cols]
 df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
 # Check data preprocessing (filled KEYM)
-df_data.groupby('PERMNO')['DATE'].max().dt.to_period('M')
-df_data.groupby('PERMNO')['DATE'].min().dt.to_period('M')
 delta_months = (df_data.groupby('PERMNO')['DATE'].max().dt.to_period('M') - df_data.groupby('PERMNO')['DATE'].min().dt.to_period('M')).apply(attrgetter('n')) + 1
 months_count = df_data.groupby('PERMNO')['DATE'].count()
 
@@ -142,20 +179,21 @@ for i in tqdm(idx_tmp):
 
     j += 1
 
-# Modify/Create variables
-s_mean_cshoq = df_data.groupby('KEYQ')['CSHOQ'].mean()
-df_tmp = pd.DataFrame(s_mean_cshoq).reset_index(drop=False)
-df_tmp.rename(columns={'CSHOQ': 'CSHOQ_NEW'}, inplace=True)
-df_data = pd.merge(df_tmp, df_data, on='KEYQ', how='inner')
-df_data['CSHOQ'] = df_data['CSHOQ_NEW']
-df_data = df_data.drop(columns=['CSHOQ_NEW'])
+# Checkpoint data
+# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
+    df_data = pickle.load(f)
 
+
+
+
+# Modify/Create variables
 df_data['XINTQ'] = df_data['XINTQ'].fillna(0)  # Fill missing values with 0 for the interest expense
 df_data['TRT1M'] = df_data['TRT1M'] / 100  # Expressed in percentage points
 df_data['VOL'] = df_data['VOL'] * 100  # Expressed in hundreds shares (monthly data)
 df_data['DVOL'] = df_data['PRCCM'] * df_data['VOL'] / (10**6)  # Dollar volume expressed in millions
 df_data['SPRDPCT'] = (df_data['ASK'] - df_data['BID']) / df_data['ASK']  # Percentage bid-ask spread
-
+df_data['SHROUT'] = df_data['SHROUT'] / 1000  # Shares outstanding expressed in mil.
 # Filter out illiquid stocks (max dollar volume < $100mil.)
 min_dvol = 100
 s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
@@ -164,10 +202,18 @@ df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
 ls_permnos = df_tmp['PERMNO'].unique().tolist()
 df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 
-# Checkpoint data
-df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
-    df_data = pickle.load(f)
+# Need to sort
+
+
+
+
+dic_data = {}
+
+
+
+
+
+
 
 
 # Summarize final data
@@ -175,6 +221,8 @@ df_1 = df_data.drop(columns=['PERMNO', 'DATE', 'FQTR', 'QTR', 'MTH', 'KEYQ', 'KE
                              'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'LOC'])
 df_summary_1 = fn.tab_summary(df_1)
 
+df_1 = df_stock_monthly.drop(columns=['PERMNO', 'DATE'])
+df_summary_1 = fn.tab_summary(df_1)
 
 # TODO: create data dictionary
 '''
@@ -502,6 +550,15 @@ for i in tqdm(idx_tmp):
 #pd.array([1,2,None]).sum(skipna= False)
 df_data_test_4 = df_data.loc[df_data['TIC'] == bytes('AAPL', 'utf-8')]
 df_data_test_5 = df_data_test_4[['PERMNO','FQTR','YEAR','QTR','MTH','REVTQ','REVTQ_LTM','NIQ', 'NIQ_LTM']]
+'''
+
+'''
+s_mean_cshoq = df_data.groupby('KEYQ')['CSHOQ'].mean()
+df_tmp = pd.DataFrame(s_mean_cshoq).reset_index(drop=False)
+df_tmp.rename(columns={'CSHOQ': 'CSHOQ_NEW'}, inplace=True)
+df_data = pd.merge(df_tmp, df_data, on='KEYQ', how='inner')
+df_data['CSHOQ'] = df_data['CSHOQ_NEW']
+df_data = df_data.drop(columns=['CSHOQ_NEW'])
 '''
 
 '''
