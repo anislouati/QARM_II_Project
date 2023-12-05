@@ -1,6 +1,7 @@
 # Import packages
 from pathlib import Path
 from tqdm import tqdm
+import numpy as np
 import pandas as pd
 
 # Project directories paths (README: modify if necessary!)
@@ -152,3 +153,11 @@ def tab_summary(df_data):
                                'Median': df_data.median(),
                                'Max': df_data.max()})
     return df_summary
+
+
+
+
+
+
+
+
