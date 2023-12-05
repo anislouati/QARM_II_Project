@@ -35,8 +35,29 @@ ls_selected_cols_2 = ['LPERMNO', 'DATADATE', 'PRCCM', 'TRT1M']
 df_security_monthly = df_security_monthly[ls_selected_cols_2]
 df_security_monthly.rename(columns={'LPERMNO': 'PERMNO', 'DATADATE': 'DATE'}, inplace=True)
 
-ls_selected_cols_3 = ['PERMNO', 'DATE', 'BID', 'ASK', 'VOL', 'SHROUT']
+ls_selected_cols_3 = ['PERMNO', 'DATE', 'BID', 'ASK', 'VOL', 'SHROUT', 'SPRTRN']
 df_stock_monthly = df_stock_monthly[ls_selected_cols_3]
+
+
+
+# Checkpoint data
+df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
+df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
+df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as f:
+    df_fundamentals_quarterly = pickle.load(f)
+with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as f:
+    df_security_monthly = pickle.load(f)
+with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'rb') as f:
+    df_stock_monthly = pickle.load(f)
+
+
+
+
+
+
+
+
 
 # Preprocess data (add keys/identifiers)
 df_fundamentals_quarterly = fn.preprocessing_1(df_fundamentals_quarterly)
@@ -66,16 +87,7 @@ df_fundamentals_quarterly = fn.preprocessing_2(df_fundamentals_quarterly)
 df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
-# Checkpoint data
-df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
-df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
-df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
-with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as f:
-    df_fundamentals_quarterly = pickle.load(f)
-with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as f:
-    df_security_monthly = pickle.load(f)
-with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'rb') as f:
-    df_stock_monthly = pickle.load(f)
+
 
 # Merge datasets
 df_fundamentals_quarterly = df_fundamentals_quarterly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYM'])
@@ -89,7 +101,7 @@ df_data = fn.preprocessing_4(df_data)
 ls_selected_cols = ['PERMNO', 'DATE', 'FQTR', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM',
                     'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ACTQ', 'ATQ', 'COGSQ', 'DLCQ', 'DLTTQ', 'DPQ',
                     'EPSFXQ', 'LCTQ', 'LTQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPQ', 'XINTQ', 'CAPXY',
-                    'PRCCM', 'TRT1M', 'BID', 'ASK', 'VOL', 'SHROUT']
+                    'PRCCM', 'TRT1M', 'BID', 'ASK', 'VOL', 'SHROUT', 'SPRTRN']
 df_data = df_data[ls_selected_cols]
 df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
@@ -111,7 +123,7 @@ df_data = fn.preprocessing_5(df_data)
 ls_selected_cols = ['PERMNO', 'DATE', 'FQTR', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM',
                     'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ACTQ', 'ATQ', 'COGSQ', 'DLCQ', 'DLTTQ', 'DPQ',
                     'EPSFXQ', 'LCTQ', 'LTQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ',
-                    'PRCCM', 'TRT1M', 'BID', 'ASK', 'SPRDPCT', 'VOL', 'DVOL', 'SHROUT']
+                    'PRCCM', 'TRT1M', 'BID', 'ASK', 'SPRDPCT', 'VOL', 'DVOL', 'SHROUT', 'SPRTRN']
 df_data = df_data[ls_selected_cols]
 df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
@@ -125,7 +137,6 @@ df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 
 # Checkpoint data
 df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-# %%
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
@@ -134,6 +145,7 @@ df_1 = df_data.drop(columns=['PERMNO', 'DATE', 'FQTR', 'QTR', 'MTH', 'KEYQ', 'KE
                              'CONM', 'TIC', 'EXCHG', 'GSECTOR'])
 df_summary_1 = fn.tab_summary(df_1)
 
+print(df_data['SPRTRN'].unique().tolist())
 
 # Create data dictionary
 dic_data = {}
@@ -272,7 +284,6 @@ df = df.drop(columns=[v + '_t', 'PERMNO_t'])
 # **************************************************
 
 '''
-
 def get_LTM(variables):
     j = 0
     idx_tmp = df_data.index
@@ -320,7 +331,6 @@ df_data['REVTQ_LTM_2'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t_3'], df
 test_LTM = df_data['REVTQ_LTM'].fillna(-1000000000) == df_data['REVTQ_LTM_2'].fillna(-1000000000)
 print(len(test_LTM))
 print(test_LTM.sum())
-
 '''
 
 '''
@@ -375,5 +385,4 @@ df_data = df_data.drop(columns=['GPOA_t', 'PERMNO_t'])
 test_LTM = df_data['d_GPOA'].fillna(-1000000000) == df_data['d_GPOA_2'].fillna(-1000000000)
 print(len(test_LTM))
 print(test_LTM.sum())
-
 '''
