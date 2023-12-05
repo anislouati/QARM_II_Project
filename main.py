@@ -233,6 +233,36 @@ df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
+# Beta
+
+n=5
+for i in range(1,n*12+1):
+    df_data['TRT1M'+'t_' + str(i)] = df_data['TRT1M'].shift(periods=i*3)
+
+df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=n * 4 * 3)
+
+df_data['TRT1M_list'] = 'None'
+
+df_data['TRT1M_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['TRT1M'+'t_' + str(i)] , np.nan)
+
+
+#df_data = pd.concat([df_data['TRT1M'+'t_' + str(i)] for i in range(1,n*12+1)]).sort_index().values.tolist()
+#df_data['TRT1M_list'] = [df_data['TRT1M'+'t_' + str(i)] for i in range(1,n*12+1)]
+
+# Rename the concatenated column and drop the original columns
+df = pd.concat([df, concatenated_cols['Name_Age_Country']], axis=1)
+df = df.rename(columns={'Name_Age_Country': 'Name|Age|Country'})
+df = df.drop(columns=['Name', 'Age', 'Country'])
+
+
+if df_data['PERMNO'] == df_data['PERMNO_t']:
+
+
+col_list = [v + '_t', v]
+
+df['d_' + v] = np.where(df['PERMNO'] == df['PERMNO_t'], df[col_list].sum(axis=1, skipna=False), np.nan)
+
+df = df.drop(columns=[v + '_t', 'PERMNO_t'])
 
 
 
