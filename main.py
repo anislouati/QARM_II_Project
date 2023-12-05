@@ -134,9 +134,16 @@ df_1 = df_data.drop(columns=['PERMNO', 'DATE', 'FQTR', 'QTR', 'MTH', 'KEYQ', 'KE
 df_summary_1 = fn.tab_summary(df_1)
 
 
+# Create data dictionary
+dic_data = {}
+ls_dates = sorted(df_data['DATE'].unique().tolist())
+ls_lens = []
 
-
-
+for date in tqdm(ls_dates):
+    df_tmp = df_data[df_data['DATE'] == date]
+    df_tmp = df_tmp.dropna(how='any')
+    dic_data[date] = df_tmp
+    ls_lens += [len(df_tmp)]
 
 
 
@@ -249,13 +256,6 @@ zzz_test = zzz.loc[df_data['TIC'] == bytes('AAPL', 'utf-8')]
 # Safety
 df_data['LEV'] = (df_data['DLTTQ'] + df_data['DLCQ']) / df_data['ATQ']
 df_data['AZSCORE'] = (1.2*df_data['WCAPQ'] + 1.4*df_data['REQ_LTM'] + 3.3*(df_data['PIQ_LTM'] + df_data['XINTQ_LTM']) + 0.6*df_data['ME'] + df_data['REVTQ_LTM']) / df_data['ATQ']
-
-
-# Need to sort
-dic_data = {}
-# TODO: create data dictionary
-
-
 
 
 

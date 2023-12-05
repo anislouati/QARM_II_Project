@@ -143,6 +143,7 @@ def preprocessing_5(df_data):
 
     return df_out
 
+
 def tab_summary(df_data):
     df_summary = pd.DataFrame({'Count': df_data.count(),  # Count of non-missing values
                                'Missing Pct': (df_data.isna().sum() / len(df_data)),  # Missing values as percentage
