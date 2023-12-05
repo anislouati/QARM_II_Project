@@ -248,16 +248,55 @@ with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
 # Beta
 
 n=5
-for i in range(1,n*12+1):
-    df_data['TRT1M'+'t_' + str(i)] = df_data['TRT1M'].shift(periods=i*3)
+for i in range(0,n*12+1):
+    df_data['TRT1M' + 't_' + str(i)] = df_data['TRT1M'].shift(periods=i)
+for i in range(0, n * 12 + 1):
+    df_data['SPRTRN' + 't_' + str(i)] = df_data['SPRTRN'].shift(periods=i)
 
 df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=n * 4 * 3)
 
-df_data['TRT1M_list'] = 'None'
 
-df_data['TRT1M_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['TRT1M'+'t_' + str(i)] , np.nan)
+col_list_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(0,n*12+1)]
+col_list_SPRTRN = ['SPRTRN' + 't_' + str(i) for i in range(0,n*12+1)]
 
 
+df_data['TRT1M_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], -df_data[col_list_TRT1M].mean(axis=1, skipna=False), np.nan) # Check the PERMNO
+df_data['SPRTRN_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], -df_data[col_list_SPRTRN].mean(axis=1, skipna=False), np.nan) # Check the PERMNO
+
+for i in range(0,n*12+1):
+    df_data['TRT1M' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'TRT1M_mean']].sum(axis=1, skipna=False)
+
+for i in range(0, n * 12 + 1):
+    df_data['SPRTRN' + 't_' + str(i)] = df_data['SPRTRN'].shift(periods=i)
+
+
+
+for i in range(0, n * 12 + 1):
+    df_data['Prod_TRT1M_SPRTRN' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'SPRTRN' + 't_' + str(i)]].product(axis=1, skipna=False)
+
+
+col_list_Cov_TRT1M_SPRTRN= ['Prod_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0,n*12+1)]
+
+df_data['Cov_TRT1M_SPRTRN'] = df_data[col_list_Cov_TRT1M_SPRTRN].sum(axis=1, skipna=False) / (len(range(0, n * 12 + 1)) - 1)
+
+
+df_data['TRT1M_Var'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[col_list_TRT1M].var(axis=1, skipna=False), np.nan)
+df_data['SPRTRN_Var'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[col_list_SPRTRN].var(axis=1, skipna=False), np.nan)
+
+df_data['Beta'] = df_data['Cov_TRT1M_SPRTRN'] / df_data['SPRTRN_Var']
+
+
+df_data = df_data.drop(columns=['TRT1M' + 't_' + str(i) for i in range(0,n*12+1)])
+df_data = df_data.drop(columns=['SPRTRN' + 't_' + str(i) for i in range(0,n*12+1)])
+df_data = df_data.drop(columns=['Prod_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0,n*12+1)])
+df_data = df_data.drop(columns=['TRT1M_mean','SPRTRN_mean','Cov_TRT1M_SPRTRN','PERMNO_t'])
+
+
+
+#df_data['SPRTRN_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[['TRT1M'+'t_' + str(i) for i in range(1,n*12+1)]].mean(), np.nan)
+
+'''
+#df_data['TRT1M_list'] = 'None'
 #df_data = pd.concat([df_data['TRT1M'+'t_' + str(i)] for i in range(1,n*12+1)]).sort_index().values.tolist()
 #df_data['TRT1M_list'] = [df_data['TRT1M'+'t_' + str(i)] for i in range(1,n*12+1)]
 
@@ -275,7 +314,7 @@ col_list = [v + '_t', v]
 df['d_' + v] = np.where(df['PERMNO'] == df['PERMNO_t'], df[col_list].sum(axis=1, skipna=False), np.nan)
 
 df = df.drop(columns=[v + '_t', 'PERMNO_t'])
-
+'''
 
 
 # %%
@@ -385,4 +424,38 @@ df_data = df_data.drop(columns=['GPOA_t', 'PERMNO_t'])
 test_LTM = df_data['d_GPOA'].fillna(-1000000000) == df_data['d_GPOA_2'].fillna(-1000000000)
 print(len(test_LTM))
 print(test_LTM.sum())
+'''
+
+'''
+n=5
+for i in range(1,n*12+1):
+    df_data['TRT1M' + 't_' + str(i)] = df_data['TRT1M'].shift(periods=i)
+for i in range(1, n * 12 + 1):
+    df_data['SPRTRN' + 't_' + str(i)] = df_data['SPRTRN'].shift(periods=i)
+
+df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=n * 4 * 3)
+
+col_list_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(1,n*12+1)]
+col_list_TRT1M.append('TRT1M')
+
+col_list_SPRTRN = ['SPRTRN' + 't_' + str(i) for i in range(1,n*12+1)]
+col_list_SPRTRN.append('SPRTRN')
+
+df_data['TRT1M_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], -df_data[col_list_TRT1M].mean(axis=1, skipna=False), np.nan) # Check the PERMNO
+df_data['SPRTRN_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], -df_data[col_list_SPRTRN].mean(axis=1, skipna=False), np.nan) # Check the PERMNO
+
+for i in range(1,n*12+1):
+    df_data['TRT1M' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'TRT1M_mean']].sum(axis=1, skipna=False)
+
+for i in range(1, n * 12 + 1):
+    df_data['SPRTRN' + 't_' + str(i)] = df_data['SPRTRN'].shift(periods=i)
+
+for i in range(1, n * 12 + 1):
+    df_data['Prod_TRT1M_SPRTRN' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'SPRTRN' + 't_' + str(i)]].product(axis=1, skipna=False)
+
+col_list_Cov_TRT1M_SPRTRN= ['TRT1M' + 't_' + str(i) for i in range(1,n*12+1)]
+col_list_Cov_TRT1M_SPRTRN.append('TRT1M')
+
+df_data['Cov_TRT1M_SPRTRN'] =
+
 '''
