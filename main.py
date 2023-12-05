@@ -67,9 +67,9 @@ df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
 # Checkpoint data
-# df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
-# df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
-# df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
+df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
+df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
+df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as f:
     df_fundamentals_quarterly = pickle.load(f)
 with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as f:
@@ -125,6 +125,7 @@ df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 
 # Checkpoint data
 df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+# %%
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
@@ -152,42 +153,26 @@ for date in tqdm(ls_dates):
 # *** Branch: SCORE COMPUTATIONS                 ***
 # **************************************************
 
-# %%
-
-
-def get_LTM(variables):
-    j = 0
-    idx_tmp = df_data.index
+def get_LTM(variables,df):
     for v in variables:
-        df_data[v + '_LTM'] = df_data[v]
-    for i in tqdm(idx_tmp):
-        for v in variables:
-            if j < (3 * 3):
-                df_data.loc[i, v + '_LTM'] = None
-            if j >= (3 * 3):
-                if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j - (3 * 3)], 'PERMNO']:
-                    df_data.loc[i, v + '_LTM'] = pd.array([df_data.loc[idx_tmp[j - (3 * 3)], v],
-                                                            df_data.loc[idx_tmp[j - (2 * 3)], v],
-                                                            df_data.loc[idx_tmp[j - (1 * 3)], v],
-                                                            df_data.loc[idx_tmp[j - (0 * 3)], v]]).sum(skipna=False)
-                else:
-                    df_data.loc[i, v + '_LTM'] = None
+        df[v + '_t_3'] = df[v].shift(periods=3 * 3)
+        df[v + '_t_2'] = df[v].shift(periods=2 * 3)
+        df[v + '_t_1'] = df[v].shift(periods=1 * 3)
+        df['PERMNO_t_3'] = df['PERMNO'].shift(periods=3 * 3)
 
-        j = j + 1
+        col_list = [v + '_t_3', v + '_t_2', v + '_t_1', v]
 
+        df[v + '_LTM'] = np.where(df['PERMNO'] == df['PERMNO_t_3'], df[col_list].sum(axis=1, skipna=False), np.nan)
 
-get_LTM(['REVTQ', 'NIQ', 'COGSQ', 'DPQ', 'WCAPCHQ', 'CAPXQ', 'REQ', 'PIQ', 'XINTQ'])
+        df = df.drop(columns=[v + '_t_3', v + '_t_2', v + '_t_1', 'PERMNO_t_3'])
 
+    return df
 
-df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-# %%
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
-    df_data = pickle.load(f)
+df_data = get_LTM(['REVTQ', 'NIQ', 'COGSQ', 'DPQ', 'WCAPCHQ', 'CAPXQ', 'REQ', 'PIQ', 'XINTQ'],df_data)
 
-# TODO: LTM score
 
 # *** Value Score ***
-df_data['ME'] = df_data['PRCCM'] * df_data['shrout']
+df_data['ME'] = df_data['PRCCM'] * df_data['SHROUT']
 df_data['BE'] = df_data['ATQ'] - df_data['LTQ']   # Book value of Equity = Total Asset - Total Liabilities
 df_data['BE/ME'] = df_data['BE'] / df_data['ME']  # Book-to-Market equity
 df_data['E/P'] = (df_data['NIQ_LTM'] / df_data['SHROUT']) / df_data['PRCCM']  # Earning-to-Price
@@ -211,6 +196,104 @@ df_data.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with nan
 df_data_test = df_data.loc[df_data['TIC'] == bytes('AAPL', 'utf-8')]
 '''
 
+# Growth
+
+def get_growth(variables, n, df):
+    for v in variables:
+        df[v + '_t'] = -df[v].shift(periods=n * 4 * 3)
+
+        df['PERMNO_t'] = df['PERMNO'].shift(periods=n * 4 * 3)
+
+        col_list = [v + '_t', v]
+
+        df['d_' + v] = np.where(df['PERMNO'] == df['PERMNO_t'], df[col_list].sum(axis=1, skipna=False), np.nan)
+
+        df = df.drop(columns=[v + '_t', 'PERMNO_t'])
+
+    return df
+
+df_data = get_growth(variables= ['GPOA','ROE','ROA','CFOA','GMAR'], n=5, df=df_data)
+
+
+'''
+zzz = df_data[['DATE', 'PERMNO', 'QTR', 'GPOA', 'd_GPOA', 'ROE','d_ROE', 'ROA', 'd_ROA', 'CFOA', 'd_CFOA','GMAR', 'd_GMAR']]
+zzz_test = zzz.loc[df_data['TIC'] == bytes('AAPL', 'utf-8')]
+'''
+
+
+# Safety
+df_data['LEV'] = (df_data['DLTTQ'] + df_data['DLCQ']) / df_data['ATQ']
+df_data['AZSCORE'] = (1.2*df_data['WCAPQ'] + 1.4*df_data['REQ_LTM'] + 3.3*(df_data['PIQ_LTM'] + df_data['XINTQ_LTM']) + 0.6*df_data['ME'] + df_data['REVTQ_LTM']) / df_data['ATQ']
+
+df_data.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with nan
+
+# Checkpoint data
+df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+# %%
+with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
+    df_data = pickle.load(f)
+
+
+
+
+# %%
+# **************************************************
+# *** Branch: COMMENTS                           ***
+# **************************************************
+
+'''
+
+def get_LTM(variables):
+    j = 0
+    idx_tmp = df_data.index
+    for v in variables:
+        df_data[v + '_LTM'] = df_data[v]
+    for i in tqdm(idx_tmp):
+        for v in variables:
+            if j < (3 * 3):
+                df_data.loc[i, v + '_LTM'] = None
+            if j >= (3 * 3):
+                if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j - (3 * 3)], 'PERMNO']:
+                    df_data.loc[i, v + '_LTM'] = pd.array([df_data.loc[idx_tmp[j - (3 * 3)], v],
+                                                            df_data.loc[idx_tmp[j - (2 * 3)], v],
+                                                            df_data.loc[idx_tmp[j - (1 * 3)], v],
+                                                            df_data.loc[idx_tmp[j - (0 * 3)], v]]).sum(skipna=False)
+                else:
+                    df_data.loc[i, v + '_LTM'] = None
+
+        j = j + 1
+
+get_LTM(['REVTQ'])
+#get_LTM(['REVTQ', 'NIQ', 'COGSQ', 'DPQ', 'WCAPCHQ', 'CAPXQ', 'REQ', 'PIQ', 'XINTQ'])
+
+def get_LTM_2():
+    return
+
+
+#df_data['REVTQ_LTM_2'] = np.nan
+df_data['REVTQ_t_3'] = df_data['REVTQ'].shift(periods=3*3)
+df_data['REVTQ_t_2'] = df_data['REVTQ'].shift(periods=2 * 3)
+df_data['REVTQ_t_1'] = df_data['REVTQ'].shift(periods=1 * 3)
+df_data['PERMNO_t_3'] = df_data['PERMNO'].shift(periods=3*3)
+
+col_list = ['REVTQ_t_3', 'REVTQ_t_2', 'REVTQ_t_1','REVTQ']
+
+
+if df_data['PERMNO'] == df_data['PERMNO_t_3']:
+    return
+
+#np.where(df['Courses'] == 'Spark', 1000, 2000)
+#df_data['REVTQ_LTM_2'] = df[col_list].sum(axis=1, skipna=False)
+
+df_data['REVTQ_LTM_2'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t_3'], df_data[col_list].sum(axis=1, skipna=False), np.nan)
+
+test_LTM = df_data['REVTQ_LTM'].fillna(-1000000000) == df_data['REVTQ_LTM_2'].fillna(-1000000000)
+print(len(test_LTM))
+print(test_LTM.sum())
+
+'''
+
+'''
 # Growth
 df_data['d_GPOA'] = df_data['GPOA']
 df_data['d_ROE'] = df_data['ROE']
@@ -247,23 +330,20 @@ for i in tqdm(idx_tmp):
 
     j += 1
 
+n = 5
+
+df_data['GPOA_t'] = -df_data['GPOA'].shift(periods=n* 4 * 3)
+
+df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=n* 4 * 3)
+
+col_list = ['GPOA_t', 'GPOA']
+
+df_data['d_GPOA_2'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[col_list].sum(axis=1, skipna=False), np.nan)
+
+df_data = df_data.drop(columns=['GPOA_t', 'PERMNO_t'])
+
+test_LTM = df_data['d_GPOA'].fillna(-1000000000) == df_data['d_GPOA_2'].fillna(-1000000000)
+print(len(test_LTM))
+print(test_LTM.sum())
+
 '''
-zzz = df_data[['DATE', 'PERMNO', 'QTR', 'GPOA', 'd_GPOA', 'ROE','d_ROE', 'ROA', 'd_ROA', 'CFOA', 'd_CFOA','GMAR', 'd_GMAR']]
-zzz_test = zzz.loc[df_data['TIC'] == bytes('AAPL', 'utf-8')]
-'''
-
-
-# Safety
-df_data['LEV'] = (df_data['DLTTQ'] + df_data['DLCQ']) / df_data['ATQ']
-df_data['AZSCORE'] = (1.2*df_data['WCAPQ'] + 1.4*df_data['REQ_LTM'] + 3.3*(df_data['PIQ_LTM'] + df_data['XINTQ_LTM']) + 0.6*df_data['ME'] + df_data['REVTQ_LTM']) / df_data['ATQ']
-
-
-
-
-
-
-# %%
-# **************************************************
-# *** Branch: COMMENTS                           ***
-# **************************************************
-
