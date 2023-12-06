@@ -317,19 +317,24 @@ dic_test = dic_test[dic_test['DVOL'] >= 40]
 dic_test_2 = dic_data[list(dic_data.keys())[360]]
 dic_test_2 = dic_test_2[dic_test_2['DVOL'] >= 40]
 
+'''
 #for i in dic_data:
 #df['max_rank'] = df['Number_legs'].rank(method='max')
 
-dic_test['BE/ME_rank'] = dic_test.loc['BE/ME'].rank(method='max',ascending=False)
-dict_test_3 = dic_test[['BE/ME_r,['BE/ME']]
+dic_test['BE/ME_rank'] = dic_test['BE/ME'].rank(method='max',ascending=False)
+dict_test_3 = dic_test[['BE/ME_rank','BE/ME']]
+'''
 
+ls_cols = ['BE/ME']
+for v in ls_cols:
+    df_data[v + '_rank'].rank(method='max',ascending=False)
 
-
-
-
+'''
 df_data['NTRT1M'] = df_data['NTRT1M'].fillna(0)
+'''
 
 # TODO: get_zscore(df_data, ls_vars) VAR_ZS
+
 
 # %%
 # **************************************************
@@ -337,8 +342,17 @@ df_data['NTRT1M'] = df_data['NTRT1M'].fillna(0)
 # **************************************************
 
 '''
+min_dvol = 100
+s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
+df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
+df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
+'''
+
+'''
 df_data['ATQ_s'] = df_data['ATQ'].shift(periods=(3))
 df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(3))
 df_data['ATQ_s'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['ATQ_s'],  np.nan)
 df_data = df_data[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ATQ','ATQ_s']]
 '''
+
+
