@@ -185,3 +185,184 @@ zzz = df_data[['DATADATE', 'PERMNO','YEAR','QTR', 'GPOA', 'g_GPOA']]
 df_data.iloc[0][['DATADATE', 'PERMNO','YEAR','QTR']]
 df_data.iloc[0 + n*4*3+1][['DATADATE', 'PERMNO','YEAR','QTR']]
 '''
+
+'''
+def get_LTM(variables):
+    j = 0
+    idx_tmp = df_data.index
+    for v in variables:
+        df_data[v + '_LTM'] = df_data[v]
+    for i in tqdm(idx_tmp):
+        for v in variables:
+            if j < (3 * 3):
+                df_data.loc[i, v + '_LTM'] = None
+            if j >= (3 * 3):
+                if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j - (3 * 3)], 'PERMNO']:
+                    df_data.loc[i, v + '_LTM'] = pd.array([df_data.loc[idx_tmp[j - (3 * 3)], v],
+                                                            df_data.loc[idx_tmp[j - (2 * 3)], v],
+                                                            df_data.loc[idx_tmp[j - (1 * 3)], v],
+                                                            df_data.loc[idx_tmp[j - (0 * 3)], v]]).sum(skipna=False)
+                else:
+                    df_data.loc[i, v + '_LTM'] = None
+
+        j = j + 1
+
+get_LTM(['REVTQ'])
+#get_LTM(['REVTQ', 'NIQ', 'COGSQ', 'DPQ', 'WCAPCHQ', 'CAPXQ', 'REQ', 'PIQ', 'XINTQ'])
+
+def get_LTM_2():
+    return
+
+
+#df_data['REVTQ_LTM_2'] = np.nan
+df_data['REVTQ_t_3'] = df_data['REVTQ'].shift(periods=3*3)
+df_data['REVTQ_t_2'] = df_data['REVTQ'].shift(periods=2 * 3)
+df_data['REVTQ_t_1'] = df_data['REVTQ'].shift(periods=1 * 3)
+df_data['PERMNO_t_3'] = df_data['PERMNO'].shift(periods=3*3)
+
+col_list = ['REVTQ_t_3', 'REVTQ_t_2', 'REVTQ_t_1','REVTQ']
+
+
+if df_data['PERMNO'] == df_data['PERMNO_t_3']:
+    return
+
+#np.where(df['Courses'] == 'Spark', 1000, 2000)
+#df_data['REVTQ_LTM_2'] = df[col_list].sum(axis=1, skipna=False)
+
+df_data['REVTQ_LTM_2'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t_3'], df_data[col_list].sum(axis=1, skipna=False), np.nan)
+
+test_LTM = df_data['REVTQ_LTM'].fillna(-1000000000) == df_data['REVTQ_LTM_2'].fillna(-1000000000)
+print(len(test_LTM))
+print(test_LTM.sum())
+'''
+
+'''
+# Growth
+df_data['d_GPOA'] = df_data['GPOA']
+df_data['d_ROE'] = df_data['ROE']
+df_data['d_ROA'] = df_data['ROA']
+df_data['d_CFOA'] = df_data['CFOA']
+df_data['d_GMAR'] = df_data['GMAR']
+
+j = 0
+n = 5
+idx_tmp = df_data.index
+for i in tqdm(idx_tmp):
+
+    if j < (n*4*3):
+        df_data.loc[i, 'd_GPOA'] = None
+        df_data.loc[i, 'd_ROE'] = None
+        df_data.loc[i, 'd_ROA'] = None
+        df_data.loc[i, 'd_CFOA'] = None
+        df_data.loc[i, 'd_GMAR'] = None
+
+    if j >= (n*4*3):
+        if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j-(n*4*3)], 'PERMNO']:
+            df_data.loc[i, 'd_GPOA'] = (df_data.loc[i, 'GPOA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'GPOA'])
+            df_data.loc[i, 'd_ROE'] = (df_data.loc[i, 'ROE'] - df_data.loc[idx_tmp[j-(n*4*3)], 'ROE'])
+            df_data.loc[i, 'd_ROA'] = (df_data.loc[i, 'ROA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'ROA'])
+            df_data.loc[i, 'd_CFOA'] = (df_data.loc[i, 'CFOA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'CFOA'])
+            df_data.loc[i, 'd_GMAR'] = (df_data.loc[i, 'GMAR'] - df_data.loc[idx_tmp[j-(n*4*3)], 'GMAR'])
+
+        else:
+            df_data.loc[i, 'd_GPOA'] = None
+            df_data.loc[i, 'd_ROE'] = None
+            df_data.loc[i, 'd_ROA'] = None
+            df_data.loc[i, 'd_CFOA'] = None
+            df_data.loc[i, 'd_GMAR'] = None
+
+    j += 1
+
+n = 5
+
+df_data['GPOA_t'] = -df_data['GPOA'].shift(periods=n* 4 * 3)
+
+df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=n* 4 * 3)
+
+col_list = ['GPOA_t', 'GPOA']
+
+df_data['d_GPOA_2'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[col_list].sum(axis=1, skipna=False), np.nan)
+
+df_data = df_data.drop(columns=['GPOA_t', 'PERMNO_t'])
+
+test_LTM = df_data['d_GPOA'].fillna(-1000000000) == df_data['d_GPOA_2'].fillna(-1000000000)
+print(len(test_LTM))
+print(test_LTM.sum())
+'''
+
+'''
+zzz = df_data[['DATE', 'PERMNO', 'QTR', 'GPOA', 'd_GPOA', 'ROE','d_ROE', 'ROA', 'd_ROA', 'CFOA', 'd_CFOA','GMAR', 'd_GMAR']]
+zzz_test = zzz.loc[df_data['TIC'] == bytes('AAPL', 'utf-8')]
+'''
+
+'''
+n=5
+for i in range(1,n*12+1):
+    df_data['TRT1M' + 't_' + str(i)] = df_data['TRT1M'].shift(periods=i)
+for i in range(1, n * 12 + 1):
+    df_data['SPRTRN' + 't_' + str(i)] = df_data['SPRTRN'].shift(periods=i)
+
+df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=n * 4 * 3)
+
+col_list_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(1,n*12+1)]
+col_list_TRT1M.append('TRT1M')
+
+col_list_SPRTRN = ['SPRTRN' + 't_' + str(i) for i in range(1,n*12+1)]
+col_list_SPRTRN.append('SPRTRN')
+
+df_data['TRT1M_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], -df_data[col_list_TRT1M].mean(axis=1, skipna=False), np.nan) # Check the PERMNO
+df_data['SPRTRN_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], -df_data[col_list_SPRTRN].mean(axis=1, skipna=False), np.nan) # Check the PERMNO
+
+for i in range(1,n*12+1):
+    df_data['TRT1M' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'TRT1M_mean']].sum(axis=1, skipna=False)
+
+for i in range(1, n * 12 + 1):
+    df_data['SPRTRN' + 't_' + str(i)] = df_data['SPRTRN'].shift(periods=i)
+
+for i in range(1, n * 12 + 1):
+    df_data['Prod_TRT1M_SPRTRN' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'SPRTRN' + 't_' + str(i)]].product(axis=1, skipna=False)
+
+col_list_Cov_TRT1M_SPRTRN= ['TRT1M' + 't_' + str(i) for i in range(1,n*12+1)]
+col_list_Cov_TRT1M_SPRTRN.append('TRT1M')
+
+df_data['Cov_TRT1M_SPRTRN'] =
+'''
+
+'''
+tmp = pd.DataFrame()
+tmp['TRT1M' + 't_' + str(i)] = df_data['TRT1M'].shift(periods=i)
+df_data = pd.concat([df_data, tmp], axis=1)
+'''
+
+'''
+ #tmp =pd.DataFrame({'TRT1M' + 't_' + str(i): df_data['TRT1M'].shift(periods=i)})
+df_data = pd.concat([df_data, pd.DataFrame({'TRT1M' + 't_' + str(i): df_data['TRT1M'].shift(periods=i)})], axis=1) 
+'''
+
+'''
+zzz_test = df_data.loc[df_data['TIC'] == bytes('WMT', 'utf-8')]
+'''
+
+'''
+#df_data['SPRTRN_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[['TRT1M'+'t_' + str(i) for i in range(1,n*12+1)]].mean(), np.nan)
+
+
+#df_data['TRT1M_list'] = 'None'
+#df_data = pd.concat([df_data['TRT1M'+'t_' + str(i)] for i in range(1,n*12+1)]).sort_index().values.tolist()
+#df_data['TRT1M_list'] = [df_data['TRT1M'+'t_' + str(i)] for i in range(1,n*12+1)]
+
+# Rename the concatenated column and drop the original columns
+df = pd.concat([df, concatenated_cols['Name_Age_Country']], axis=1)
+df = df.rename(columns={'Name_Age_Country': 'Name|Age|Country'})
+df = df.drop(columns=['Name', 'Age', 'Country'])
+
+
+if df_data['PERMNO'] == df_data['PERMNO_t']:
+
+
+col_list = [v + '_t', v]
+
+df['d_' + v] = np.where(df['PERMNO'] == df['PERMNO_t'], df[col_list].sum(axis=1, skipna=False), np.nan)
+
+df = df.drop(columns=[v + '_t', 'PERMNO_t'])
+'''

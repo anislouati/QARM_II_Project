@@ -68,9 +68,9 @@ df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
 # Checkpoint data
-df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
-df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
-df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
+# df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
+# df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
+# df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as f:
     df_fundamentals_quarterly = pickle.load(f)
 with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as f:
@@ -86,37 +86,7 @@ df_stock_monthly = df_stock_monthly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR
 df_data = pd.merge(df_stock_monthly, df_tmp, on='KEYM', how='inner')
 
 # Fill missing dates with nans (by stock)
-def preprocessing_4(df_data):
-    df_out = df_data
-    df_out['FILLED'] = False  # Indicate if row has been filled
-    ls_permnos = df_out['PERMNO'].unique().tolist()
-
-    df_dates = pd.DataFrame({'DATE': pd.Series(df_out['DATE'].unique().tolist())})  # Assumption: df_data['DATE'] contains all monthly dates
-    df_dates['YEAR'] = df_dates['DATE'].dt.year.astype(float)
-    df_dates['MTH'] = df_dates['DATE'].dt.month.astype(float)
-    df_dates = df_dates.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
-
-    ls_dfs = []
-    for permno in tqdm(ls_permnos, desc='Preprocessing (4)'):
-        s_tmp = df_out[df_out['PERMNO'] == permno]['DATE']
-        dt_start, dt_end = s_tmp.min(), s_tmp.max()
-        pos_start = df_dates.index[(df_dates['YEAR'] == dt_start.year) & (df_dates['MTH'] == dt_start.month)].tolist()[0]
-        pos_end = df_dates.index[(df_dates['YEAR'] == dt_end.year) & (df_dates['MTH'] == dt_end.month)].tolist()[0]
-
-        df_tmp = df_dates.loc[pos_start:pos_end, ['DATE']]
-        df_tmp['PERMNO'] = permno
-        df_tmp['FILLED'] = True
-        df_tmp = fn.preprocessing_1(df_tmp)
-        df_tmp = df_tmp[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FILLED']]
-        df_tmp = df_tmp[~df_tmp['KEYM'].isin(df_out[df_out['PERMNO'] == permno]['KEYM'])]  # Exclude obs present in dataset
-        ls_dfs += [df_tmp]
-
-    ls_dfs = [df_out] + ls_dfs
-    df_out = pd.concat(ls_dfs, axis=0, ignore_index=True)
-    df_out['FILLED'] = df_out['FILLED'].astype(bool)
-    return df_out
-
-df_data = preprocessing_4(df_data)
+df_data = fn.preprocessing_4(df_data)
 ls_selected_cols = ['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FILLED', 'FQTR',
                     'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ATQ', 'COGSQ', 'DLCQ', 'DLTTQ', 'DPQ', 'LTQ',
                     'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPQ', 'XINTQ', 'CAPXY',
@@ -138,48 +108,7 @@ print('Stocks in dataset: {}'.format(len(df_data['PERMNO'].unique().tolist())))
 print('Stocks with filled data: {}'.format(s_tmp[0]))
 
 # Create/Modify variables
-def preprocessing_5(df_data):
-    df_out = df_data
-    df_out['CAPXQ'] = df_out['CAPXY']
-    df_out['WCAPCHQ'] = df_out['WCAPQ']
-
-    j = 0
-    idx_tmp = df_out.index
-    for i in tqdm(idx_tmp, desc='Preprocessing (5)'):
-        # CAPXQ
-        if j < (3 * 1):
-            if df_out.loc[i, 'FQTR'] != 1:
-                df_out.loc[i, 'CAPXQ'] = None
-
-        if j >= 3:
-            if df_out.loc[i, 'FQTR'] != 1:
-                if df_out.loc[i, 'PERMNO'] == df_out.loc[idx_tmp[j - 3], 'PERMNO']:
-                    df_out.loc[i, 'CAPXQ'] = df_out.loc[i, 'CAPXY'] - df_out.loc[idx_tmp[j - 3], 'CAPXY']
-                else:
-                    df_out.loc[i, 'CAPXQ'] = None
-
-        # WCAPCHQ
-        if j < 3:
-            df_out.loc[i, 'WCAPCHQ'] = None
-
-        if j >= 3:
-            if df_out.loc[i, 'PERMNO'] == df_out.loc[idx_tmp[j - 3], 'PERMNO']:
-                df_out.loc[i, 'WCAPCHQ'] = df_out.loc[i, 'WCAPQ'] - df_out.loc[idx_tmp[j - 3], 'WCAPQ']
-            else:
-                df_out.loc[i, 'WCAPCHQ'] = None
-
-        j += 1
-
-    df_out[(df_out['XINTQ'] == np.nan) & ~df_out['FILLED']] = 0.  # Assumption: fill missing values with 0 (interest expense)
-    df_out['TRT1M'] = df_out['TRT1M'] / 100  # Total return expressed as float (before: percentage points)
-    df_out['VOL'] = df_out['VOL'] * 100  # Volume expressed in units (before: hundreds shares, monthly data)
-    df_out['SHROUT'] = df_out['SHROUT'] / 1000  # Shares outstanding expressed in mil.
-    df_out['DVOL'] = (df_out['PRCCM'] * df_out['VOL']) / (10 ** 6)  # Dollar volume expressed in mil.
-    df_out['SPRDPCT'] = (df_out['ASK'] - df_out['BID']) / df_out['ASK']  # Bid-Ask spread expressed as float
-
-    return df_out
-
-df_data = preprocessing_5(df_data)
+df_data = fn.preprocessing_5(df_data)
 ls_selected_cols = ['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FILLED', 'FQTR',
                     'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ATQ', 'COGSQ', 'DLCQ', 'DLTTQ', 'DPQ', 'LTQ',
                     'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ',
@@ -195,13 +124,42 @@ df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
 ls_permnos = df_tmp['PERMNO'].unique().tolist()
 df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 
-
-# TODO: preprocessing_6
-
 # Checkpoint data
-df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
+
+
+# TODO: rewrite preprocessing_6 (takes 6h)
+# TODO: get_zscore(df_data, ls_vars) VAR_ZS
+# TODO: shift by 3 fondamental_quarterly, by permno, put nan when delisted
+
+# Push forward fundamentals (out-of-sample)
+
+def preprocessing_6(df_data):
+    df_out = df_data
+    df_out = df_out.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
+    ls_vars = ['ATQ', 'COGSQ', 'DLCQ', 'DLTTQ', 'DPQ', 'LTQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ']
+    ls_permnos = df_out['PERMNO'].unique().tolist()
+
+    for permno in tqdm(ls_permnos, desc='Preprocessing (6)'):
+        idx_tmp = df_out[df_out['PERMNO'] == permno].index
+        s_tmp = df_out.loc[idx_tmp[0], ls_vars]
+        df_out.loc[idx_tmp[0], ls_vars] = np.nan
+
+        for i in range(1, len(idx_tmp) - 1):
+            if df_out.loc[idx_tmp[i], 'QTR'] == df_out.loc[idx_tmp[i - 1], 'QTR']:
+                df_out.loc[idx_tmp[i], ls_vars] = df_out.loc[idx_tmp[i - 1], ls_vars]
+            else:
+                s_new = df_out.loc[idx_tmp[i], ls_vars]
+                df_out.loc[idx_tmp[i], ls_vars] = s_tmp
+                s_tmp = s_new
+    return df_out
+
+
+df_data = preprocessing_6(df_data)
+
+
 
 
 # %%
@@ -287,7 +245,6 @@ df_data.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with nan
 
 # Checkpoint data
 df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-# %%
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
@@ -340,32 +297,7 @@ with warnings.catch_warnings():
     df_data = df_data.drop(columns=['TRT1M_mean','SPRTRN_mean','Cov_TRT1M_SPRTRN','PERMNO_t'])
 
 
-'''
-zzz_test = df_data.loc[df_data['TIC'] == bytes('WMT', 'utf-8')]
-'''
-'''
-#df_data['SPRTRN_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[['TRT1M'+'t_' + str(i) for i in range(1,n*12+1)]].mean(), np.nan)
 
-
-#df_data['TRT1M_list'] = 'None'
-#df_data = pd.concat([df_data['TRT1M'+'t_' + str(i)] for i in range(1,n*12+1)]).sort_index().values.tolist()
-#df_data['TRT1M_list'] = [df_data['TRT1M'+'t_' + str(i)] for i in range(1,n*12+1)]
-
-# Rename the concatenated column and drop the original columns
-df = pd.concat([df, concatenated_cols['Name_Age_Country']], axis=1)
-df = df.rename(columns={'Name_Age_Country': 'Name|Age|Country'})
-df = df.drop(columns=['Name', 'Age', 'Country'])
-
-
-if df_data['PERMNO'] == df_data['PERMNO_t']:
-
-
-col_list = [v + '_t', v]
-
-df['d_' + v] = np.where(df['PERMNO'] == df['PERMNO_t'], df[col_list].sum(axis=1, skipna=False), np.nan)
-
-df = df.drop(columns=[v + '_t', 'PERMNO_t'])
-'''
 
 
 
@@ -383,8 +315,7 @@ for date in tqdm(ls_dates):
 
 
 
-# TODO: get_zscore(df_data, ls_vars) VAR_ZS
-# TODO: shift by 3 fondamental_quarterly, by permno, put nan when delisted
+
 
 
 
@@ -393,157 +324,3 @@ for date in tqdm(ls_dates):
 # *** Branch: COMMENTS                           ***
 # **************************************************
 
-'''
-def get_LTM(variables):
-    j = 0
-    idx_tmp = df_data.index
-    for v in variables:
-        df_data[v + '_LTM'] = df_data[v]
-    for i in tqdm(idx_tmp):
-        for v in variables:
-            if j < (3 * 3):
-                df_data.loc[i, v + '_LTM'] = None
-            if j >= (3 * 3):
-                if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j - (3 * 3)], 'PERMNO']:
-                    df_data.loc[i, v + '_LTM'] = pd.array([df_data.loc[idx_tmp[j - (3 * 3)], v],
-                                                            df_data.loc[idx_tmp[j - (2 * 3)], v],
-                                                            df_data.loc[idx_tmp[j - (1 * 3)], v],
-                                                            df_data.loc[idx_tmp[j - (0 * 3)], v]]).sum(skipna=False)
-                else:
-                    df_data.loc[i, v + '_LTM'] = None
-
-        j = j + 1
-
-get_LTM(['REVTQ'])
-#get_LTM(['REVTQ', 'NIQ', 'COGSQ', 'DPQ', 'WCAPCHQ', 'CAPXQ', 'REQ', 'PIQ', 'XINTQ'])
-
-def get_LTM_2():
-    return
-
-
-#df_data['REVTQ_LTM_2'] = np.nan
-df_data['REVTQ_t_3'] = df_data['REVTQ'].shift(periods=3*3)
-df_data['REVTQ_t_2'] = df_data['REVTQ'].shift(periods=2 * 3)
-df_data['REVTQ_t_1'] = df_data['REVTQ'].shift(periods=1 * 3)
-df_data['PERMNO_t_3'] = df_data['PERMNO'].shift(periods=3*3)
-
-col_list = ['REVTQ_t_3', 'REVTQ_t_2', 'REVTQ_t_1','REVTQ']
-
-
-if df_data['PERMNO'] == df_data['PERMNO_t_3']:
-    return
-
-#np.where(df['Courses'] == 'Spark', 1000, 2000)
-#df_data['REVTQ_LTM_2'] = df[col_list].sum(axis=1, skipna=False)
-
-df_data['REVTQ_LTM_2'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t_3'], df_data[col_list].sum(axis=1, skipna=False), np.nan)
-
-test_LTM = df_data['REVTQ_LTM'].fillna(-1000000000) == df_data['REVTQ_LTM_2'].fillna(-1000000000)
-print(len(test_LTM))
-print(test_LTM.sum())
-'''
-
-'''
-# Growth
-df_data['d_GPOA'] = df_data['GPOA']
-df_data['d_ROE'] = df_data['ROE']
-df_data['d_ROA'] = df_data['ROA']
-df_data['d_CFOA'] = df_data['CFOA']
-df_data['d_GMAR'] = df_data['GMAR']
-
-j = 0
-n = 5
-idx_tmp = df_data.index
-for i in tqdm(idx_tmp):
-
-    if j < (n*4*3):
-        df_data.loc[i, 'd_GPOA'] = None
-        df_data.loc[i, 'd_ROE'] = None
-        df_data.loc[i, 'd_ROA'] = None
-        df_data.loc[i, 'd_CFOA'] = None
-        df_data.loc[i, 'd_GMAR'] = None
-
-    if j >= (n*4*3):
-        if df_data.loc[i, 'PERMNO'] == df_data.loc[idx_tmp[j-(n*4*3)], 'PERMNO']:
-            df_data.loc[i, 'd_GPOA'] = (df_data.loc[i, 'GPOA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'GPOA'])
-            df_data.loc[i, 'd_ROE'] = (df_data.loc[i, 'ROE'] - df_data.loc[idx_tmp[j-(n*4*3)], 'ROE'])
-            df_data.loc[i, 'd_ROA'] = (df_data.loc[i, 'ROA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'ROA'])
-            df_data.loc[i, 'd_CFOA'] = (df_data.loc[i, 'CFOA'] - df_data.loc[idx_tmp[j-(n*4*3)], 'CFOA'])
-            df_data.loc[i, 'd_GMAR'] = (df_data.loc[i, 'GMAR'] - df_data.loc[idx_tmp[j-(n*4*3)], 'GMAR'])
-
-        else:
-            df_data.loc[i, 'd_GPOA'] = None
-            df_data.loc[i, 'd_ROE'] = None
-            df_data.loc[i, 'd_ROA'] = None
-            df_data.loc[i, 'd_CFOA'] = None
-            df_data.loc[i, 'd_GMAR'] = None
-
-    j += 1
-
-n = 5
-
-df_data['GPOA_t'] = -df_data['GPOA'].shift(periods=n* 4 * 3)
-
-df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=n* 4 * 3)
-
-col_list = ['GPOA_t', 'GPOA']
-
-df_data['d_GPOA_2'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[col_list].sum(axis=1, skipna=False), np.nan)
-
-df_data = df_data.drop(columns=['GPOA_t', 'PERMNO_t'])
-
-test_LTM = df_data['d_GPOA'].fillna(-1000000000) == df_data['d_GPOA_2'].fillna(-1000000000)
-print(len(test_LTM))
-print(test_LTM.sum())
-'''
-
-'''
-zzz = df_data[['DATE', 'PERMNO', 'QTR', 'GPOA', 'd_GPOA', 'ROE','d_ROE', 'ROA', 'd_ROA', 'CFOA', 'd_CFOA','GMAR', 'd_GMAR']]
-zzz_test = zzz.loc[df_data['TIC'] == bytes('AAPL', 'utf-8')]
-'''
-
-'''
-n=5
-for i in range(1,n*12+1):
-    df_data['TRT1M' + 't_' + str(i)] = df_data['TRT1M'].shift(periods=i)
-for i in range(1, n * 12 + 1):
-    df_data['SPRTRN' + 't_' + str(i)] = df_data['SPRTRN'].shift(periods=i)
-
-df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=n * 4 * 3)
-
-col_list_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(1,n*12+1)]
-col_list_TRT1M.append('TRT1M')
-
-col_list_SPRTRN = ['SPRTRN' + 't_' + str(i) for i in range(1,n*12+1)]
-col_list_SPRTRN.append('SPRTRN')
-
-df_data['TRT1M_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], -df_data[col_list_TRT1M].mean(axis=1, skipna=False), np.nan) # Check the PERMNO
-df_data['SPRTRN_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], -df_data[col_list_SPRTRN].mean(axis=1, skipna=False), np.nan) # Check the PERMNO
-
-for i in range(1,n*12+1):
-    df_data['TRT1M' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'TRT1M_mean']].sum(axis=1, skipna=False)
-
-for i in range(1, n * 12 + 1):
-    df_data['SPRTRN' + 't_' + str(i)] = df_data['SPRTRN'].shift(periods=i)
-
-for i in range(1, n * 12 + 1):
-    df_data['Prod_TRT1M_SPRTRN' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'SPRTRN' + 't_' + str(i)]].product(axis=1, skipna=False)
-
-col_list_Cov_TRT1M_SPRTRN= ['TRT1M' + 't_' + str(i) for i in range(1,n*12+1)]
-col_list_Cov_TRT1M_SPRTRN.append('TRT1M')
-
-df_data['Cov_TRT1M_SPRTRN'] =
-
-'''
-'''
-tmp = pd.DataFrame()
-tmp['TRT1M' + 't_' + str(i)] = df_data['TRT1M'].shift(periods=i)
-df_data = pd.concat([df_data, tmp], axis=1)
-
-'''
-
-'''
- #tmp =pd.DataFrame({'TRT1M' + 't_' + str(i): df_data['TRT1M'].shift(periods=i)})
-df_data = pd.concat([df_data, pd.DataFrame({'TRT1M' + 't_' + str(i): df_data['TRT1M'].shift(periods=i)})], axis=1)
-    
-'''
