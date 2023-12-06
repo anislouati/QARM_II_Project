@@ -116,11 +116,16 @@ ls_selected_cols = ['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FIL
 df_data = df_data[ls_selected_cols]
 df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
+# Checkpoint data
+# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
+    df_data = pickle.load(f)
+
 # Filter out illiquid stocks (max dollar volume (monthly) < $100mil.)
-min_dvol = 100
+min_dvol = 40
 s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
 df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
-df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
+df_tmp = df_tmp[df_tmp['DVOL'] >= 40]
 ls_permnos = df_tmp['PERMNO'].unique().tolist()
 df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 
@@ -245,6 +250,7 @@ df_data.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with nan
 
 # Checkpoint data
 df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+# %%
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
@@ -297,10 +303,28 @@ with warnings.catch_warnings():
     df_data = df_data.drop(columns=['TRT1M_mean','SPRTRN_mean','Cov_TRT1M_SPRTRN','PERMNO_t'])
 
 
+# Next Month & Next Quarter Returns
+
+df_data['NTRT1M'] = df_data['TRT1M'].shift(periods=(-1))
+df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(-1))
+df_data['NTRT1M'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['NTRT1M'],  np.nan)
+df_data['NTRT1M'] = df_data['NTRT1M'].fillna(0)
+
+for i in range(1,4):
+    df_data['TRT1M_t' + str(i)] = 1 + df_data['TRT1M'].shift(periods=(-i))
+
+df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(-3))
+
+ls_cols = ['TRT1M_t' + str(i) for i in range(1,4)]
+
+df_data['NTRT1Q'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[ls_cols].product(axis=1, skipna=False) - 1 ,  np.nan)
+df_data['NTRT1Q'] = df_data['NTRT1Q'].fillna(0)
+
+df_data = df_data.drop(columns=['TRT1M_t' + str(i) for i in range(1,4)])
+df_data = df_data.drop(columns=['PERMNO_t'])
 
 
-
-
+# %%
 
 # Create data dictionary
 dic_data = {}
@@ -314,8 +338,34 @@ for date in tqdm(ls_dates):
     ls_lens += [len(df_tmp)]
 
 
+'''
+min_dvol = 100
+s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
+df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
+df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
+'''
+dic_test = dic_data[list(dic_data.keys())[72]]
+dic_test = dic_test[dic_test['DVOL'] >= 40]
+
+dic_test_2 = dic_data[list(dic_data.keys())[360]]
+dic_test_2 = dic_test_2[dic_test_2['DVOL'] >= 40]
+
+#for i in dic_data:
+#df['max_rank'] = df['Number_legs'].rank(method='max')
+
+dic_test['BE/ME_rank'] = dic_test.loc['BE/ME'].rank(method='max',ascending=False)
+dict_test_3 = dic_test[['BE/ME_r,['BE/ME']]
 
 
+'''
+df_data['ATQ_s'] = df_data['ATQ'].shift(periods=(3))
+df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(3))
+df_data['ATQ_s'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['ATQ_s'],  np.nan)
+df_data = df_data[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ATQ','ATQ_s']]
+'''
+
+
+df_data['NTRT1M'] = df_data['NTRT1M'].fillna(0)
 
 
 
