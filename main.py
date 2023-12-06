@@ -85,9 +85,39 @@ df_tmp = pd.merge(df_fundamentals_quarterly, df_security_monthly, on='KEYQ', how
 df_stock_monthly = df_stock_monthly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ'])
 df_data = pd.merge(df_stock_monthly, df_tmp, on='KEYM', how='inner')
 
-# Fill missing dates with nans
-df_data = fn.preprocessing_4(df_data)
-ls_selected_cols = ['PERMNO', 'DATE', 'FQTR', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM',
+# Fill missing dates with nans (by stock)
+def preprocessing_4(df_data):
+    df_out = df_data
+    df_out['FILLED'] = False  # Indicate if row has been filled
+    ls_permnos = df_out['PERMNO'].unique().tolist()
+
+    df_dates = pd.DataFrame({'DATE': pd.Series(df_out['DATE'].unique().tolist())})  # Assumption: df_data['DATE'] contains all monthly dates
+    df_dates['YEAR'] = df_dates['DATE'].dt.year.astype(float)
+    df_dates['MTH'] = df_dates['DATE'].dt.month.astype(float)
+    df_dates = df_dates.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
+
+    ls_dfs = []
+    for permno in tqdm(ls_permnos, desc='Preprocessing (4)'):
+        s_tmp = df_out[df_out['PERMNO'] == permno]['DATE']
+        dt_start, dt_end = s_tmp.min(), s_tmp.max()
+        pos_start = df_dates.index[(df_dates['YEAR'] == dt_start.year) & (df_dates['MTH'] == dt_start.month)].tolist()[0]
+        pos_end = df_dates.index[(df_dates['YEAR'] == dt_end.year) & (df_dates['MTH'] == dt_end.month)].tolist()[0]
+
+        df_tmp = df_dates.loc[pos_start:pos_end, ['DATE']]
+        df_tmp['PERMNO'] = permno
+        df_tmp['FILLED'] = True
+        df_tmp = fn.preprocessing_1(df_tmp)
+        df_tmp = df_tmp[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FILLED']]
+        df_tmp = df_tmp[~df_tmp['KEYM'].isin(df_out[df_out['PERMNO'] == permno]['KEYM'])]  # Exclude obs present in dataset
+        ls_dfs += [df_tmp]
+
+    ls_dfs = [df_out] + ls_dfs
+    df_out = pd.concat(ls_dfs, axis=0, ignore_index=True)
+    df_out['FILLED'] = df_out['FILLED'].astype(bool)
+    return df_out
+
+df_data = preprocessing_4(df_data)
+ls_selected_cols = ['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FILLED', 'FQTR',
                     'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ATQ', 'COGSQ', 'DLCQ', 'DLTTQ', 'DPQ', 'LTQ',
                     'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPQ', 'XINTQ', 'CAPXY',
                     'PRCCM', 'TRT1M', 'BID', 'ASK', 'VOL', 'SHROUT', 'SPRTRN']
@@ -108,8 +138,49 @@ print('Stocks in dataset: {}'.format(len(df_data['PERMNO'].unique().tolist())))
 print('Stocks with filled data: {}'.format(s_tmp[0]))
 
 # Create/Modify variables
-df_data = fn.preprocessing_5(df_data)
-ls_selected_cols = ['PERMNO', 'DATE', 'FQTR', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM',
+def preprocessing_5(df_data):
+    df_out = df_data
+    df_out['CAPXQ'] = df_out['CAPXY']
+    df_out['WCAPCHQ'] = df_out['WCAPQ']
+
+    j = 0
+    idx_tmp = df_out.index
+    for i in tqdm(idx_tmp, desc='Preprocessing (5)'):
+        # CAPXQ
+        if j < (3 * 1):
+            if df_out.loc[i, 'FQTR'] != 1:
+                df_out.loc[i, 'CAPXQ'] = None
+
+        if j >= 3:
+            if df_out.loc[i, 'FQTR'] != 1:
+                if df_out.loc[i, 'PERMNO'] == df_out.loc[idx_tmp[j - 3], 'PERMNO']:
+                    df_out.loc[i, 'CAPXQ'] = df_out.loc[i, 'CAPXY'] - df_out.loc[idx_tmp[j - 3], 'CAPXY']
+                else:
+                    df_out.loc[i, 'CAPXQ'] = None
+
+        # WCAPCHQ
+        if j < 3:
+            df_out.loc[i, 'WCAPCHQ'] = None
+
+        if j >= 3:
+            if df_out.loc[i, 'PERMNO'] == df_out.loc[idx_tmp[j - 3], 'PERMNO']:
+                df_out.loc[i, 'WCAPCHQ'] = df_out.loc[i, 'WCAPQ'] - df_out.loc[idx_tmp[j - 3], 'WCAPQ']
+            else:
+                df_out.loc[i, 'WCAPCHQ'] = None
+
+        j += 1
+
+    df_out[(df_out['XINTQ'] == np.nan) & ~df_out['FILLED']] = 0.  # Assumption: fill missing values with 0 (interest expense)
+    df_out['TRT1M'] = df_out['TRT1M'] / 100  # Total return expressed as float (before: percentage points)
+    df_out['VOL'] = df_out['VOL'] * 100  # Volume expressed in units (before: hundreds shares, monthly data)
+    df_out['SHROUT'] = df_out['SHROUT'] / 1000  # Shares outstanding expressed in mil.
+    df_out['DVOL'] = (df_out['PRCCM'] * df_out['VOL']) / (10 ** 6)  # Dollar volume expressed in mil.
+    df_out['SPRDPCT'] = (df_out['ASK'] - df_out['BID']) / df_out['ASK']  # Bid-Ask spread expressed as float
+
+    return df_out
+
+df_data = preprocessing_5(df_data)
+ls_selected_cols = ['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FILLED', 'FQTR',
                     'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ATQ', 'COGSQ', 'DLCQ', 'DLTTQ', 'DPQ', 'LTQ',
                     'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ',
                     'PRCCM', 'TRT1M', 'BID', 'ASK', 'SPRDPCT', 'VOL', 'DVOL', 'SHROUT', 'SPRTRN']
@@ -124,6 +195,9 @@ df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
 ls_permnos = df_tmp['PERMNO'].unique().tolist()
 df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 
+
+# TODO: preprocessing_6
+
 # Checkpoint data
 df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
@@ -136,7 +210,7 @@ with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
 # **************************************************
 
 # Summarize preprocessed data
-df_1 = df_data.drop(columns=['PERMNO', 'DATE', 'FQTR', 'QTR', 'MTH', 'KEYQ', 'KEYM',
+df_1 = df_data.drop(columns=['PERMNO', 'DATE', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR',
                              'CONM', 'TIC', 'EXCHG', 'GSECTOR'])
 df_summary_1 = fn.tab_summary(df_1)
 
