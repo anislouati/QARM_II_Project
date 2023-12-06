@@ -44,8 +44,8 @@ df_fundamentals_quarterly = fn.preprocessing_1(df_fundamentals_quarterly)
 df_security_monthly = fn.preprocessing_1(df_security_monthly)
 df_stock_monthly = fn.preprocessing_1(df_stock_monthly)
 
-# Filter dates (min_year-max_year)
-min_year = 1990
+# Filter raw dates (min_year-max_year)
+min_year = 1980
 max_year = 2022
 df_fundamentals_quarterly = df_fundamentals_quarterly[(df_fundamentals_quarterly['YEAR'] >= min_year) & (df_fundamentals_quarterly['YEAR'] <= max_year)]
 df_security_monthly = df_security_monthly[(df_security_monthly['YEAR'] >= min_year) & (df_security_monthly['YEAR'] <= max_year)]
@@ -116,11 +116,11 @@ ls_selected_cols = ['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FIL
 df_data = df_data[ls_selected_cols]
 df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
-# Checkpoint data
-# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
-    df_data = pickle.load(f)
+# ATTENTION: accounting data published in Q_t is available (out-of-sample) for investment decisions in Q_t_1
+# Push forward fundamentals (out-of-sample) ==> Example: info published on 31/03 (Q_t) available starting 30/04 (Q_t_1)
+df_data = fn.preprocessing_6(df_data)
 
+'''
 # Filter out illiquid stocks (max dollar volume (monthly) < $100mil.)
 min_dvol = 40
 s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
@@ -128,57 +128,19 @@ df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
 df_tmp = df_tmp[df_tmp['DVOL'] >= 40]
 ls_permnos = df_tmp['PERMNO'].unique().tolist()
 df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
+'''
 
 # Checkpoint data
-# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
-
-# TODO: rewrite preprocessing_6 (takes 6h)
-# TODO: get_zscore(df_data, ls_vars) VAR_ZS
-# TODO: shift by 3 fondamental_quarterly, by permno, put nan when delisted
-
-# Push forward fundamentals (out-of-sample)
-
-def preprocessing_6(df_data):
-    df_out = df_data
-    df_out = df_out.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
-    ls_vars = ['ATQ', 'COGSQ', 'DLCQ', 'DLTTQ', 'DPQ', 'LTQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ']
-    ls_permnos = df_out['PERMNO'].unique().tolist()
-
-    for permno in tqdm(ls_permnos, desc='Preprocessing (6)'):
-        idx_tmp = df_out[df_out['PERMNO'] == permno].index
-        s_tmp = df_out.loc[idx_tmp[0], ls_vars]
-        df_out.loc[idx_tmp[0], ls_vars] = np.nan
-
-        for i in range(1, len(idx_tmp) - 1):
-            if df_out.loc[idx_tmp[i], 'QTR'] == df_out.loc[idx_tmp[i - 1], 'QTR']:
-                df_out.loc[idx_tmp[i], ls_vars] = df_out.loc[idx_tmp[i - 1], ls_vars]
-            else:
-                s_new = df_out.loc[idx_tmp[i], ls_vars]
-                df_out.loc[idx_tmp[i], ls_vars] = s_tmp
-                s_tmp = s_new
-    return df_out
-
-
-df_data = preprocessing_6(df_data)
-
-
-
-
 # %%
-# **************************************************
-# *** Branch: SCORES COMPUTATION                 ***
-# **************************************************
 
 # Summarize preprocessed data
 df_1 = df_data.drop(columns=['PERMNO', 'DATE', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR',
                              'CONM', 'TIC', 'EXCHG', 'GSECTOR'])
 df_summary_1 = fn.tab_summary(df_1)
-
-
-
 
 # Create variables LTM (Last Twelve Months)
 def get_LTM(df_data, ls_vars):
@@ -199,7 +161,7 @@ df_data = get_LTM(df_data, ls_vars=['COGSQ', 'DPQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ'
 
 
 # Create additional variables
-def preprocessing_6(df_data):
+def preprocessing_7(df_data):
     df_out = df_data
 
     # Value
@@ -221,7 +183,7 @@ def preprocessing_6(df_data):
     df_out.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with nan
     return df_out
 
-df_data = preprocessing_6(df_data)
+df_data = preprocessing_7(df_data)
 
 
 
@@ -248,11 +210,7 @@ df_data['LEV'] = (df_data['DLTTQ'] + df_data['DLCQ']) / df_data['ATQ']
 df_data['AZSCORE'] = (1.2*df_data['WCAPQ'] + 1.4*df_data['REQ_LTM'] + 3.3*(df_data['PIQ_LTM'] + df_data['XINTQ_LTM']) + 0.6*df_data['ME'] + df_data['REVTQ_LTM']) / df_data['ATQ']
 df_data.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with nan
 
-# Checkpoint data
-df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-# %%
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
-    df_data = pickle.load(f)
+
 
 # Beta & Volatility
 with warnings.catch_warnings():
@@ -304,7 +262,6 @@ with warnings.catch_warnings():
 
 
 # Next Month & Next Quarter Returns
-
 df_data['NTRT1M'] = df_data['TRT1M'].shift(periods=(-1))
 df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(-1))
 df_data['NTRT1M'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['NTRT1M'],  np.nan)
@@ -324,7 +281,17 @@ df_data = df_data.drop(columns=['TRT1M_t' + str(i) for i in range(1,4)])
 df_data = df_data.drop(columns=['PERMNO_t'])
 
 
+# Checkpoint data
+df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
+    df_data = pickle.load(f)
+
 # %%
+
+# Filter clean dates (min_year-max_year)
+min_year = 1995
+max_year = 2022
+df_data = df_data[(df_data['YEAR'] >= min_year) & (df_data['YEAR'] <= max_year)]
 
 # Create data dictionary
 dic_data = {}
@@ -344,7 +311,7 @@ s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
 df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
 df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
 '''
-dic_test = dic_data[list(dic_data.keys())[72]]
+dic_test = dic_data[list(dic_data.keys())[332]]
 dic_test = dic_test[dic_test['DVOL'] >= 40]
 
 dic_test_2 = dic_data[list(dic_data.keys())[360]]
@@ -357,20 +324,21 @@ dic_test['BE/ME_rank'] = dic_test.loc['BE/ME'].rank(method='max',ascending=False
 dict_test_3 = dic_test[['BE/ME_r,['BE/ME']]
 
 
-'''
-df_data['ATQ_s'] = df_data['ATQ'].shift(periods=(3))
-df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(3))
-df_data['ATQ_s'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['ATQ_s'],  np.nan)
-df_data = df_data[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ATQ','ATQ_s']]
-'''
+
 
 
 df_data['NTRT1M'] = df_data['NTRT1M'].fillna(0)
 
-
+# TODO: get_zscore(df_data, ls_vars) VAR_ZS
 
 # %%
 # **************************************************
 # *** Branch: COMMENTS                           ***
 # **************************************************
 
+'''
+df_data['ATQ_s'] = df_data['ATQ'].shift(periods=(3))
+df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(3))
+df_data['ATQ_s'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['ATQ_s'],  np.nan)
+df_data = df_data[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ATQ','ATQ_s']]
+'''

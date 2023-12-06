@@ -148,6 +148,28 @@ def preprocessing_5(df_data):
     return df_out
 
 
+def preprocessing_6(df_data):
+    df_out = df_data
+    df_out = df_out.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=3)
+    ls_vars = ['ATQ', 'COGSQ', 'DLCQ', 'DLTTQ', 'DPQ', 'LTQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ',
+               'WCAPQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ']
+
+    for var in tqdm(ls_vars, desc='Preprocessing (6)'):
+        df_out[var] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[var].shift(periods=3), np.nan)
+        df_out.loc[df_out['FILLED'], var] = np.nan
+
+    df_out = df_out.drop(columns=['PERMNO_t'])
+    return df_out
+
+
+
+
+
+
+
+
+
 
 def tab_summary(df_data):
     df_summary = pd.DataFrame({'Count': df_data.count(),  # Count of non-missing values
