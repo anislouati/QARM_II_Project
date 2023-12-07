@@ -232,3 +232,71 @@ df_tmp = df_tmp[df_tmp['DVOL'] >= 40]
 ls_permnos = df_tmp['PERMNO'].unique().tolist()
 df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 '''
+
+'''
+df_out['M_TRT1M'] = - df_out['M_TRT1M']
+for i in range(0, n * 12):
+    df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
+'''
+
+'''
+for i in range(0, n * 12):
+    if i == 0:
+        df_out['LS_TRT1M'] = df_out['TRT1M' + 't_' + str(i)].astype(str)
+    else:
+        df_out['LS_TRT1M'] = df_out['LS_TRT1M'] + ',' + df_out['TRT1M' + 't_' + str(i)].astype(str)
+'''
+
+# test_df.astype(str).agg(', '.join, axis=1)
+# np.array(your_list,dtype=float)
+# np.fromstring(df_out['LS_TRT1M'], dtype=float, sep=',')
+# np.array(df_out['LS_TRT1M'].split(','),dtype=float)
+# np.fromstring(df_out['LS_TRT1M'], dtype=float, sep=',')
+# df_out[ls_cols_TRT1M].apply(lambda row: row.tolist(), axis=1)
+'''
+df_out['LS_TRT1M'] = df_out[ls_cols_TRT1M].astype(str).agg(','.join, axis=1)
+print('Done')
+df_out['LS_TRT1M'] = df_out['LS_TRT1M'].tolist()
+'''
+'''
+df_out['LS_TRT1M'] = df_out[ls_cols_TRT1M].values.tolist()
+'''
+'''
+n = 5
+for i in range(n*12-1,-1,-1):
+    df_data['TRT1M' + 't_' + str(i)] = df_data['TRT1M'].shift(periods=i)
+
+df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months: first date n*12 - 1
+ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n*12-1,-1,-1)]
+
+# Compute (-1)* mean return over the last n*12 months
+df_data['M_TRT1M'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[ls_cols_TRT1M].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
+
+# Compute return + (-1) * mean return
+for i in range(n*12-1,-1,-1):
+    df_data['TRT1M' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
+
+df_data['M_TRT1M'] = -df_data['M_TRT1M']
+
+for i in range(n*12-1,-1,-1):
+    df_data['TRT1M' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
+
+ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n*12-1,-1,-1)]
+df_data['LS_TRT1M'] = df_data[ls_cols_TRT1M].values.tolist()
+
+df_out = df_data.drop(columns=['TRT1M' + 't_' + str(i) for i in range(n*12-1,-1,-1)])
+'''
+
+'''
+for n in range(n*12-1,-1,-1):
+  print(n)
+'''
+
+'''
+zzz = df_data['LS_TRT1M'].iloc[62][0]
+zzzz= pd.DataFrame(df_data['LS_TRT1M'].iloc[62])
+'''
+
+'''
+x = pd.DataFrame(df_data['LS_TRT1M'].iloc[60])
+'''

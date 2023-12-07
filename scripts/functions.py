@@ -267,6 +267,34 @@ def preprocessing_7(df_data):
         df_out = df_out.drop(columns=['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
         df_out = df_out.drop(columns=['M_TRT1M', 'M_SPRTRN', 'COV_TRT1M_SPRTRN', 'PERMNO_t'])
 
+        # Create variable with list of returns over the last n years
+
+        for i in range(n * 12 - 1, -1, -1):
+            df_out['TRT1M' + 't_' + str(i)] = df_out['TRT1M'].shift(periods=i)
+
+        df_out['PERMNO_t'] = df_out['PERMNO'].shift(
+            periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months: first date n*12 - 1
+        ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)]
+
+        # Compute (-1)* mean return over the last n*12 months
+        df_out['M_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_TRT1M].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
+
+        # Compute return + (-1) * mean return
+        for i in range(n * 12 - 1, -1, -1):
+            df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
+
+        df_out['M_TRT1M'] = -df_out['M_TRT1M']
+
+        for i in range(n * 12 - 1, -1, -1):
+            df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
+
+        ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)]
+        df_out['LS_TRT1M'] = df_out[ls_cols_TRT1M].values.tolist()
+
+        df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)])
+        df_out = df_out.drop(columns=['M_TRT1M', 'PERMNO_t'])
+
+
     # Next Month & Next Quarter Returns
     df_out['NTRT1M'] = df_out['TRT1M'].shift(periods=(-1))
     df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-1))
