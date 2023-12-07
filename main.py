@@ -128,6 +128,25 @@ df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
+# %%
+# Momentum
+def preprocessing_mom(df_data):
+    df_out = df_data
+    mom_lag = 6
+    for i in range(0, mom_lag):
+        df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=(i))
+
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(mom_lag - 1))
+    ls_cols = ['TRT1M_t' + str(i) for i in range(0, mom_lag)]
+    df_out['MOM'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
+
+
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, mom_lag)])
+    df_out = df_out.drop(columns=['PERMNO_t'])
+
+    return df_out
+
+df_data = preprocessing_mom(df_data)
 
 # %%
 # **************************************************
@@ -166,15 +185,18 @@ for date in tqdm(ls_dates):
 dic_test = dic_data[list(dic_data.keys())[300]]
 dic_test = dic_test[dic_test['DVOL'] >= 20]
 
+'''
 dic_test = dic_data[list(dic_data.keys())[332]]
 dic_test = dic_test[dic_test['DVOL'] >= 40]
 
 dic_test_2 = dic_data[list(dic_data.keys())[360]]
 dic_test_2 = dic_test_2[dic_test_2['DVOL'] >= 40]
+'''
+# Check that rank 1 is the best
 
-ls_cols = ['BE/ME', 'E/P', 'CF/P', 'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC', 'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR', 'LEV', 'AZSCORE', 'BETA']
+ls_cols = ['BE/ME', 'E/P', 'CF/P', 'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC', 'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR', 'LEV', 'AZSCORE', 'BETA','MOM']
 for v in ls_cols:
-    df_data[v + '_rank'].rank(method='max', ascending=False)
+    dic_test[v + '_rank'] = dic_test[v].rank(method='max', ascending=False)
 
 
 
