@@ -192,16 +192,18 @@ def preprocessing_7(df_data):
     # Create variables LTM (Last Twelve Months)
     df_out = df_data
     df_out = get_LTM(df_out, ls_vars=['COGSQ', 'DPQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ'])
-    df_out['CF_LTM'] = df_out['NIQ_LTM'] + df_out['DPQ_LTM'] - df_out['WCAPCHQ_LTM'] - df_out['CAPXQ_LTM']  # CF = NI + D&A - dWC - CAPX
 
-    # Value
+    # New variables
+    df_out['CF_LTM'] = df_out['NIQ_LTM'] + df_out['DPQ_LTM'] - df_out['WCAPCHQ_LTM'] - df_out['CAPXQ_LTM']  # CF = NI + D&A - dWC - CAPX
     df_out['ME'] = df_out['PRCCM'] * df_out['SHROUT']
     df_out['BE'] = df_out['ATQ'] - df_out['LTQ']  # Book value of Equity = Total Assets - Total Liabilities
+
+    # Value
     df_out['BE/ME'] = df_out['BE'] / df_out['ME']  # Book-to-Market Equity
     df_out['E/P'] = (df_out['NIQ_LTM'] / df_out['SHROUT']) / df_out['PRCCM']  # Earning-to-Price
     df_out['CF/P'] = (df_out['CF_LTM'] / df_out['SHROUT']) / df_out['PRCCM']  # Cash Flow-to-Price
 
-    # Profitability
+    # Quality: Profitability
     df_out['GPOA'] = (df_out['REVTQ_LTM'] - df_out['COGSQ_LTM']) / df_out['ATQ']
     df_out['ROE'] = df_out['NIQ_LTM'] / df_out['BE']
     df_out['ROA'] = df_out['NIQ_LTM'] / df_out['ATQ']
@@ -209,10 +211,11 @@ def preprocessing_7(df_data):
     df_out['GMAR'] = (df_out['REVTQ_LTM'] - df_out['COGSQ_LTM']) / df_out['REVTQ_LTM']
     df_out['ACC'] = - (df_out['WCAPCHQ_LTM'] - df_out['DPQ_LTM']) / df_out['ATQ']
 
-    # Create diff. variables (n years interval)
+    # Quality: Growth: Create diff. variables (n years interval)
+    df_out.replace([np.inf, -np.inf], np.nan, inplace=True) # Avoid to have runtime error (sum inf number)
     df_out = get_diff(df_out, ls_vars=['GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR'], n=5)
 
-    # Safety
+    # Quality: Safety
     df_out['LEV'] = (df_out['DLTTQ'] + df_out['DLCQ']) / df_out['ATQ']
     df_out['AZSCORE'] = ((1.2 * df_out['WCAPQ']) + (1.4 * df_out['REQ_LTM']) + (3.3 * (df_out['PIQ_LTM'] + df_out['XINTQ_LTM'])) + (0.6 * df_out['ME']) + df_out['REVTQ_LTM']) / df_out['ATQ']
 
@@ -229,24 +232,33 @@ def preprocessing_7(df_data):
         for i in range(0, n * 12):
             df_out['SPRTRN' + 't_' + str(i)] = df_out['SPRTRN'].shift(periods=i)
 
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1)
+        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1) # Take n*12 months taking the current months: first date n*12 - 1
         ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(0, n * 12)]
         ls_cols_SPRTRN = ['SPRTRN' + 't_' + str(i) for i in range(0, n * 12)]
 
+        # Compute (-1)* mean return over the last n*12 months
         df_out['M_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], -df_out[ls_cols_TRT1M].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
         df_out['M_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], -df_out[ls_cols_SPRTRN].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
 
+        # Compute return + (-1) * mean return
         for i in range(0, n * 12):
             df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
         for i in range(0, n * 12):
             df_out['SPRTRN' + 't_' + str(i)] = df_out[['SPRTRN' + 't_' + str(i), 'M_SPRTRN']].sum(axis=1, skipna=False)
+
+        # Compute product of (TRT1M - mean TRT1M) * (SPRTRN - mean SPRTRN)
         for i in range(0, n * 12):
             df_out['PROD_TRT1M_SPRTRN' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'SPRTRN' + 't_' + str(i)]].product(axis=1, skipna=False)
 
+        # Compute COV(TRT1M, SPRTRN) over the last n*12 months
         ls_cols_COV_TRT1M_SPRTRN = ['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)]
         df_out['COV_TRT1M_SPRTRN'] = df_out[ls_cols_COV_TRT1M_SPRTRN].sum(axis=1, skipna=False) / (len(range(0, n * 12)) - 1)
+
+        # Compute Var over the last n*12 months (Var(return - mean return) = Var(return))
         df_out['VAR_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_TRT1M].var(axis=1, skipna=False), np.nan)
         df_out['VAR_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_SPRTRN].var(axis=1, skipna=False), np.nan)
+
+        # Compute BETA over the last n*12 months
         df_out['BETA'] = df_out['COV_TRT1M_SPRTRN'] / df_out['VAR_SPRTRN']
 
         df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(0, n * 12)])
@@ -254,24 +266,26 @@ def preprocessing_7(df_data):
         df_out = df_out.drop(columns=['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
         df_out = df_out.drop(columns=['M_TRT1M', 'M_SPRTRN', 'COV_TRT1M_SPRTRN', 'PERMNO_t'])
 
-        # Next Month & Next Quarter Returns
-        df_out['NTRT1M'] = df_out['TRT1M'].shift(periods=(-1))
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-1))
-        df_out['NTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['NTRT1M'], np.nan)
-        df_out['NTRT1M'] = df_out['NTRT1M'].fillna(0)
-        df_out.loc[df_out['FILLED'], 'NTRT1M'] = np.nan
 
-        for i in range(1, 4):
-            df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=(-i))
+    # Next Month & Next Quarter Returns
+    df_out['NTRT1M'] = df_out['TRT1M'].shift(periods=(-1))
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-1))
+    df_out['NTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['NTRT1M'], np.nan)
+    df_out['NTRT1M'] = df_out['NTRT1M'].fillna(0)
+    df_out.loc[df_out['FILLED'], 'NTRT1M'] = np.nan
 
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-3))
-        ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
-        df_out['NTRT1Q'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
-        df_out['NTRT1Q'] = df_out['NTRT1Q'].fillna(0)
-        df_out.loc[df_out['FILLED'], 'NTRT1Q'] = np.nan
+    for i in range(1, 4):
+        df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=(-i))
 
-        df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 4)])
-        df_out = df_out.drop(columns=['PERMNO_t'])
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-3))
+    ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
+    df_out['NTRT1Q'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
+    df_out['NTRT1Q'] = df_out['NTRT1Q'].fillna(0)
+    df_out.loc[df_out['FILLED'], 'NTRT1Q'] = np.nan
+
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 4)])
+    df_out = df_out.drop(columns=['PERMNO_t'])
+
     return df_out
 
 
