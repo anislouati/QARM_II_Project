@@ -132,7 +132,7 @@ with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
 # Momentum
 def preprocessing_mom(df_data):
     df_out = df_data
-    mom_lag = 6
+    mom_lag = 12
     for i in range(0, mom_lag):
         df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=(i))
 
@@ -196,10 +196,43 @@ dic_test_2 = dic_test_2[dic_test_2['DVOL'] >= 40]
 
 ls_cols = ['BE/ME', 'E/P', 'CF/P', 'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC', 'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR', 'LEV', 'AZSCORE', 'BETA','MOM']
 for v in ls_cols:
-    dic_test[v + '_rank'] = dic_test[v].rank(method='max', ascending=False)
+    dic_test[v + '_rank'] = dic_test[v].rank(method='max', ascending=True)
+
+for v in ls_cols:
+    dic_test[v + '_zscore'] = (dic_test[v + '_rank'] - dic_test[v + '_rank'].mean()) / dic_test[v + '_rank'].std()
 
 
+ls_cols = ['BE/ME', 'E/P', 'CF/P']
+ls_cols = [i + '_zscore' for i in ls_cols]
+dic_test['Value_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
 
+ls_cols = ['GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC']
+ls_cols = [i + '_zscore' for i in ls_cols]
+dic_test['Profitability_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+
+ls_cols = ['D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR']
+ls_cols = [i + '_zscore' for i in ls_cols]
+dic_test['Growth_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+
+ls_cols = ['LEV', 'AZSCORE', 'BETA']
+ls_cols = [i + '_zscore' for i in ls_cols]
+dic_test['Safety_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+
+ls_cols = ['Profitability', 'Growth', 'Safety']
+ls_cols = [i + '_zscore' for i in ls_cols]
+dic_test['Quality_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+
+ls_cols = ['MOM']
+ls_cols = [i + '_zscore' for i in ls_cols]
+dic_test['Momentum_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+
+ls_cols = ['Value', 'Quality']
+ls_cols = [i + '_zscore' for i in ls_cols]
+dic_test['Value_Quality_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+
+ls_cols = ['Value', 'Quality','Momentum']
+ls_cols = [i + '_zscore' for i in ls_cols]
+dic_test['Value_Quality_Momentum_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
 
 
 
