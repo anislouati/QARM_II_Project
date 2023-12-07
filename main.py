@@ -120,10 +120,14 @@ df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).res
 # Push forward fundamentals (out-of-sample) ==> Example: info published on 31/03 (Q_t) available starting 30/04 (Q_t_1)
 df_data = fn.preprocessing_6(df_data)
 
+# Create additional variables (fundamental metrics)
+df_data = fn.preprocessing_7(df_data)
+
 # Checkpoint data
-# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+#df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
+
 
 '''
 # Filter out illiquid stocks (max dollar volume (monthly) < $100mil.)
@@ -134,171 +138,6 @@ df_tmp = df_tmp[df_tmp['DVOL'] >= 40]
 ls_permnos = df_tmp['PERMNO'].unique().tolist()
 df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 '''
-
-
-# %%
-
-def get_LTM(df_data, ls_vars):
-    df_out = df_data
-    for var in tqdm(ls_vars, desc='LTM'):
-        df_out[var + '_t_3'] = df_out[var].shift(periods=3 * 3)
-        df_out[var + '_t_2'] = df_out[var].shift(periods=2 * 3)
-        df_out[var + '_t_1'] = df_out[var].shift(periods=1 * 3)
-        df_out['PERMNO_t_3'] = df_out['PERMNO'].shift(periods=3 * 3)
-
-        ls_cols = [var + '_t_3', var + '_t_2', var + '_t_1', var]
-        df_out[var + '_LTM'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t_3'], df_out[ls_cols].sum(axis=1, skipna=False), np.nan)
-        df_out = df_out.drop(columns=[var + '_t_3', var + '_t_2', var + '_t_1', 'PERMNO_t_3'])
-
-    return df_out
-
-df_data = get_LTM(df_data, ls_vars=['COGSQ', 'DPQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ'])
-
-
-# Create additional variables
-def preprocessing_7(df_data):
-    # Create variables LTM (Last Twelve Months)
-    df_out = df_data
-    df_out = get_LTM(df_out, ls_vars=['COGSQ', 'DPQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ'])
-
-    # Value
-    df_out['ME'] = df_out['PRCCM'] * df_out['SHROUT']
-    df_out['BE'] = df_out['ATQ'] - df_out['LTQ']  # Book value of Equity = Total Assets - Total Liabilities
-    df_out['CF_LTM'] = df_out['NIQ_LTM'] + df_out['DPQ_LTM'] - df_out['WCAPCHQ_LTM'] - df_out['CAPXQ_LTM']  # CF = NI + D&A - dWC - CAPX
-    df_out['BE/ME'] = df_out['BE'] / df_out['ME']  # Book-to-Market Equity
-    df_out['E/P'] = (df_out['NIQ_LTM'] / df_out['SHROUT']) / df_out['PRCCM']  # Earning-to-Price
-    df_out['CF/P'] = (df_out['CF_LTM'] / df_out['SHROUT']) / df_out['PRCCM']  # Cash Flow-to-Price
-
-    # Profitability
-    df_out['GPOA'] = (df_out['REVTQ_LTM'] - df_out['COGSQ_LTM']) / df_out['ATQ']
-    df_out['ROE'] = df_out['NIQ_LTM'] / df_out['BE']
-    df_out['ROA'] = df_out['NIQ_LTM'] / df_out['ATQ']
-    df_out['CFOA'] = df_out['CF_LTM'] / df_out['ATQ']
-    df_out['GMAR'] = (df_out['REVTQ_LTM'] - df_out['COGSQ_LTM']) / df_out['REVTQ_LTM']
-    df_out['ACC'] = - (df_out['WCAPCHQ_LTM'] - df_out['DPQ_LTM']) / df_out['ATQ']
-
-    df_out.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with nan
-    return df_out
-
-df_data = preprocessing_7(df_data)
-
-
-
-# Create diff. variables (nb_years interval)
-def get_diff(df_data, ls_vars, nb_years):
-    df_out = df_data
-    for var in ls_vars:
-        df_out[var + '_t'] = (-1) * df_out[var].shift(periods=(nb_years * 4 * 3))
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(nb_years * 4 * 3))
-        ls_cols = [var + '_t', var]
-        df_out['d_' + var] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].sum(axis=1, skipna=False), np.nan)
-        df_out = df_out.drop(columns=[var + '_t', 'PERMNO_t'])
-
-    return df_out
-
-df_data = get_diff(df_data, ls_vars=['GPOA','ROE','ROA','CFOA','GMAR'], nb_years=5)
-
-
-
-
-
-# Safety
-df_data['LEV'] = (df_data['DLTTQ'] + df_data['DLCQ']) / df_data['ATQ']
-df_data['AZSCORE'] = (1.2*df_data['WCAPQ'] + 1.4*df_data['REQ_LTM'] + 3.3*(df_data['PIQ_LTM'] + df_data['XINTQ_LTM']) + 0.6*df_data['ME'] + df_data['REVTQ_LTM']) / df_data['ATQ']
-df_data.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with nan
-
-
-
-# Beta & Volatility
-with warnings.catch_warnings():
-    warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
-
-    n=5
-    for i in range(0,n*12):
-        df_data['TRT1M' + 't_' + str(i)] = df_data['TRT1M'].shift(periods=i)
-    for i in range(0, n * 12):
-        df_data['SPRTRN' + 't_' + str(i)] = df_data['SPRTRN'].shift(periods=i)
-
-
-
-    df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=n * 4 * 3 - 1)
-
-
-    col_list_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(0,n*12)]
-    col_list_SPRTRN = ['SPRTRN' + 't_' + str(i) for i in range(0,n*12)]
-
-
-    df_data['TRT1M_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], -df_data[col_list_TRT1M].mean(axis=1, skipna=False), np.nan) # Check the PERMNO
-    df_data['SPRTRN_mean'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], -df_data[col_list_SPRTRN].mean(axis=1, skipna=False), np.nan) # Check the PERMNO
-
-    for i in range(0,n*12):
-        df_data['TRT1M' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'TRT1M_mean']].sum(axis=1, skipna=False)
-
-    for i in range(0, n * 12):
-        df_data['SPRTRN' + 't_' + str(i)] = df_data[['SPRTRN' + 't_' + str(i), 'SPRTRN_mean']].sum(axis=1, skipna=False)
-
-    for i in range(0, n * 12):
-        df_data['Prod_TRT1M_SPRTRN' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'SPRTRN' + 't_' + str(i)]].product(axis=1, skipna=False)
-
-
-    col_list_Cov_TRT1M_SPRTRN = ['Prod_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0,n*12)]
-
-    df_data['Cov_TRT1M_SPRTRN'] = df_data[col_list_Cov_TRT1M_SPRTRN].sum(axis=1, skipna=False) / (len(range(0, n * 12)) - 1)
-
-
-    df_data['TRT1M_Var'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[col_list_TRT1M].var(axis=1, skipna=False), np.nan)
-    df_data['SPRTRN_Var'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[col_list_SPRTRN].var(axis=1, skipna=False), np.nan)
-
-    df_data['Beta'] = df_data['Cov_TRT1M_SPRTRN'] / df_data['SPRTRN_Var']
-
-
-    df_data = df_data.drop(columns=['TRT1M' + 't_' + str(i) for i in range(0,n*12)])
-    df_data = df_data.drop(columns=['SPRTRN' + 't_' + str(i) for i in range(0,n*12)])
-    df_data = df_data.drop(columns=['Prod_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0,n*12)])
-    df_data = df_data.drop(columns=['TRT1M_mean','SPRTRN_mean','Cov_TRT1M_SPRTRN','PERMNO_t'])
-
-
-# Next Month & Next Quarter Returns
-df_data['NTRT1M'] = df_data['TRT1M'].shift(periods=(-1))
-df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(-1))
-df_data['NTRT1M'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['NTRT1M'],  np.nan)
-df_data['NTRT1M'] = df_data['NTRT1M'].fillna(0)
-
-for i in range(1,4):
-    df_data['TRT1M_t' + str(i)] = 1 + df_data['TRT1M'].shift(periods=(-i))
-
-df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(-3))
-
-ls_cols = ['TRT1M_t' + str(i) for i in range(1,4)]
-
-df_data['NTRT1Q'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[ls_cols].product(axis=1, skipna=False) - 1 ,  np.nan)
-df_data['NTRT1Q'] = df_data['NTRT1Q'].fillna(0)
-
-df_data = df_data.drop(columns=['TRT1M_t' + str(i) for i in range(1,4)])
-df_data = df_data.drop(columns=['PERMNO_t'])
-
-
-# Checkpoint data
-#df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
-    df_data = pickle.load(f)
-
-
-# Summarize preprocessed data
-df_1 = df_data.drop(columns=['PERMNO', 'DATE', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR',
-                             'CONM', 'TIC', 'EXCHG', 'GSECTOR'])
-df_summary_1 = fn.tab_summary(df_1)
-
-
-
-
-
-
-
-
-
-
-# %%
 
 # Filter clean dates (min_year-max_year)
 min_year = 1997
@@ -317,12 +156,7 @@ for date in tqdm(ls_dates):
     ls_lens += [len(df_tmp)]
 
 
-'''
-min_dvol = 100
-s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
-df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
-df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
-'''
+# TODO: get_zscore(df_data, ls_vars) VAR_ZS
 dic_test = dic_data[list(dic_data.keys())[300]]
 dic_test = dic_test[dic_test['DVOL'] >= 20]
 
@@ -332,17 +166,9 @@ dic_test = dic_test[dic_test['DVOL'] >= 40]
 dic_test_2 = dic_data[list(dic_data.keys())[360]]
 dic_test_2 = dic_test_2[dic_test_2['DVOL'] >= 40]
 
-
-
-ls_cols = ['BE/ME','E/P', 'CF/P','GPOA','ROE','ROA','CFOA','GMAR','ACC','d_GPOA','d_ROE','d_ROA','d_CFOA','d_GMAR','LEV','AZSCORE','Beta']
+ls_cols = ['BE/ME', 'E/P', 'CF/P', 'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC', 'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR', 'LEV', 'AZSCORE', 'Beta']
 for v in ls_cols:
-    df_data[v + '_rank'].rank(method='max',ascending=False)
-
-'''
-df_data['NTRT1M'] = df_data['NTRT1M'].fillna(0)
-'''
-
-# TODO: get_zscore(df_data, ls_vars) VAR_ZS
+    df_data[v + '_rank'].rank(method='max', ascending=False)
 
 
 # %%
@@ -363,4 +189,15 @@ df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
 
 dic_test['BE/ME_rank'] = dic_test['BE/ME'].rank(method='max',ascending=False)
 dict_test_3 = dic_test[['BE/ME_rank','BE/ME']]
+'''
+
+'''
+def tab_summary(df_data):
+    df_summary = pd.DataFrame({'Count': df_data.count(),  # Count of non-missing values
+                               'Missing Pct': (df_data.isna().sum() / len(df_data)),  # Missing values as percentage
+                               'Min': df_data.min(),
+                               'Mean': df_data.mean(),
+                               'Median': df_data.median(),
+                               'Max': df_data.max()})
+    return df_summary
 '''
