@@ -406,3 +406,15 @@ def tab_summary(df_data):
                                'Max': df_data.max()})
     return df_summary
 '''
+
+'''
+# Filter out illiquid stocks (max dollar volume (monthly) < $100mil.)
+min_dvol = 40
+s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
+df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
+df_tmp = df_tmp[df_tmp['DVOL'] >= 40]
+ls_permnos = df_tmp['PERMNO'].unique().tolist()
+df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
+'''
+
+

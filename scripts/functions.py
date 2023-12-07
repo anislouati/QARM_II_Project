@@ -172,7 +172,7 @@ def get_LTM(df_data, ls_vars):
         df_out['PERMNO_t_3'] = df_out['PERMNO'].shift(periods=3 * 3)
 
         ls_cols = [var + '_t_3', var + '_t_2', var + '_t_1', var]
-        df_out[var + '_LTM'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t_3'], df_out[ls_cols].sum(axis=1, skipna=False), np.nan)
+        df_out['LTM_' + var] = np.where(df_out['PERMNO'] == df_out['PERMNO_t_3'], df_out[ls_cols].sum(axis=1, skipna=False), np.nan)
         df_out = df_out.drop(columns=[var + '_t_3', var + '_t_2', var + '_t_1', 'PERMNO_t_3'])
     return df_out
 
@@ -194,35 +194,33 @@ def preprocessing_7(df_data):
     df_out = get_LTM(df_out, ls_vars=['COGSQ', 'DPQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ'])
 
     # New variables
-    df_out['CF_LTM'] = df_out['NIQ_LTM'] + df_out['DPQ_LTM'] - df_out['WCAPCHQ_LTM'] - df_out['CAPXQ_LTM']  # CF = NI + D&A - dWC - CAPX
+    df_out['LTM_CF'] = df_out['LTM_NIQ'] + df_out['LTM_DPQ'] - df_out['LTM_WCAPCHQ'] - df_out['LTM_CAPXQ']  # CF = NI + D&A - dWC - CAPX
     df_out['ME'] = df_out['PRCCM'] * df_out['SHROUT']
     df_out['BE'] = df_out['ATQ'] - df_out['LTQ']  # Book value of Equity = Total Assets - Total Liabilities
 
     # Value
     df_out['BE/ME'] = df_out['BE'] / df_out['ME']  # Book-to-Market Equity
-    df_out['E/P'] = (df_out['NIQ_LTM'] / df_out['SHROUT']) / df_out['PRCCM']  # Earning-to-Price
-    df_out['CF/P'] = (df_out['CF_LTM'] / df_out['SHROUT']) / df_out['PRCCM']  # Cash Flow-to-Price
+    df_out['E/P'] = (df_out['LTM_NIQ'] / df_out['SHROUT']) / df_out['PRCCM']  # Earning-to-Price
+    df_out['CF/P'] = (df_out['LTM_CF'] / df_out['SHROUT']) / df_out['PRCCM']  # Cash Flow-to-Price
 
     # Quality: Profitability
-    df_out['GPOA'] = (df_out['REVTQ_LTM'] - df_out['COGSQ_LTM']) / df_out['ATQ']
-    df_out['ROE'] = df_out['NIQ_LTM'] / df_out['BE']
-    df_out['ROA'] = df_out['NIQ_LTM'] / df_out['ATQ']
-    df_out['CFOA'] = df_out['CF_LTM'] / df_out['ATQ']
-    df_out['GMAR'] = (df_out['REVTQ_LTM'] - df_out['COGSQ_LTM']) / df_out['REVTQ_LTM']
-    df_out['ACC'] = - (df_out['WCAPCHQ_LTM'] - df_out['DPQ_LTM']) / df_out['ATQ']
+    df_out['GPOA'] = (df_out['LTM_REVTQ'] - df_out['LTM_COGSQ']) / df_out['ATQ']
+    df_out['ROE'] = df_out['LTM_NIQ'] / df_out['BE']
+    df_out['ROA'] = df_out['LTM_NIQ'] / df_out['ATQ']
+    df_out['CFOA'] = df_out['LTM_CF'] / df_out['ATQ']
+    df_out['GMAR'] = (df_out['LTM_REVTQ'] - df_out['LTM_COGSQ']) / df_out['LTM_REVTQ']
+    df_out['ACC'] = - (df_out['LTM_WCAPCHQ'] - df_out['LTM_DPQ']) / df_out['ATQ']
 
-    # Quality: Growth: Create diff. variables (n years interval)
-    df_out.replace([np.inf, -np.inf], np.nan, inplace=True) # Avoid to have runtime error (sum inf number)
-    df_out = get_diff(df_out, ls_vars=['GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR'], n=5)
+    # Quality: Growth
+    df_out.replace([np.inf, -np.inf], np.nan, inplace=True)  # Avoid to have runtime error (sum inf number)
+    df_out = get_diff(df_out, ls_vars=['GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR'], n=5)  # Create diff. variables (n years interval)
 
     # Quality: Safety
-    df_out['LEV'] = (-1) * (df_out['DLTTQ'] + df_out['DLCQ']) / df_out['ATQ']  # Take the negative
-    df_out['AZSCORE'] = ((1.2 * df_out['WCAPQ']) + (1.4 * df_out['REQ_LTM']) + (3.3 * (df_out['PIQ_LTM'] + df_out['XINTQ_LTM'])) + (0.6 * df_out['ME']) + df_out['REVTQ_LTM']) / df_out['ATQ']
+    df_out['LEV'] = (-1) * (df_out['DLTTQ'] + df_out['DLCQ']) / df_out['ATQ']  # Take the negative (zscore computation)
+    df_out['AZSCORE'] = ((1.2 * df_out['WCAPQ']) + (1.4 * df_out['LTM_REQ']) + (3.3 * (df_out['LTM_PIQ'] + df_out['LTM_XINTQ'])) + (0.6 * df_out['ME']) + df_out['LTM_REVTQ']) / df_out['ATQ']
+    df_out.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with nan
 
-    # Replace inf with nan
-    df_out.replace([np.inf, -np.inf], np.nan, inplace=True)
-
-    # Beta and volatility (benchmark: S&P 500 Composite Index)
+    # Beta and Volatility (benchmark: S&P 500 Composite Index)
     with warnings.catch_warnings():
         warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
@@ -232,7 +230,7 @@ def preprocessing_7(df_data):
         for i in range(0, n * 12):
             df_out['SPRTRN' + 't_' + str(i)] = df_out['SPRTRN'].shift(periods=i)
 
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1) # Take n*12 months taking the current months: first date n*12 - 1
+        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months: first date n*12 - 1
         ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(0, n * 12)]
         ls_cols_SPRTRN = ['SPRTRN' + 't_' + str(i) for i in range(0, n * 12)]
 
@@ -295,7 +293,7 @@ def preprocessing_7(df_data):
         df_out = df_out.drop(columns=['M_TRT1M', 'PERMNO_t'])
 
 
-    # Next Month & Next Quarter Returns
+    # Next Month and Next Quarter Returns
     df_out['NTRT1M'] = df_out['TRT1M'].shift(periods=(-1))
     df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-1))
     df_out['NTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['NTRT1M'], np.nan)
@@ -315,15 +313,15 @@ def preprocessing_7(df_data):
     df_out = df_out.drop(columns=['PERMNO_t'])
 
     # Momentum
-    mom_lag = 6
-    for i in range(0, mom_lag):
+    n_lags = 6
+    for i in range(0, n_lags):
         df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=i)
 
-    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(mom_lag - 1))
-    ls_cols = ['TRT1M_t' + str(i) for i in range(0, mom_lag)]
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags - 1))
+    ls_cols = ['TRT1M_t' + str(i) for i in range(0, n_lags)]
     df_out['CTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Cumulative total returns (nb_lags
 
-    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, mom_lag)])
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, n_lags)])
     df_out = df_out.drop(columns=['PERMNO_t'])
     return df_out
 
