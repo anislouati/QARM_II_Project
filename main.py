@@ -68,9 +68,9 @@ df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
 # Checkpoint data
-#df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
-#df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
-#df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
+# df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
+# df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
+# df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as f:
     df_fundamentals_quarterly = pickle.load(f)
 with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as f:
@@ -94,7 +94,7 @@ ls_selected_cols = ['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FIL
 df_data = df_data[ls_selected_cols]
 df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
-# Check data preprocessing (4)
+# Check filled data (by stock)
 delta_months = (df_data.groupby('PERMNO')['DATE'].max().dt.to_period('M') - df_data.groupby('PERMNO')['DATE'].min().dt.to_period('M')).apply(attrgetter('n')) + 1
 months_count = df_data.groupby('PERMNO')['DATE'].count()
 
@@ -120,6 +120,11 @@ df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).res
 # Push forward fundamentals (out-of-sample) ==> Example: info published on 31/03 (Q_t) available starting 30/04 (Q_t_1)
 df_data = fn.preprocessing_6(df_data)
 
+# Checkpoint data
+# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
+    df_data = pickle.load(f)
+
 '''
 # Filter out illiquid stocks (max dollar volume (monthly) < $100mil.)
 min_dvol = 40
@@ -130,19 +135,9 @@ ls_permnos = df_tmp['PERMNO'].unique().tolist()
 df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 '''
 
-# Checkpoint data
-#df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
-    df_data = pickle.load(f)
 
 # %%
 
-# Summarize preprocessed data
-df_1 = df_data.drop(columns=['PERMNO', 'DATE', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR',
-                             'CONM', 'TIC', 'EXCHG', 'GSECTOR'])
-df_summary_1 = fn.tab_summary(df_1)
-
-# Create variables LTM (Last Twelve Months)
 def get_LTM(df_data, ls_vars):
     df_out = df_data
     for var in tqdm(ls_vars, desc='LTM'):
@@ -162,7 +157,9 @@ df_data = get_LTM(df_data, ls_vars=['COGSQ', 'DPQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ'
 
 # Create additional variables
 def preprocessing_7(df_data):
+    # Create variables LTM (Last Twelve Months)
     df_out = df_data
+    df_out = get_LTM(df_out, ls_vars=['COGSQ', 'DPQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ'])
 
     # Value
     df_out['ME'] = df_out['PRCCM'] * df_out['SHROUT']
@@ -286,6 +283,21 @@ df_data = df_data.drop(columns=['PERMNO_t'])
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
+
+# Summarize preprocessed data
+df_1 = df_data.drop(columns=['PERMNO', 'DATE', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR',
+                             'CONM', 'TIC', 'EXCHG', 'GSECTOR'])
+df_summary_1 = fn.tab_summary(df_1)
+
+
+
+
+
+
+
+
+
+
 # %%
 
 # Filter clean dates (min_year-max_year)
@@ -314,16 +326,13 @@ df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
 dic_test = dic_data[list(dic_data.keys())[300]]
 dic_test = dic_test[dic_test['DVOL'] >= 20]
 
+dic_test = dic_data[list(dic_data.keys())[332]]
+dic_test = dic_test[dic_test['DVOL'] >= 40]
+
 dic_test_2 = dic_data[list(dic_data.keys())[360]]
 dic_test_2 = dic_test_2[dic_test_2['DVOL'] >= 40]
 
-'''
-#for i in dic_data:
-#df['max_rank'] = df['Number_legs'].rank(method='max')
 
-dic_test['BE/ME_rank'] = dic_test['BE/ME'].rank(method='max',ascending=False)
-dict_test_3 = dic_test[['BE/ME_rank','BE/ME']]
-'''
 
 ls_cols = ['BE/ME','E/P', 'CF/P','GPOA','ROE','ROA','CFOA','GMAR','ACC','d_GPOA','d_ROE','d_ROA','d_CFOA','d_GMAR','LEV','AZSCORE','Beta']
 for v in ls_cols:
@@ -349,10 +358,9 @@ df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
 '''
 
 '''
-df_data['ATQ_s'] = df_data['ATQ'].shift(periods=(3))
-df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(3))
-df_data['ATQ_s'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['ATQ_s'],  np.nan)
-df_data = df_data[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ATQ','ATQ_s']]
+#for i in dic_data:
+#df['max_rank'] = df['Number_legs'].rank(method='max')
+
+dic_test['BE/ME_rank'] = dic_test['BE/ME'].rank(method='max',ascending=False)
+dict_test_3 = dic_test[['BE/ME_rank','BE/ME']]
 '''
-
-

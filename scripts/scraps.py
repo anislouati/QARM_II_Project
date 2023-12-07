@@ -366,3 +366,17 @@ df['d_' + v] = np.where(df['PERMNO'] == df['PERMNO_t'], df[col_list].sum(axis=1,
 
 df = df.drop(columns=[v + '_t', 'PERMNO_t'])
 '''
+
+'''
+min_dvol = 100
+s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
+df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
+df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
+'''
+
+'''
+df_data['ATQ_s'] = df_data['ATQ'].shift(periods=(3))
+df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(3))
+df_data['ATQ_s'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['ATQ_s'],  np.nan)
+df_data = df_data[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ATQ','ATQ_s']]
+'''
