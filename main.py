@@ -68,9 +68,9 @@ df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
 # Checkpoint data
-# df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
-# df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
-# df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
+df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
+df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
+df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as f:
     df_fundamentals_quarterly = pickle.load(f)
 with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as f:
@@ -124,11 +124,17 @@ df_data = fn.preprocessing_6(df_data)
 df_data = fn.preprocessing_7(df_data)
 
 # Checkpoint data
-#df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
 
+# %%
+# **************************************************
+# *** Branch: PORTFOLIO CONSTRUCTION             ***
+# **************************************************
+
+# TODO: continue here
 '''
 # Filter out illiquid stocks (max dollar volume (monthly) < $100mil.)
 min_dvol = 40
@@ -166,9 +172,13 @@ dic_test = dic_test[dic_test['DVOL'] >= 40]
 dic_test_2 = dic_data[list(dic_data.keys())[360]]
 dic_test_2 = dic_test_2[dic_test_2['DVOL'] >= 40]
 
-ls_cols = ['BE/ME', 'E/P', 'CF/P', 'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC', 'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR', 'LEV', 'AZSCORE', 'Beta']
+ls_cols = ['BE/ME', 'E/P', 'CF/P', 'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC', 'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR', 'LEV', 'AZSCORE', 'BETA']
 for v in ls_cols:
     df_data[v + '_rank'].rank(method='max', ascending=False)
+
+
+
+
 
 
 # %%
