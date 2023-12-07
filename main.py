@@ -68,9 +68,9 @@ df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
 # Checkpoint data
-# df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
-# df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
-# df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
+#df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
+#df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
+#df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as f:
     df_fundamentals_quarterly = pickle.load(f)
 with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as f:
@@ -131,7 +131,7 @@ df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 '''
 
 # Checkpoint data
-df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+#df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
@@ -238,7 +238,7 @@ with warnings.catch_warnings():
         df_data['TRT1M' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'TRT1M_mean']].sum(axis=1, skipna=False)
 
     for i in range(0, n * 12):
-        df_data['SPRTRN' + 't_' + str(i)] = df_data[['SPRTRN' + 't_' + str(i), 'TRT1M_mean']].sum(axis=1, skipna=False)
+        df_data['SPRTRN' + 't_' + str(i)] = df_data[['SPRTRN' + 't_' + str(i), 'SPRTRN_mean']].sum(axis=1, skipna=False)
 
     for i in range(0, n * 12):
         df_data['Prod_TRT1M_SPRTRN' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'SPRTRN' + 't_' + str(i)]].product(axis=1, skipna=False)
@@ -282,14 +282,14 @@ df_data = df_data.drop(columns=['PERMNO_t'])
 
 
 # Checkpoint data
-df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+#df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
 # %%
 
 # Filter clean dates (min_year-max_year)
-min_year = 1995
+min_year = 1997
 max_year = 2022
 df_data = df_data[(df_data['YEAR'] >= min_year) & (df_data['YEAR'] <= max_year)]
 
@@ -311,8 +311,8 @@ s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
 df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
 df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
 '''
-dic_test = dic_data[list(dic_data.keys())[332]]
-dic_test = dic_test[dic_test['DVOL'] >= 40]
+dic_test = dic_data[list(dic_data.keys())[300]]
+dic_test = dic_test[dic_test['DVOL'] >= 20]
 
 dic_test_2 = dic_data[list(dic_data.keys())[360]]
 dic_test_2 = dic_test_2[dic_test_2['DVOL'] >= 40]
@@ -325,7 +325,7 @@ dic_test['BE/ME_rank'] = dic_test['BE/ME'].rank(method='max',ascending=False)
 dict_test_3 = dic_test[['BE/ME_rank','BE/ME']]
 '''
 
-ls_cols = ['BE/ME']
+ls_cols = ['BE/ME','E/P', 'CF/P','GPOA','ROE','ROA','CFOA','GMAR','ACC','d_GPOA','d_ROE','d_ROA','d_CFOA','d_GMAR','LEV','AZSCORE','Beta']
 for v in ls_cols:
     df_data[v + '_rank'].rank(method='max',ascending=False)
 
