@@ -120,49 +120,21 @@ df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).res
 # Push forward fundamentals (out-of-sample) ==> Example: info published on 31/03 (Q_t) available starting 30/04 (Q_t_1)
 df_data = fn.preprocessing_6(df_data)
 
-# Create additional variables (fundamental metrics)
-df_data = fn.preprocessing_7(df_data)
-
 # Checkpoint data
-df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+#df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
-# %%
-# Momentum
-def preprocessing_mom(df_data):
-    df_out = df_data
-    mom_lag = 12
-    for i in range(0, mom_lag):
-        df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=(i))
+# Create additional variables (fundamental metrics)
+df_data = fn.preprocessing_7(df_data)
 
-    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(mom_lag - 1))
-    ls_cols = ['TRT1M_t' + str(i) for i in range(0, mom_lag)]
-    df_out['MOM'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
-
-
-    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, mom_lag)])
-    df_out = df_out.drop(columns=['PERMNO_t'])
-
-    return df_out
-
-df_data = preprocessing_mom(df_data)
 
 # %%
 # **************************************************
 # *** Branch: PORTFOLIO CONSTRUCTION             ***
 # **************************************************
 
-# TODO: continue here
-'''
-# Filter out illiquid stocks (max dollar volume (monthly) < $100mil.)
-min_dvol = 40
-s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
-df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
-df_tmp = df_tmp[df_tmp['DVOL'] >= 40]
-ls_permnos = df_tmp['PERMNO'].unique().tolist()
-df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
-'''
+# Abbreviations: Momentum (MOM), Value (VAL), Quality (QLT)
 
 # Filter clean dates (min_year-max_year)
 min_year = 1997
@@ -172,18 +144,22 @@ df_data = df_data[(df_data['YEAR'] >= min_year) & (df_data['YEAR'] <= max_year)]
 # Create data dictionary
 dic_data = {}
 ls_dates = sorted(df_data['DATE'].unique().tolist())
-ls_lens = []
 
 for date in tqdm(ls_dates):
     df_tmp = df_data[df_data['DATE'] == date]
     df_tmp = df_tmp.dropna(how='any')
+
+    min_dvol = 25
+    df_tmp = df_tmp[df_tmp['DVOL'] >= min_dvol]
+
+    min_me = 250
+    df_tmp = df_tmp[df_tmp['ME'] >= min_me]
     dic_data[date] = df_tmp
-    ls_lens += [len(df_tmp)]
 
 
 # TODO: get_zscore(df_data, ls_vars) VAR_ZS
 dic_test = dic_data[list(dic_data.keys())[300]]
-dic_test = dic_test[dic_test['DVOL'] >= 20]
+#dic_test = dic_test[dic_test['DVOL'] >= 20]
 
 '''
 dic_test = dic_data[list(dic_data.keys())[332]]
@@ -194,45 +170,50 @@ dic_test_2 = dic_test_2[dic_test_2['DVOL'] >= 40]
 '''
 # Check that rank 1 is the best
 
-ls_cols = ['BE/ME', 'E/P', 'CF/P', 'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC', 'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR', 'LEV', 'AZSCORE', 'BETA','MOM']
-for v in ls_cols:
-    dic_test[v + '_rank'] = dic_test[v].rank(method='max', ascending=True)
+ls_cols = ['BE/ME', 'E/P', 'CF/P',
+           'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC',
+           'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR',
+           'LEV', 'AZSCORE', 'NBETA',
+           'CTRT1M']
 
 for v in ls_cols:
-    dic_test[v + '_zscore'] = (dic_test[v + '_rank'] - dic_test[v + '_rank'].mean()) / dic_test[v + '_rank'].std()
+    dic_test['RK_' + v] = dic_test[v].rank(method='max', ascending=True)
+
+for v in ls_cols:
+    dic_test['ZS_' + v] = (dic_test['RK_' + v] - dic_test['RK_' + v].mean()) / dic_test['RK_' + v].std()
 
 
 ls_cols = ['BE/ME', 'E/P', 'CF/P']
-ls_cols = [i + '_zscore' for i in ls_cols]
-dic_test['Value_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+ls_cols = [('ZS_' + i) for i in ls_cols]
+dic_test['ZS_VAL'] = dic_test[ls_cols].mean(axis=1, skipna=False)
 
 ls_cols = ['GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC']
-ls_cols = [i + '_zscore' for i in ls_cols]
-dic_test['Profitability_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+ls_cols = [('ZS_' + i) for i in ls_cols]
+dic_test['ZS_PROF'] = dic_test[ls_cols].mean(axis=1, skipna=False)
 
 ls_cols = ['D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR']
-ls_cols = [i + '_zscore' for i in ls_cols]
-dic_test['Growth_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+ls_cols = [('ZS_' + i) for i in ls_cols]
+dic_test['ZS_GWTH'] = dic_test[ls_cols].mean(axis=1, skipna=False)
 
-ls_cols = ['LEV', 'AZSCORE', 'BETA']
-ls_cols = [i + '_zscore' for i in ls_cols]
-dic_test['Safety_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+ls_cols = ['LEV', 'AZSCORE', 'NBETA']
+ls_cols = [('ZS_' + i) for i in ls_cols]
+dic_test['ZS_SAF'] = dic_test[ls_cols].mean(axis=1, skipna=False)
 
-ls_cols = ['Profitability', 'Growth', 'Safety']
-ls_cols = [i + '_zscore' for i in ls_cols]
-dic_test['Quality_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+ls_cols = ['PROF', 'GWTH', 'SAF']
+ls_cols = [('ZS_' + i) for i in ls_cols]
+dic_test['ZS_QLT'] = dic_test[ls_cols].mean(axis=1, skipna=False)
 
-ls_cols = ['MOM']
-ls_cols = [i + '_zscore' for i in ls_cols]
-dic_test['Momentum_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+ls_cols = ['CTRT1M']
+ls_cols = [('ZS_' + i) for i in ls_cols]
+dic_test['ZS_MOM'] = dic_test[ls_cols].mean(axis=1, skipna=False)
 
-ls_cols = ['Value', 'Quality']
-ls_cols = [i + '_zscore' for i in ls_cols]
-dic_test['Value_Quality_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+ls_cols = ['VAL', 'QLT']
+ls_cols = [('ZS_' + i) for i in ls_cols]
+dic_test['ZS_VAL_QLT'] = dic_test[ls_cols].mean(axis=1, skipna=False)
 
-ls_cols = ['Value', 'Quality','Momentum']
-ls_cols = [i + '_zscore' for i in ls_cols]
-dic_test['Value_Quality_Momentum_zscore'] = dic_test[ls_cols].mean(axis=1, skipna=False)
+ls_cols = ['VAL', 'QLT', 'MOM']
+ls_cols = [('ZS_' + i) for i in ls_cols]
+dic_test['ZS_VAL_QLT_MOM'] = dic_test[ls_cols].mean(axis=1, skipna=False)
 
 
 
@@ -241,28 +222,13 @@ dic_test['Value_Quality_Momentum_zscore'] = dic_test[ls_cols].mean(axis=1, skipn
 # *** Branch: COMMENTS                           ***
 # **************************************************
 
+
 '''
-min_dvol = 100
+# Filter out illiquid stocks (max dollar volume (monthly) < $100mil.)
+min_dvol = 40
 s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
 df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
-df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
-'''
-
-'''
-#for i in dic_data:
-#df['max_rank'] = df['Number_legs'].rank(method='max')
-
-dic_test['BE/ME_rank'] = dic_test['BE/ME'].rank(method='max',ascending=False)
-dict_test_3 = dic_test[['BE/ME_rank','BE/ME']]
-'''
-
-'''
-def tab_summary(df_data):
-    df_summary = pd.DataFrame({'Count': df_data.count(),  # Count of non-missing values
-                               'Missing Pct': (df_data.isna().sum() / len(df_data)),  # Missing values as percentage
-                               'Min': df_data.min(),
-                               'Mean': df_data.mean(),
-                               'Median': df_data.median(),
-                               'Max': df_data.max()})
-    return df_summary
+df_tmp = df_tmp[df_tmp['DVOL'] >= 40]
+ls_permnos = df_tmp['PERMNO'].unique().tolist()
+df_data = df_data[df_data['PERMNO'].isin(ls_permnos)]
 '''

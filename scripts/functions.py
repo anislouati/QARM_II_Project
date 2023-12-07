@@ -216,7 +216,7 @@ def preprocessing_7(df_data):
     df_out = get_diff(df_out, ls_vars=['GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR'], n=5)
 
     # Quality: Safety
-    df_out['LEV'] = -(df_out['DLTTQ'] + df_out['DLCQ']) / df_out['ATQ'] # Take the negative
+    df_out['LEV'] = (-1) * (df_out['DLTTQ'] + df_out['DLCQ']) / df_out['ATQ']  # Take the negative
     df_out['AZSCORE'] = ((1.2 * df_out['WCAPQ']) + (1.4 * df_out['REQ_LTM']) + (3.3 * (df_out['PIQ_LTM'] + df_out['XINTQ_LTM'])) + (0.6 * df_out['ME']) + df_out['REVTQ_LTM']) / df_out['ATQ']
 
     # Replace inf with nan
@@ -259,13 +259,13 @@ def preprocessing_7(df_data):
         df_out['VAR_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_SPRTRN].var(axis=1, skipna=False), np.nan)
 
         # Compute BETA over the last n*12 months
-        df_out['BETA'] = -df_out['COV_TRT1M_SPRTRN'] / df_out['VAR_SPRTRN'] # Take the negative
+        df_out['BETA'] = df_out['COV_TRT1M_SPRTRN'] / df_out['VAR_SPRTRN']
+        df_out['NBETA'] = (-1) * df_out['BETA']  # Take the negative (zscore computation)
 
         df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(0, n * 12)])
         df_out = df_out.drop(columns=['SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
         df_out = df_out.drop(columns=['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
         df_out = df_out.drop(columns=['M_TRT1M', 'M_SPRTRN', 'COV_TRT1M_SPRTRN', 'PERMNO_t'])
-
 
     # Next Month & Next Quarter Returns
     df_out['NTRT1M'] = df_out['TRT1M'].shift(periods=(-1))
@@ -286,12 +286,27 @@ def preprocessing_7(df_data):
     df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 4)])
     df_out = df_out.drop(columns=['PERMNO_t'])
 
+    # Momentum
+    mom_lag = 6
+    for i in range(0, mom_lag):
+        df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=i)
+
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(mom_lag - 1))
+    ls_cols = ['TRT1M_t' + str(i) for i in range(0, mom_lag)]
+    df_out['CTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Cumulative total returns (nb_lags
+
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, mom_lag)])
+    df_out = df_out.drop(columns=['PERMNO_t'])
     return df_out
 
 
 
 
 
+# %%
+# **************************************************
+# *** Branch: PORTFOLIO CONSTRUCTION             ***
+# **************************************************
 
 
 

@@ -380,3 +380,29 @@ df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=(3))
 df_data['ATQ_s'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data['ATQ_s'],  np.nan)
 df_data = df_data[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FQTR', 'CONM', 'TIC', 'EXCHG', 'GSECTOR', 'ATQ','ATQ_s']]
 '''
+
+'''
+min_dvol = 100
+s_max_dvols = df_data.groupby('PERMNO')['DVOL'].max()
+df_tmp = pd.DataFrame(s_max_dvols).reset_index(drop=False)
+df_tmp = df_tmp[df_tmp['DVOL'] >= 100]
+'''
+
+'''
+#for i in dic_data:
+#df['max_rank'] = df['Number_legs'].rank(method='max')
+
+dic_test['BE/ME_rank'] = dic_test['BE/ME'].rank(method='max',ascending=False)
+dict_test_3 = dic_test[['BE/ME_rank','BE/ME']]
+'''
+
+'''
+def tab_summary(df_data):
+    df_summary = pd.DataFrame({'Count': df_data.count(),  # Count of non-missing values
+                               'Missing Pct': (df_data.isna().sum() / len(df_data)),  # Missing values as percentage
+                               'Min': df_data.min(),
+                               'Mean': df_data.mean(),
+                               'Median': df_data.median(),
+                               'Max': df_data.max()})
+    return df_summary
+'''
