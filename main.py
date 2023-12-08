@@ -120,20 +120,14 @@ df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).res
 # Push forward fundamentals (out-of-sample) ==> Example: info published on 31/03 (Q_t) available starting 30/04 (Q_t_1)
 df_data = fn.preprocessing_6(df_data)
 
-
-# Checkpoint data
-#df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
-    df_data = pickle.load(f)
-
-
 # Create additional variables (fundamental metrics)
 df_data = fn.preprocessing_7(df_data)
 
 # Checkpoint data
-#df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
+
 
 # %%
 # **************************************************
@@ -144,56 +138,6 @@ with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
 min_year = 1997
 max_year = 2022
 df_data = df_data[(df_data['YEAR'] >= min_year) & (df_data['YEAR'] <= max_year)]
-
-
-
-
-def get_ZS(df_data):
-    df_out = df_data
-    ls_vars = ['BE/ME', 'E/P', 'CF/P',
-               'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC',
-               'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR',
-               'LEV', 'AZSCORE', 'NBETA',
-               'CTRT1M']
-
-    for var in ls_vars:
-        df_out['RK_' + var] = df_out[var].rank(method='max', ascending=True)
-    for var in ls_vars:
-        df_out['ZS_' + var] = (df_out['RK_' + var] - df_out['RK_' + var].mean()) / df_out['RK_' + var].std()
-
-    # Value
-    ls_cols = [('ZS_' + var) for var in ['BE/ME', 'E/P', 'CF/P']]
-    df_out['ZS_VAL'] = df_out[ls_cols].mean(axis=1, skipna=False)
-
-    # Profitability
-    ls_cols = [('ZS_' + var) for var in ['GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC']]
-    df_out['ZS_PROF'] = df_out[ls_cols].mean(axis=1, skipna=False)
-
-    # Growth
-    ls_cols = [('ZS_' + var) for var in ['D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR']]
-    df_out['ZS_GWTH'] = df_out[ls_cols].mean(axis=1, skipna=False)
-
-    # Safety
-    ls_cols = [('ZS_' + var) for var in ['LEV', 'AZSCORE', 'NBETA']]
-    df_out['ZS_SAF'] = df_out[ls_cols].mean(axis=1, skipna=False)
-
-    # Quality
-    ls_cols = [('ZS_' + var) for var in ['PROF', 'GWTH', 'SAF']]
-    df_out['ZS_QLT'] = df_out[ls_cols].mean(axis=1, skipna=False)
-
-    # Momentum
-    ls_cols = [('ZS_' + var) for var in ['CTRT1M']]
-    df_out['ZS_MOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
-
-    # Value and Quality
-    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT']]
-    df_out['ZS_VAL_QLT'] = df_out[ls_cols].mean(axis=1, skipna=False)
-
-    # Value, Quality and Momentum
-    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'MOM']]
-    df_out['ZS_VAL_QLT_MOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
-    return df_out
-
 
 # Create data dictionary
 dic_data = {}
@@ -209,17 +153,8 @@ for date in tqdm(ls_dates):
     min_me = 250
     df_tmp = df_tmp[df_tmp['ME'] >= min_me]
 
-    df_tmp = get_ZS(df_tmp)
+    df_tmp = fn.get_ZS(df_tmp)
     dic_data[date] = df_tmp
-
-
-print(dic_data[ls_dates[0]])
-
-
-
-
-print(dic_data.keys())
-
 
 
 # Weighting: EW, VW, MV, RP, MN
@@ -252,37 +187,3 @@ def get_EW_port(ls_asts):
 
 
 
-'''
-for i in range(1, 4):
-    df_out['TRT1M_t' + str(i)] = df_out['TRT1M'].shift(periods=(-i))
-
-df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-3))
-ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
-
-
-df_out['M_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'],df_out[ls_cols].mean(axis=1, skipna=True), np.nan)
-
-
-for i in range(1, 4):
-    df_out['TRT1M_t' + str(i)] = df_out[['TRT1M_t' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
-
-df_out['M_TRT1M'] = -df_out['M_TRT1M']
-
-for i in range(1, 4):
-    df_out['TRT1M_t' + str(i)] = df_out[['TRT1M_t' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
-
-
-for i in range(1, 4):
-    df_out['TRT1M_t' + str(i)] = df_out['TRT1M_t' + str(i)].fillna(0)
-
-
-df_out['LS_NTRT1Q'] = df_out[ls_cols].values.tolist()
-df_out.loc[df_out['FILLED'], 'LS_NTRT1Q'] = np.nan
-
-df_out = df_out.drop(columns=['M_TRT1M'])
-'''
-
-'''
-df_data_test = df_data[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FILLED', 'FQTR',
-                    'CONM', 'TIC', 'EXCHG', 'GSECTOR','TRT1M','NTRT1M','NTRT1Q','NTRT1Y']]
-'''

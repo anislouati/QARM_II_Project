@@ -192,33 +192,39 @@ def preprocessing_7(df_data):
     # Create variables LTM (Last Twelve Months)
     df_out = df_data
     df_out = get_LTM(df_out, ls_vars=['COGSQ', 'DPQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ'])
+    print('Preprocessing (7):')
 
     # New variables
     df_out['LTM_CF'] = df_out['LTM_NIQ'] + df_out['LTM_DPQ'] - df_out['LTM_WCAPCHQ'] - df_out['LTM_CAPXQ']  # CF = NI + D&A - dWC - CAPX
     df_out['ME'] = df_out['PRCCM'] * df_out['SHROUT']
     df_out['BE'] = df_out['ATQ'] - df_out['LTQ']  # Book value of Equity = Total Assets - Total Liabilities
+    print('- New variables: DONE')
 
     # Value
     df_out['BE/ME'] = df_out['BE'] / df_out['ME']  # Book-to-Market Equity
     df_out['E/P'] = (df_out['LTM_NIQ'] / df_out['SHROUT']) / df_out['PRCCM']  # Earning-to-Price
     df_out['CF/P'] = (df_out['LTM_CF'] / df_out['SHROUT']) / df_out['PRCCM']  # Cash Flow-to-Price
+    print('- Value: DONE')
 
-    # Quality: Profitability
+    # Profitability
     df_out['GPOA'] = (df_out['LTM_REVTQ'] - df_out['LTM_COGSQ']) / df_out['ATQ']
     df_out['ROE'] = df_out['LTM_NIQ'] / df_out['BE']
     df_out['ROA'] = df_out['LTM_NIQ'] / df_out['ATQ']
     df_out['CFOA'] = df_out['LTM_CF'] / df_out['ATQ']
     df_out['GMAR'] = (df_out['LTM_REVTQ'] - df_out['LTM_COGSQ']) / df_out['LTM_REVTQ']
     df_out['ACC'] = - (df_out['LTM_WCAPCHQ'] - df_out['LTM_DPQ']) / df_out['ATQ']
+    print('- Profitability: DONE')
 
-    # Quality: Growth
+    # Growth
     df_out.replace([np.inf, -np.inf], np.nan, inplace=True)  # Avoid to have runtime error (sum inf number)
     df_out = get_diff(df_out, ls_vars=['GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR'], n=5)  # Create diff. variables (n years interval)
+    print('- Growth: DONE')
 
-    # Quality: Safety
+    # Safety
     df_out['LEV'] = (-1) * (df_out['DLTTQ'] + df_out['DLCQ']) / df_out['ATQ']  # Take the negative (zscore computation)
     df_out['AZSCORE'] = ((1.2 * df_out['WCAPQ']) + (1.4 * df_out['LTM_REQ']) + (3.3 * (df_out['LTM_PIQ'] + df_out['LTM_XINTQ'])) + (0.6 * df_out['ME']) + df_out['LTM_REVTQ']) / df_out['ATQ']
     df_out.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with nan
+    print('- Safety: DONE')
 
     # Beta and Volatility (benchmark: S&P 500 Composite Index)
     with warnings.catch_warnings():
@@ -256,7 +262,7 @@ def preprocessing_7(df_data):
         df_out['VAR_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_TRT1M].var(axis=1, skipna=False), np.nan)
         df_out['VAR_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_SPRTRN].var(axis=1, skipna=False), np.nan)
 
-        # Compute BETA over the last n*12 months
+        # Compute Beta over the last n*12 months
         df_out['BETA'] = df_out['COV_TRT1M_SPRTRN'] / df_out['VAR_SPRTRN']
         df_out['NBETA'] = (-1) * df_out['BETA']  # Take the negative (zscore computation)
 
@@ -264,20 +270,19 @@ def preprocessing_7(df_data):
         df_out = df_out.drop(columns=['SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
         df_out = df_out.drop(columns=['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
         df_out = df_out.drop(columns=['M_TRT1M', 'M_SPRTRN', 'COV_TRT1M_SPRTRN', 'PERMNO_t'])
+        print('- Beta and Volatility: DONE')
 
-        # Create variable with list of returns over the last n years
-
+        # Past years returns (last n years)
         for i in range(n * 12 - 1, -1, -1):
             df_out['TRT1M' + 't_' + str(i)] = df_out['TRT1M'].shift(periods=i)
 
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(
-            periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months: first date n*12 - 1
+        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months: first date n*12 - 1
         ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)]
 
         # Compute (-1)* mean return over the last n*12 months
         df_out['M_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_TRT1M].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
 
-        # Compute return + (-1) * mean return
+        # Compute return + (-1)* mean return
         for i in range(n * 12 - 1, -1, -1):
             df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
 
@@ -287,106 +292,72 @@ def preprocessing_7(df_data):
             df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
 
         ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)]
-        df_out['LS_TRT1M'] = df_out[ls_cols_TRT1M].values.tolist()
+        df_out['LS_PTRT1M'] = df_out[ls_cols_TRT1M].values.tolist()
 
         df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)])
         df_out = df_out.drop(columns=['M_TRT1M', 'PERMNO_t'])
-
-
-    # Next Month Returns
-    df_out['NTRT1M'] = df_out['TRT1M'].shift(periods=(-1))
-    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-1))
-    df_out['NTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['NTRT1M'], np.nan)
-    df_out['NTRT1M'] = df_out['NTRT1M'].fillna(0)
-    df_out.loc[df_out['FILLED'], 'NTRT1M'] = np.nan
-
-    # Next Quarter
-    # Create the list next quarter
-    for i in range(1, 4):
-        df_out['TRT1M_t' + str(i)] = df_out['TRT1M'].shift(periods=(-i))
-
-    ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
-
-    for i in range(1, 4):
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-i))
-        df_out['TRT1M_t' + str(i)] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['TRT1M_t' + str(i)], np.nan)
-
-    for i in range(1, 4):
-        df_out['TRT1M_t' + str(i)] = df_out['TRT1M_t' + str(i)].fillna(0)
-
-
-    df_out['LS_NTRT1Q'] = df_out[ls_cols].values.tolist()
-    df_out.loc[df_out['FILLED'], 'LS_NTRT1Q'] = np.nan
-
-    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 4)])
-    df_out = df_out.drop(columns=['PERMNO_t'])
-
-
-    # Create the variable next quarter cumulative return
-    for i in range(1, 4):
-        df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=(-i))
-
-    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-3))
-    ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
-
-
-    df_out['NTRT1Q'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
-    df_out['NTRT1Q'] = df_out['NTRT1Q'].fillna(0)
-    df_out.loc[df_out['FILLED'], 'NTRT1Q'] = np.nan
-
-    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 4)])
-    df_out = df_out.drop(columns=['PERMNO_t'])
-
-
-    # Next Year
-    # Create the list next year
-    for i in range(1, 12+1):
-        df_out['TRT1M_t' + str(i)] = df_out['TRT1M'].shift(periods=(-i))
-
-    ls_cols = ['TRT1M_t' + str(i) for i in range(1, 12+1)]
-
-    for i in range(1, 12+1):
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-i))
-        df_out['TRT1M_t' + str(i)] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['TRT1M_t' + str(i)], np.nan)
-
-    for i in range(1, 12+1):
-        df_out['TRT1M_t' + str(i)] = df_out['TRT1M_t' + str(i)].fillna(0)
-
-    df_out['LS_NTRT1Y'] = df_out[ls_cols].values.tolist()
-    df_out.loc[df_out['FILLED'], 'LS_NTRT1Q'] = np.nan
-
-    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 12+1)])
-    df_out = df_out.drop(columns=['PERMNO_t'])
-
-
-    # Create the variable next year cumulative return
-    for i in range(1, 12+1):
-        df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=(-i))
-
-    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-12))
-    ls_cols = ['TRT1M_t' + str(i) for i in range(1, 12+1)]
-    df_out['NTRT1Y'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
-    df_out['NTRT1Y'] = df_out['NTRT1Y'].fillna(0)
-    df_out.loc[df_out['FILLED'], 'NTRT1Y'] = np.nan
-
-    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 12+1)])
-    df_out = df_out.drop(columns=['PERMNO_t'])
+        print('- Past years returns: DONE')
 
     # Momentum
-    n_lags = 6
+    n_lags = 6  # Lookback (n_lags months)
     for i in range(0, n_lags):
         df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=i)
 
     df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags - 1))
     ls_cols = ['TRT1M_t' + str(i) for i in range(0, n_lags)]
-    df_out['CTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Cumulative total returns (nb_lags
+    df_out['CTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Cumulative total returns
 
     df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, n_lags)])
     df_out = df_out.drop(columns=['PERMNO_t'])
+
+    # Next month return
+    df_out['NTRT1M'] = df_out['TRT1M'].shift(periods=(-1))
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-1))
+    df_out['NTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['NTRT1M'], np.nan)
+    df_out['NTRT1M'] = df_out['NTRT1M'].fillna(0)
+    df_out.loc[df_out['FILLED'], 'NTRT1M'] = np.nan
+    print('- Next month return: DONE')
+
+    # Next quarter returns (list)
+    for i in range(1, 4):
+        df_out['TRT1M_t' + str(i)] = df_out['TRT1M'].shift(periods=(-i))
+
+    ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
+
+    for i in range(1, 4):
+        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-i))
+        df_out['TRT1M_t' + str(i)] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['TRT1M_t' + str(i)], np.nan)
+
+    for i in range(1, 4):
+        df_out['TRT1M_t' + str(i)] = df_out['TRT1M_t' + str(i)].fillna(0)
+
+    df_out['LS_NTRT1M_1Q'] = df_out[ls_cols].values.tolist()
+    df_out.loc[df_out['FILLED'], 'LS_NTRT1M_1Q'] = np.nan
+
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 4)])
+    df_out = df_out.drop(columns=['PERMNO_t'])
+    print('- Next quarter returns: DONE')
+
+    # Next year returns (list)
+    for i in range(1, 12 + 1):
+        df_out['TRT1M_t' + str(i)] = df_out['TRT1M'].shift(periods=(-i))
+
+    ls_cols = ['TRT1M_t' + str(i) for i in range(1, 12 + 1)]
+
+    for i in range(1, 12 + 1):
+        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-i))
+        df_out['TRT1M_t' + str(i)] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['TRT1M_t' + str(i)], np.nan)
+
+    for i in range(1, 12 + 1):
+        df_out['TRT1M_t' + str(i)] = df_out['TRT1M_t' + str(i)].fillna(0)
+
+    df_out['LS_NTRT1M_1Y'] = df_out[ls_cols].values.tolist()
+    df_out.loc[df_out['FILLED'], 'LS_NTRT1M_1Y'] = np.nan
+
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 12 + 1)])
+    df_out = df_out.drop(columns=['PERMNO_t'])
+    print('- Next year returns: DONE')
     return df_out
-
-
-
 
 
 # %%
@@ -395,7 +366,50 @@ def preprocessing_7(df_data):
 # **************************************************
 
 
+def get_ZS(df_data):
+    df_out = df_data
+    ls_vars = ['BE/ME', 'E/P', 'CF/P',
+               'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC',
+               'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR',
+               'LEV', 'AZSCORE', 'NBETA',
+               'CTRT1M']
 
+    for var in ls_vars:
+        df_out['RK_' + var] = df_out[var].rank(method='max', ascending=True)
+    for var in ls_vars:
+        df_out['ZS_' + var] = (df_out['RK_' + var] - df_out['RK_' + var].mean()) / df_out['RK_' + var].std()
 
+    # Value
+    ls_cols = [('ZS_' + var) for var in ['BE/ME', 'E/P', 'CF/P']]
+    df_out['ZS_VAL'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Profitability
+    ls_cols = [('ZS_' + var) for var in ['GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC']]
+    df_out['ZS_PROF'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Growth
+    ls_cols = [('ZS_' + var) for var in ['D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR']]
+    df_out['ZS_GWTH'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Safety
+    ls_cols = [('ZS_' + var) for var in ['LEV', 'AZSCORE', 'NBETA']]
+    df_out['ZS_SAF'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Quality
+    ls_cols = [('ZS_' + var) for var in ['PROF', 'GWTH', 'SAF']]
+    df_out['ZS_QLT'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Momentum
+    ls_cols = [('ZS_' + var) for var in ['CTRT1M']]
+    df_out['ZS_MOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Value and Quality
+    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT']]
+    df_out['ZS_VAL_QLT'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Value, Quality and Momentum
+    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'MOM']]
+    df_out['ZS_VAL_QLT_MOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
+    return df_out
 
 

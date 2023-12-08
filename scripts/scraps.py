@@ -497,3 +497,66 @@ zzzz= pd.DataFrame(df_data['LS_TRT1M'].iloc[62])
 '''
 x = pd.DataFrame(df_data['LS_TRT1M'].iloc[60])
 '''
+
+'''
+for i in range(1, 4):
+    df_out['TRT1M_t' + str(i)] = df_out['TRT1M'].shift(periods=(-i))
+
+df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-3))
+ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
+
+
+df_out['M_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'],df_out[ls_cols].mean(axis=1, skipna=True), np.nan)
+
+
+for i in range(1, 4):
+    df_out['TRT1M_t' + str(i)] = df_out[['TRT1M_t' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
+
+df_out['M_TRT1M'] = -df_out['M_TRT1M']
+
+for i in range(1, 4):
+    df_out['TRT1M_t' + str(i)] = df_out[['TRT1M_t' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
+
+
+for i in range(1, 4):
+    df_out['TRT1M_t' + str(i)] = df_out['TRT1M_t' + str(i)].fillna(0)
+
+
+df_out['LS_NTRT1Q'] = df_out[ls_cols].values.tolist()
+df_out.loc[df_out['FILLED'], 'LS_NTRT1Q'] = np.nan
+
+df_out = df_out.drop(columns=['M_TRT1M'])
+'''
+
+'''
+df_data_test = df_data[['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FILLED', 'FQTR',
+                    'CONM', 'TIC', 'EXCHG', 'GSECTOR','TRT1M','NTRT1M','NTRT1Q','NTRT1Y']]
+'''
+
+'''
+# Create the variable next quarter cumulative return
+for i in range(1, 4):
+    df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=(-i))
+
+df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-3))
+ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
+df_out['NTRT1Q'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
+df_out['NTRT1Q'] = df_out['NTRT1Q'].fillna(0)
+df_out.loc[df_out['FILLED'], 'NTRT1Q'] = np.nan
+
+df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 4)])
+df_out = df_out.drop(columns=['PERMNO_t'])
+
+# Create the variable next year cumulative return
+for i in range(1, 12+1):
+    df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=(-i))
+
+df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-12))
+ls_cols = ['TRT1M_t' + str(i) for i in range(1, 12+1)]
+df_out['NTRT1Y'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
+df_out['NTRT1Y'] = df_out['NTRT1Y'].fillna(0)
+df_out.loc[df_out['FILLED'], 'NTRT1Y'] = np.nan
+
+df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 12+1)])
+df_out = df_out.drop(columns=['PERMNO_t'])
+'''
