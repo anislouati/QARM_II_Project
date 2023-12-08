@@ -293,23 +293,83 @@ def preprocessing_7(df_data):
         df_out = df_out.drop(columns=['M_TRT1M', 'PERMNO_t'])
 
 
-    # Next Month and Next Quarter Returns
+    # Next Month Returns
     df_out['NTRT1M'] = df_out['TRT1M'].shift(periods=(-1))
     df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-1))
     df_out['NTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['NTRT1M'], np.nan)
     df_out['NTRT1M'] = df_out['NTRT1M'].fillna(0)
     df_out.loc[df_out['FILLED'], 'NTRT1M'] = np.nan
 
+    # Next Quarter
+    # Create the list next quarter
+    for i in range(1, 4):
+        df_out['TRT1M_t' + str(i)] = df_out['TRT1M'].shift(periods=(-i))
+
+    ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
+
+    for i in range(1, 4):
+        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-i))
+        df_out['TRT1M_t' + str(i)] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['TRT1M_t' + str(i)], np.nan)
+
+    for i in range(1, 4):
+        df_out['TRT1M_t' + str(i)] = df_out['TRT1M_t' + str(i)].fillna(0)
+
+
+    df_out['LS_NTRT1Q'] = df_out[ls_cols].values.tolist()
+    df_out.loc[df_out['FILLED'], 'LS_NTRT1Q'] = np.nan
+
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 4)])
+    df_out = df_out.drop(columns=['PERMNO_t'])
+
+
+    # Create the variable next quarter cumulative return
     for i in range(1, 4):
         df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=(-i))
 
     df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-3))
     ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
+
+
     df_out['NTRT1Q'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
     df_out['NTRT1Q'] = df_out['NTRT1Q'].fillna(0)
     df_out.loc[df_out['FILLED'], 'NTRT1Q'] = np.nan
 
     df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 4)])
+    df_out = df_out.drop(columns=['PERMNO_t'])
+
+
+    # Next Year
+    # Create the list next year
+    for i in range(1, 12+1):
+        df_out['TRT1M_t' + str(i)] = df_out['TRT1M'].shift(periods=(-i))
+
+    ls_cols = ['TRT1M_t' + str(i) for i in range(1, 12+1)]
+
+    for i in range(1, 12+1):
+        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-i))
+        df_out['TRT1M_t' + str(i)] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['TRT1M_t' + str(i)], np.nan)
+
+    for i in range(1, 12+1):
+        df_out['TRT1M_t' + str(i)] = df_out['TRT1M_t' + str(i)].fillna(0)
+
+    df_out['LS_NTRT1Y'] = df_out[ls_cols].values.tolist()
+    df_out.loc[df_out['FILLED'], 'LS_NTRT1Q'] = np.nan
+
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 12+1)])
+    df_out = df_out.drop(columns=['PERMNO_t'])
+
+
+    # Create the variable next year cumulative return
+    for i in range(1, 12+1):
+        df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=(-i))
+
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-12))
+    ls_cols = ['TRT1M_t' + str(i) for i in range(1, 12+1)]
+    df_out['NTRT1Y'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
+    df_out['NTRT1Y'] = df_out['NTRT1Y'].fillna(0)
+    df_out.loc[df_out['FILLED'], 'NTRT1Y'] = np.nan
+
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 12+1)])
     df_out = df_out.drop(columns=['PERMNO_t'])
 
     # Momentum
