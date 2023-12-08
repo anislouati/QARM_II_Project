@@ -147,7 +147,6 @@ df_data = df_data[(df_data['YEAR'] >= min_year) & (df_data['YEAR'] <= max_year)]
 
 
 
-# TODO: get_zscore(df_data, ls_vars) VAR_ZS
 
 def get_ZS(df_data):
     df_out = df_data
@@ -219,6 +218,32 @@ print(dic_data[ls_dates[0]])
 
 
 
+print(dic_data.keys())
+
+
+
+# Weighting: EW, VW, MV, RP, MN
+# Ind_const: True, False
+# Indicator (ZS): VAL, QLT, VAL_QLT, VAL_QLT_MOM
+
+
+df_tmp = dic_data[ls_dates[0]]
+
+n_asts = 20
+ls_asts = sorted(df_tmp.loc[df_tmp['ZS_VAL'].nlargest(n_asts).index, 'PERMNO'].tolist())
+
+
+def get_EW_port(ls_asts):
+    w = 1 / len(ls_asts)
+
+    df_port_w = np.array([np.ones(len(df_rtns_1m.T))]).T * w
+    df_port_w = pd.DataFrame(df_port_w).set_index(ls_assets)
+    df_port_w = pd.Series(df_port_w[0])
+    return df_port_w
+
+# TODO: tab_LS_perf ==> leg level (long_leg, short_leg)
+# TODO: tab_port_perf ==> LS portfolio
+
 
 # %%
 # **************************************************
@@ -226,81 +251,6 @@ print(dic_data[ls_dates[0]])
 # **************************************************
 
 
-'''
-dic_test = dic_data[list(dic_data.keys())[332]]
-dic_test = dic_test[dic_test['DVOL'] >= 40]
-
-dic_test_2 = dic_data[list(dic_data.keys())[360]]
-dic_test_2 = dic_test_2[dic_test_2['DVOL'] >= 40]
-'''
-
-'''
-df_out['M_TRT1M'] = - df_out['M_TRT1M']
-for i in range(0, n * 12):
-    df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
-'''
-
-'''
-for i in range(0, n * 12):
-    if i == 0:
-        df_out['LS_TRT1M'] = df_out['TRT1M' + 't_' + str(i)].astype(str)
-    else:
-        df_out['LS_TRT1M'] = df_out['LS_TRT1M'] + ',' + df_out['TRT1M' + 't_' + str(i)].astype(str)
-'''
-
-# test_df.astype(str).agg(', '.join, axis=1)
-# np.array(your_list,dtype=float)
-# np.fromstring(df_out['LS_TRT1M'], dtype=float, sep=',')
-# np.array(df_out['LS_TRT1M'].split(','),dtype=float)
-# np.fromstring(df_out['LS_TRT1M'], dtype=float, sep=',')
-# df_out[ls_cols_TRT1M].apply(lambda row: row.tolist(), axis=1)
-'''
-df_out['LS_TRT1M'] = df_out[ls_cols_TRT1M].astype(str).agg(','.join, axis=1)
-print('Done')
-df_out['LS_TRT1M'] = df_out['LS_TRT1M'].tolist()
-'''
-'''
-df_out['LS_TRT1M'] = df_out[ls_cols_TRT1M].values.tolist()
-'''
-'''
-n = 5
-for i in range(n*12-1,-1,-1):
-    df_data['TRT1M' + 't_' + str(i)] = df_data['TRT1M'].shift(periods=i)
-
-df_data['PERMNO_t'] = df_data['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months: first date n*12 - 1
-ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n*12-1,-1,-1)]
-
-# Compute (-1)* mean return over the last n*12 months
-df_data['M_TRT1M'] = np.where(df_data['PERMNO'] == df_data['PERMNO_t'], df_data[ls_cols_TRT1M].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
-
-# Compute return + (-1) * mean return
-for i in range(n*12-1,-1,-1):
-    df_data['TRT1M' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
-
-df_data['M_TRT1M'] = -df_data['M_TRT1M']
-
-for i in range(n*12-1,-1,-1):
-    df_data['TRT1M' + 't_' + str(i)] = df_data[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
-
-ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n*12-1,-1,-1)]
-df_data['LS_TRT1M'] = df_data[ls_cols_TRT1M].values.tolist()
-
-df_out = df_data.drop(columns=['TRT1M' + 't_' + str(i) for i in range(n*12-1,-1,-1)])
-'''
-
-'''
-for n in range(n*12-1,-1,-1):
-  print(n)
-'''
-
-'''
-zzz = df_data['LS_TRT1M'].iloc[62][0]
-zzzz= pd.DataFrame(df_data['LS_TRT1M'].iloc[62])
-'''
-
-'''
-x = pd.DataFrame(df_data['LS_TRT1M'].iloc[60])
-'''
 
 '''
 for i in range(1, 4):

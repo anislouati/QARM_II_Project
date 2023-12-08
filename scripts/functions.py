@@ -238,7 +238,7 @@ def preprocessing_7(df_data):
         df_out['M_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], -df_out[ls_cols_TRT1M].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
         df_out['M_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], -df_out[ls_cols_SPRTRN].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
 
-        # Compute return + (-1) * mean return
+        # Compute return + (-1)* mean return
         for i in range(0, n * 12):
             df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
         for i in range(0, n * 12):
@@ -248,7 +248,7 @@ def preprocessing_7(df_data):
         for i in range(0, n * 12):
             df_out['PROD_TRT1M_SPRTRN' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'SPRTRN' + 't_' + str(i)]].product(axis=1, skipna=False)
 
-        # Compute COV(TRT1M, SPRTRN) over the last n*12 months
+        # Compute Cov(TRT1M, SPRTRN) over the last n*12 months
         ls_cols_COV_TRT1M_SPRTRN = ['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)]
         df_out['COV_TRT1M_SPRTRN'] = df_out[ls_cols_COV_TRT1M_SPRTRN].sum(axis=1, skipna=False) / (len(range(0, n * 12)) - 1)
 
