@@ -136,13 +136,19 @@ def preprocessing_5(df_data):
             else:
                 df_out.loc[i, 'WCAPCHQ'] = None
 
+        # PRCCQ
+        len_tpm = len(df_out) - 1
+        if j != 0:
+            if df_out.loc[idx_tmp[len_tpm - j], 'PERMNO'] == df_out.loc[idx_tmp[len_tpm - j + 1], 'PERMNO']:
+                if df_out.loc[idx_tmp[len_tpm - j], 'FQTR'] == df_out.loc[idx_tmp[len_tpm - j + 1], 'FQTR']:
+                    df_out.loc[idx_tmp[len_tpm - j], 'PRCCQ'] = df_out.loc[idx_tmp[len_tpm - j + 1], 'PRCCQ']
+
         j += 1
 
     df_out['XINTQ'] = df_out['XINTQ'].fillna(0)  # Assumption: fill missing values with 0 (interest expense)
     df_out.loc[df_out['FILLED'], 'XINTQ'] = np.nan  # Put nan if row has been filled
     df_out['TRT1M'] = df_out['TRT1M'] / 100  # Total return expressed as float (before: percentage points)
     df_out['VOL'] = df_out['VOL'] * 100  # Volume expressed in units (before: hundreds shares, monthly data)
-    df_out['SHROUT'] = df_out['SHROUT'] / 1000  # Shares outstanding expressed in mil.
     df_out['DVOL'] = (df_out['PRCCM'] * df_out['VOL']) / (10 ** 6)  # Dollar volume expressed in mil.
     df_out['SPRDPCT'] = (df_out['ASK'] - df_out['BID']) / df_out['ASK']  # Bid-Ask spread expressed as float
     return df_out
@@ -152,8 +158,8 @@ def preprocessing_6(df_data):
     df_out = df_data
     df_out = df_out.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
     df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=3)
-    ls_vars = ['ATQ', 'COGSQ', 'DLCQ', 'DLTTQ', 'DPQ', 'LTQ', 'NIQ', 'PIQ', 'REQ', 'REVTQ',
-               'WCAPQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ']
+    ls_vars = ['ATQ', 'COGSQ', 'CSHOQ', 'DLCQ', 'DLTTQ', 'DPQ', 'LTQ', 'NIQ', 'PIQ', 'REQ',
+               'REVTQ', 'WCAPQ', 'WCAPCHQ', 'XINTQ', 'CAPXQ', 'PRCCQ']
 
     for var in tqdm(ls_vars, desc='Preprocessing (6)'):
         df_out[var] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[var].shift(periods=3), np.nan)
@@ -196,14 +202,14 @@ def preprocessing_7(df_data):
 
     # New variables
     df_out['LTM_CF'] = df_out['LTM_NIQ'] + df_out['LTM_DPQ'] - df_out['LTM_WCAPCHQ'] - df_out['LTM_CAPXQ']  # CF = NI + D&A - dWC - CAPX
-    df_out['ME'] = df_out['PRCCM'] * df_out['SHROUT']
+    df_out['ME'] = df_out['PRCCQ'] * df_out['CSHOQ']
     df_out['BE'] = df_out['ATQ'] - df_out['LTQ']  # Book value of Equity = Total Assets - Total Liabilities
     print('- New variables: DONE')
 
     # Value
     df_out['BE/ME'] = df_out['BE'] / df_out['ME']  # Book-to-Market Equity
-    df_out['E/P'] = (df_out['LTM_NIQ'] / df_out['SHROUT']) / df_out['PRCCM']  # Earning-to-Price
-    df_out['CF/P'] = (df_out['LTM_CF'] / df_out['SHROUT']) / df_out['PRCCM']  # Cash Flow-to-Price
+    df_out['E/P'] = (df_out['LTM_NIQ'] / df_out['CSHOQ']) / df_out['PRCCM']  # Earning-to-Price
+    df_out['CF/P'] = (df_out['LTM_CF'] / df_out['CSHOQ']) / df_out['PRCCM']  # Cash Flow-to-Price
     print('- Value: DONE')
 
     # Profitability
@@ -236,7 +242,7 @@ def preprocessing_7(df_data):
         for i in range(0, n * 12):
             df_out['SPRTRN' + 't_' + str(i)] = df_out['SPRTRN'].shift(periods=i)
 
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months: first date n*12 - 1
+        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months (first date: n*12 - 1)
         ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(0, n * 12)]
         ls_cols_SPRTRN = ['SPRTRN' + 't_' + str(i) for i in range(0, n * 12)]
 
@@ -256,11 +262,12 @@ def preprocessing_7(df_data):
 
         # Compute Cov(TRT1M, SPRTRN) over the last n*12 months
         ls_cols_COV_TRT1M_SPRTRN = ['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)]
-        df_out['COV_TRT1M_SPRTRN'] = df_out[ls_cols_COV_TRT1M_SPRTRN].sum(axis=1, skipna=False) / (len(range(0, n * 12)) - 1)
+        df_out['COV_TRT1M_SPRTRN'] = df_out[ls_cols_COV_TRT1M_SPRTRN].sum(axis=1, skipna=False) / (len(range(0, n * 12)) - 1)  # Unbiased estimator
 
-        # Compute Var over the last n*12 months (Var(return - mean return) = Var(return))
-        df_out['VAR_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_TRT1M].var(axis=1, skipna=False), np.nan)
-        df_out['VAR_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_SPRTRN].var(axis=1, skipna=False), np.nan)
+        # Compute Vol over the last n*12 months (Vol(return - mean return) = Vol(return))
+        df_out['VOL_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_TRT1M].std(axis=1, skipna=False, ddof=1), np.nan)
+        df_out['VOL_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_SPRTRN].std(axis=1, skipna=False, ddof=1), np.nan)
+        df_out['VAR_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_SPRTRN].var(axis=1, skipna=False, ddof=1), np.nan)
 
         # Compute Beta over the last n*12 months
         df_out['BETA'] = df_out['COV_TRT1M_SPRTRN'] / df_out['VAR_SPRTRN']
@@ -269,14 +276,14 @@ def preprocessing_7(df_data):
         df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(0, n * 12)])
         df_out = df_out.drop(columns=['SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
         df_out = df_out.drop(columns=['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
-        df_out = df_out.drop(columns=['M_TRT1M', 'M_SPRTRN', 'COV_TRT1M_SPRTRN', 'PERMNO_t'])
+        df_out = df_out.drop(columns=['M_TRT1M', 'M_SPRTRN', 'COV_TRT1M_SPRTRN', 'VAR_SPRTRN', 'PERMNO_t'])
         print('- Beta and Volatility: DONE')
 
         # Past years returns (last n years)
         for i in range(n * 12 - 1, -1, -1):
             df_out['TRT1M' + 't_' + str(i)] = df_out['TRT1M'].shift(periods=i)
 
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months: first date n*12 - 1
+        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months (first date: n*12 - 1)
         ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)]
 
         # Compute (-1)* mean return over the last n*12 months
@@ -293,6 +300,7 @@ def preprocessing_7(df_data):
 
         ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)]
         df_out['LS_PTRT1M'] = df_out[ls_cols_TRT1M].values.tolist()
+        df_out.loc[df_out['FILLED'], 'LS_PTRT1M'] = np.nan
 
         df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)])
         df_out = df_out.drop(columns=['M_TRT1M', 'PERMNO_t'])

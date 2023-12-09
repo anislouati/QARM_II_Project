@@ -560,3 +560,26 @@ df_out.loc[df_out['FILLED'], 'NTRT1Y'] = np.nan
 df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 12+1)])
 df_out = df_out.drop(columns=['PERMNO_t'])
 '''
+
+'''
+if ind_const:
+    ls_tmp = ls_asts
+    ls_asts = []
+    min_n_asts = n_asts // len(ls_secs)  # Integer division
+
+    for sec in ls_secs:
+        df_tmp = df_data[df_data['GSECTOR'] == sec]
+        if leg == 'long':
+            ls_asts += df_tmp.loc[df_tmp[indicator].nlargest(min_n_asts).index, 'PERMNO'].tolist()
+        if leg == 'short':
+            ls_asts += df_tmp.loc[df_tmp[indicator].nsmallest(min_n_asts).index, 'PERMNO'].tolist()
+
+    i = 0
+    while (i < len(ls_tmp)) and (len(ls_asts) < n_asts):
+        if ls_tmp[i] in ls_asts:
+            i += 1
+        else:
+            ls_asts += [ls_tmp[i]]
+            i += 1
+'''
+
