@@ -110,6 +110,7 @@ def preprocessing_5(df_data):
     df_out = df_data
     df_out['CAPXQ'] = df_out['CAPXY']
     df_out['WCAPCHQ'] = df_out['WCAPQ']
+    df_out['PRCCQ'] = df_out['PRCCM']
 
     j = 0
     idx_tmp = df_out.index
