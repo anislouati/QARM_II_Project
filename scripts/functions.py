@@ -319,6 +319,8 @@ def preprocessing_7(df_data):
     df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, n_lags)])
     df_out = df_out.drop(columns=['PERMNO_t'])
 
+    # TODO: reverse momentum, reverse (-18)-(-6) up (-6)-(0)
+
     # Next month return
     df_out['NTRT1M'] = df_out['TRT1M'].shift(periods=(-1))
     df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-1))
