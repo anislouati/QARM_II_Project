@@ -225,10 +225,10 @@ ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='I', leg=
 zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
 print(zzz['GSECTOR'].value_counts())
 
-# df_VAL_25_I_EW_Q_L
+
 def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
-    if w_method not in ['EW', 'VW', 'MV', 'MN', 'ERC']:
-        raise ValueError('Unsupported weighting method, try: [\'EW\', \'VW\', \'MV\', \'MN\', \'ERC\']')
+    if w_method not in ['EW', 'VW', 'MV', 'MN', 'RP']:
+        raise ValueError('Unsupported weighting method, try: [\'EW\', \'VW\', \'MV\', \'MN\', \'RP\']')
 
     s_port_w = pd.Series(dtype='float64')
     ls_asts = get_ls_asts(df_data, indicator, n_asts, ind_const, leg)
@@ -249,7 +249,6 @@ def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
         df_rtns.columns = ls_asts
         df_covmat = df_rtns.cov()
         a_covmat = np.array(df_covmat * 12)  # Annualized from monthly data
-        print(df_covmat)
 
         # Useful functions
         def get_port_var(w):
@@ -265,8 +264,12 @@ def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore', category=RuntimeWarning)
             result = minimize(fun=get_port_var, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
-            # TODO: if not result.success ==> equally weighted
-        s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
+
+        # Return output
+        if not result.success:  # Assumption: if optimization unsuccessful, use equal weighting (at this date)
+            s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
+        else:
+            s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
 
     # Market neutral (zero beta)
     elif w_method == 'MN':
@@ -276,11 +279,10 @@ def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
 
         # Useful functions
         def get_port_beta(w):
-            print(w.T @ a_betas)
             return w.T @ a_betas
 
         def obj_fun(w):
-            diff = (get_port_beta(w) - 1)**2
+            diff = (get_port_beta(w) - 1) ** 2
             return diff  # Minimize to have Beta_P = 1 (Beta_L - Beta_S = 1 - 1 = 0)
 
         def cons1(w):
@@ -295,11 +297,51 @@ def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
             result = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
             s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
             print(result.success)
-    # Market neutral (zero beta)
-    # TODO: implement other weighting methods
+
+        # Return output
+        if not result.success:
+            s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
+        else:
+            s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
+
+    # Risk parity (equally-weighted risk contributions)
+    elif w_method == 'RP':
+        # Initialization
+        df_rtns = pd.DataFrame(df_data.loc[df_data['PERMNO'].isin(ls_asts), 'LS_PTRT1M'].tolist()).T
+        df_rtns.columns = ls_asts
+        df_covmat = df_rtns.cov()
+        a_covmat = np.array(df_covmat * 12)  # Annualized from monthly data
+
+        # Useful functions
+        def obj_fun(w):
+            a_Sw = a_covmat @ w
+            diff = 0
+            for i in range(n_asts):
+                for j in range(n_asts):
+                    diff += ((w[i] * a_Sw[i]) - (w[j] * a_Sw[j])) ** 2
+            print(diff)
+            return diff  # Minimize to have TRC_i = TRC_j ==> (w_i * MRC_i) = (w_j * MRC_j)
+
+        def cons1(w):
+            return np.sum(w) - 1
+
+        # Optimization
+        x0 = np.ones(n_asts) / n_asts
+        bnds = [(0.005, 1) for i in range(n_asts)]  # Long-only, min 0.5% per asset
+        cons = {'type': 'eq', 'fun': cons1}
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action='ignore', category=RuntimeWarning)
+            result = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
+            s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
+
+        # Return output
+        if not result.success:
+            s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
+        else:
+            s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
     return s_port_w
 
-s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='MV', leg='L')
+s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='RP', leg='L')
 
 df = pd.DataFrame(s_port_w)
 
@@ -358,7 +400,7 @@ def tab_port_perf(df_rtns, df_port_w):
     return df_asset_perf, s_port_perf
 
 
-
+# df_VAL_25_I_EW_Q_L
 # Weighting: EW, VW, MV, RP, MN
 # Ind_const: True, False
 # Indicator (ZS): VAL, QLT, VAL_QLT, VAL_QLT_MOM
