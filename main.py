@@ -332,6 +332,14 @@ def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
     return s_port_w
 
 
+
+'''
+for date in tqdm(ls_dates):
+    df_tmp = dic_data[date]
+    s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='RP', leg='L')
+'''
+
+
 ls_lens = [len(dic_data[date]) for date in list(dic_data.keys())]
 df_tmp = dic_data[ls_dates[0]]
 ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='I', leg='L')
@@ -340,42 +348,64 @@ print(zzz['GSECTOR'].value_counts())
 s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='RP', leg='L')
 
 
-for date in tqdm(ls_dates):
-    df_tmp = dic_data[date]
-    s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='RP', leg='L')
+
+# TODO: tab_port_perf(df_data: , indicator, n_asts, ind_const, w_method, reb_freq)
+
+def tab_port_perf(dic_data: dict, indicator: str, n_asts: int, ind_const: str, w_method: str, reb_freq: str):
+    """
+    Function to compute portfolio performance.
+
+    :param dic_data: Dictionary containing data.
+    :param indicator: Indicator for portfolio construction ('ZS_VAL', 'ZS_QLT', 'ZS_MOM', 'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM').
+    :param n_asts: Number of assets in each leg (L/S) of the portfolio.
+    :param ind_const: Industry constraint ('I', 'NI').
+    :param w_method: Weighting method for portfolio construction ('EW', 'VW', 'MV', 'MN', 'RP').
+    :param reb_freq: Rebalancing frequency ('M', 'Q', 'Y').
+    :return: Dataframe containing portfolio composition (L/S) and performance data.
+    """
+
+    if reb_freq not in ['M', 'Q', 'Y']:
+        raise ValueError('Unsupported rebalancing frequency, try: [\'M\', \'Q\', \'Y\']')
+
+    df_port_perf = pd.DataFrame(columns=['DATE', 'PORT_VAL', 'PORT_RTN',
+                                         'L_VAL', 'L_RTN', 'LS_L_ASTS', 'A_L_W', 'A_L_POS',
+                                         'S_VAL', 'S_RTN', 'LS_S_ASTS', 'A_S_W', 'A_S_POS'])
+    ls_dates = list(dic_data.keys())
+
+    # Number of (EOM) dates in rebalancing period
+    n_dates = 0
+    if reb_freq == 'M':
+        n_dates = 1
+    elif reb_freq == 'Q':
+        n_dates = 3
+    elif reb_freq == 'Y':
+        n_dates = 12
+
+    # Rebalancing dates
+    ls_reb_dates = []
+    t = 1  # Exclude initial value date (t=0)
+    while t < len(ls_dates):
+        if (t % n_dates) == 0:
+            ls_reb_dates += [ls_dates[t]]
+        t += 1
+    ls_reb_dates = ls_reb_dates[:-1]  # Rebalance last time @T-1 (T: end period)
+
+    # Initial value date (t=0)
+    df_port_perf.loc[]
 
 
-# TODO: tab_port_perf(df_data, indicator, n_asts, ind_const, w_method, reb_freq)
-# TODO: tab_ports_chars(ls_dfs, )
+
+    return ls_reb_dates
+
+
+
+zzz = tab_port_perf(dic_data, indicator='ZS', n_asts=25, ind_const='I', w_method='EW', reb_freq='Y')
 
 
 
 
 
 # %%
-
-
-def tab_equal_w_os_port_perf(dic_os_data):
-    wealth = 100
-    dic_asset_perf = {}
-    s_port_perf = pd.Series(dtype='float64')
-
-    for i in tqdm(dic_os_data, desc='Eq-Weight (OS)'):
-        df_rtns_1m_s2 = dic_os_data[i]['df_rtns_1m_t']
-        min_var_port_w = get_equal_w_port(df_rtns_1m_s2)
-        port_composition = pd.Series(min_var_port_w * wealth)
-        if len(dic_asset_perf) == 0:  # Empty dictionary
-            date_before = i - relativedelta(months=1)
-            dic_asset_perf[date_before] = port_composition
-            s_port_perf[date_before] = wealth
-        r = dic_os_data[i]['df_rtns_1m_t_1'] + 1
-        port_composition = port_composition.multiply(r)
-        dic_asset_perf[i] = port_composition
-        wealth = port_composition.sum()
-        s_port_perf[i] = wealth
-
-    df_asset_perf = pd.DataFrame.from_dict(dic_asset_perf, orient='index').fillna(0).sort_index(axis=1)
-    return df_asset_perf, s_port_perf
 
 
 def tab_port_perf(df_rtns, df_port_w):
@@ -406,23 +436,37 @@ def tab_port_perf(df_rtns, df_port_w):
     return df_asset_perf, s_port_perf
 
 
+
+
+
+print(ls_asts)
+
+
+pd.Series(np.ones(len(ls_asts)), index=ls_asts)
+
+
+
+
+
+
+
+# TODO: tab_ports_chars(ls_dfs, )
+
+
+
+
+
+# %%
+
+
+
+
 # df_VAL_25_I_EW_Q_L
 # Weighting: EW, VW, MV, RP, MN
 # Ind_const: True, False
 # Indicator (ZS): VAL, QLT, VAL_QLT, VAL_QLT_MOM
 # Rebalancing: quarterly (Q), yearly (Y)
 # Performance: Mean, Vol, SR, MaxDD, FF5 (alpha, betas), Calamar, Turnover, Normalized Hierfindahl Index or Gini
-
-
-
-
-
-
-
-
-
-
-
 
 
 
