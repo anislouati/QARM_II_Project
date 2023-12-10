@@ -177,6 +177,7 @@ for date in tqdm(ls_dates, desc='Data dictionary'):
 # %%
 # Portfolio construction
 
+
 def get_ls_asts(df_data, indicator, n_asts, ind_const, leg):
     if indicator not in ['ZS_VAL', 'ZS_QLT', 'ZS_MOM', 'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM']:
         raise ValueError('Unsupported indicator, try: [\'ZS_VAL\', \'ZS_QLT\', \'ZS_MOM\', \'ZS_VAL_QLT\', \'ZS_VAL_QLT_MOM\']')
@@ -217,13 +218,6 @@ def get_ls_asts(df_data, indicator, n_asts, ind_const, leg):
 
     ls_asts = sorted(ls_asts)  # Sort by PERMNO
     return ls_asts
-
-
-ls_lens = [len(dic_data[date]) for date in list(dic_data.keys())]
-df_tmp = dic_data[ls_dates[0]]
-ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='I', leg='L')
-zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
-print(zzz['GSECTOR'].value_counts())
 
 
 def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
@@ -295,8 +289,6 @@ def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore', category=RuntimeWarning)
             result = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
-            s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
-            print(result.success)
 
         # Return output
         if not result.success:
@@ -319,7 +311,6 @@ def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
             for i in range(n_asts):
                 for j in range(n_asts):
                     diff += ((w[i] * a_Sw[i]) - (w[j] * a_Sw[j])) ** 2
-            print(diff)
             return diff  # Minimize to have TRC_i = TRC_j ==> (w_i * MRC_i) = (w_j * MRC_j)
 
         def cons1(w):
@@ -332,7 +323,6 @@ def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore', category=RuntimeWarning)
             result = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
-            s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
 
         # Return output
         if not result.success:
@@ -341,9 +331,25 @@ def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
             s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
     return s_port_w
 
+
+ls_lens = [len(dic_data[date]) for date in list(dic_data.keys())]
+df_tmp = dic_data[ls_dates[0]]
+ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='I', leg='L')
+zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
+print(zzz['GSECTOR'].value_counts())
 s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='RP', leg='L')
 
-df = pd.DataFrame(s_port_w)
+
+for date in tqdm(ls_dates):
+    df_tmp = dic_data[date]
+    s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='RP', leg='L')
+
+
+# TODO: tab_port_perf(df_data, indicator, n_asts, ind_const, w_method, reb_freq)
+# TODO: tab_ports_chars(ls_dfs, )
+
+
+
 
 
 # %%
@@ -404,9 +410,7 @@ def tab_port_perf(df_rtns, df_port_w):
 # Weighting: EW, VW, MV, RP, MN
 # Ind_const: True, False
 # Indicator (ZS): VAL, QLT, VAL_QLT, VAL_QLT_MOM
-# Rebalancing: monthly (M), quarterly (Q), yearly (Y)
-# TODO: tab_LS_perf ==> leg level (long_leg, short_leg)
-# TODO: tab_port_perf ==> LS portfolio
+# Rebalancing: quarterly (Q), yearly (Y)
 # Performance: Mean, Vol, SR, MaxDD, FF5 (alpha, betas), Calamar, Turnover, Normalized Hierfindahl Index or Gini
 
 
