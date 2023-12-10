@@ -268,7 +268,7 @@ def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
     # Market neutral (zero beta)
     elif w_method == 'MN':
         # Initialization
-        s_betas = df_tmp.loc[df_tmp['PERMNO'].isin(ls_asts), 'BETA'].rename(None)
+        s_betas = df_data.loc[df_data['PERMNO'].isin(ls_asts), 'BETA'].rename(None)
         a_betas = np.array(s_betas)
 
         # Useful functions
@@ -367,9 +367,11 @@ def tab_port_perf(dic_data: dict, indicator: str, n_asts: int, ind_const: str, w
     if reb_freq not in ['M', 'Q', 'Y']:
         raise ValueError('Unsupported rebalancing frequency, try: [\'M\', \'Q\', \'Y\']')
 
-    df_port_perf = pd.DataFrame(columns=['DATE', 'PORT_VAL', 'PORT_RTN',
-                                         'L_VAL', 'L_RTN', 'LS_L_ASTS', 'A_L_W', 'A_L_POS',
-                                         'S_VAL', 'S_RTN', 'LS_S_ASTS', 'A_S_W', 'A_S_POS'])
+    dic_cols = {'DATE': 'datetime64[ns]', 'PORT_VAL': 'float64', 'PORT_RTN': 'float64',
+                'L_VAL': 'float64', 'L_RTN': 'float64', 'LS_L_ASTS': 'object', 'LS_L_W': 'object', 'LS_L_POS': 'object',
+                'S_VAL': 'float64', 'S_RTN': 'float64', 'LS_S_ASTS': 'object', 'LS_S_W': 'object', 'LS_S_POS': 'object'}
+    df_port_perf = pd.DataFrame(columns=list(dic_cols.keys())).astype(dtype=dic_cols)
+    port_name = '_'.join([indicator[3:], str(int(n_asts)), ind_const, w_method, reb_freq])
     ls_dates = list(dic_data.keys())
 
     # Number of (EOM) dates in rebalancing period
@@ -383,29 +385,57 @@ def tab_port_perf(dic_data: dict, indicator: str, n_asts: int, ind_const: str, w
 
     # Rebalancing dates
     ls_reb_dates = []
-    t = 1  # Exclude initial value date (t=0)
+    t = 0  # Include initial allocation date
     while t < len(ls_dates):
         if (t % n_dates) == 0:
             ls_reb_dates += [ls_dates[t]]
         t += 1
     ls_reb_dates = ls_reb_dates[:-1]  # Rebalance last time @T-1 (T: end period)
 
-    # Initial value date (t=0)
-    df_port_perf.loc[]
+    # Initial allocation date
+    df_port_perf.loc[0, 'DATE'] = ls_dates[0]
+    df_port_perf.loc[0, ['PORT_VAL', 'L_VAL', 'S_VAL']] = 100
+
+    # Iteration over rebalancing dates
+    for i in tqdm(range(1), desc=port_name):
+        df_tmp = dic_data[ls_reb_dates[i]]
+        s_long_w = get_s_port_w(df_tmp, indicator, n_asts, ind_const, w_method, leg='L')
+        df_port_perf.at[(n_dates * i), 'LS_L_ASTS'] = s_long_w.index.tolist()
+        df_port_perf.at[(n_dates * i), 'LS_L_W'] = s_long_w.values.tolist()
+        df_port_perf.at[(n_dates * i), 'LS_L_POS'] = (s_long_w * df_port_perf.loc[(n_dates * i), 'L_VAL']).tolist()
+
+        s_short_w = get_s_port_w(df_tmp, indicator, n_asts, ind_const, w_method, leg='S')
+        df_port_perf.at[(n_dates * i), 'LS_S_ASTS'] = s_short_w.index.tolist()
+        df_port_perf.at[(n_dates * i), 'LS_S_W'] = s_short_w.values.tolist()
+        df_port_perf.at[(n_dates * i), 'LS_S_POS'] = (s_short_w * df_port_perf.loc[(n_dates * i), 'S_VAL']).tolist()
+
+        for j in range(n_dates):
+            # TODO: carry forward, get next returns based on
+            # TODO: look only at LS_NTR1M_1Y, remove other (look at 1, 3, 12 elements)
+        # For next n_dates...
 
 
 
-    return ls_reb_dates
 
 
-
-zzz = tab_port_perf(dic_data, indicator='ZS', n_asts=25, ind_const='I', w_method='EW', reb_freq='Y')
+    return df_port_perf
 
 
 
 
+s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='RP', leg='L')
+
+df.at[0, 'LS_L_POS'] = s_port_w.index.tolist()
+print()
+print(s_port_w.values.tolist() * 3)
+
+zzz = tab_port_perf(dic_data, indicator='ZS_VAL', n_asts=25, ind_const='I', w_method='EW', reb_freq='M')
 
 # %%
+
+
+
+
 
 
 def tab_port_perf(df_rtns, df_port_w):
@@ -434,16 +464,6 @@ def tab_port_perf(df_rtns, df_port_w):
 
     df_asset_perf = pd.DataFrame.from_dict(dic_asset_perf, orient='index').fillna(0).sort_index(axis=1)
     return df_asset_perf, s_port_perf
-
-
-
-
-
-print(ls_asts)
-
-
-pd.Series(np.ones(len(ls_asts)), index=ls_asts)
-
 
 
 
