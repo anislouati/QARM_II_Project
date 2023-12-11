@@ -187,15 +187,17 @@ for date in tqdm(ls_dates, desc='Data dictionary'):
 
 
 class Portfolio:
-    def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long,
-                 sig_short, n_asts_short, w_meth_short, ind_const, reb_freq, min_short_me, max_short_cl):
+    def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long, fact_long, sig_short, n_asts_short,
+                 w_meth_short, fact_short, ind_const, reb_freq, min_short_me, max_short_cl):
         self.dic_data = dic_data
         self.sig_long = sig_long
         self.n_asts_long = n_asts_long
         self.w_meth_long = w_meth_long
+        self.fact_long = fact_long
         self.sig_short = sig_short
         self.n_asts_short = n_asts_short
         self.w_meth_short = w_meth_short
+        self.fact_short = fact_short
         self.ind_const = ind_const
         self.reb_freq = reb_freq
         self.min_short_me = min_short_me
@@ -451,10 +453,10 @@ class Portfolio:
 
 
 
+# TODO: implement proper accounting
 
-
-port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL', n_asts_long=25, w_meth_long='EW',
-                 sig_short='ZS_QLT', n_asts_short=10, w_meth_short='EW', ind_const='I', min_short_me=1000, max_short_cl=0.4, reb_freq='Q')
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL', n_asts_long=25, w_meth_long='EW', fact_long=1.3,
+                 sig_short='ZS_QLT', n_asts_short=10, w_meth_short='EW', fact_short=0.3, ind_const='I', min_short_me=1000, max_short_cl=0.4, reb_freq='Q')
 
 zzz = port.tab_port_perf()
 port.port_name
