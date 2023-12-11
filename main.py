@@ -188,7 +188,7 @@ for date in tqdm(ls_dates, desc='Data dictionary'):
 
 class Portfolio:
     def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long,
-                 sig_short, n_asts_short, w_meth_short, ind_const, min_short_me, max_short_cl, reb_freq):
+                 sig_short, n_asts_short, w_meth_short, ind_const, reb_freq, min_short_me, max_short_cl):
         self.dic_data = dic_data
         self.sig_long = sig_long
         self.n_asts_long = n_asts_long
@@ -197,9 +197,9 @@ class Portfolio:
         self.n_asts_short = n_asts_short
         self.w_meth_short = w_meth_short
         self.ind_const = ind_const
+        self.reb_freq = reb_freq
         self.min_short_me = min_short_me
         self.max_short_cl = max_short_cl
-        self.reb_freq = reb_freq
 
         self.dic_sigs = {'ZS_VAL': 'VAL', 'ZS_QLT': 'QLT', 'ZS_MOM_1': 'MOM1', 'ZS_MOM_2': 'MOM2', 'ZS_RMOM_1': 'RMOM',
                          'ZS_VAL_QLT': 'VQ', 'ZS_VAL_QLT_MOM_1': 'VQM1', 'ZS_VAL_QLT_MOM_2': 'VQM2', 'ZS_VAL_QLT_RMOM': 'VQRM', 'ZS_VAL_QLT_ARMOM': 'VQARM'}
@@ -367,23 +367,20 @@ class Portfolio:
                 s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
         return s_port_w
 
-    '''
-    def tab_port_perf(dic_data, ind_long, n_asts_long, ind_short, n_asts_short, ind_const, w_method, min_short_me, max_short_cl, reb_freq):
-        dic_cols = {'DATE': 'datetime64[ns]', 'PORT_VAL': 'float64', 'PORT_RTN': 'float64',
+    def tab_port_perf(self):
+        dic_cols = {'DATE': 'datetime64[ns]', 'PORT_VAL': 'float64', 'PORT_L': 'float64', 'PORT_S': 'float64', 'PORT_RTN': 'float64',
                     'L_VAL': 'float64', 'L_RTN': 'float64', 'LS_L_ASTS': 'object', 'LS_L_W': 'object', 'LS_L_POS': 'object', 'LS_L_RTNS': 'object',
                     'S_VAL': 'float64', 'S_RTN': 'float64', 'LS_S_ASTS': 'object', 'LS_S_W': 'object', 'LS_S_POS': 'object', 'LS_S_RTNS': 'object'}
         df_port_perf = pd.DataFrame(columns=list(dic_cols.keys())).astype(dtype=dic_cols)
-
-
-        ls_dates = list(dic_data.keys())
+        ls_dates = list(self.dic_data.keys())
 
         # Number of (EOM) dates in rebalancing period
         n_dates = 0
-        if reb_freq == 'M':
+        if self.reb_freq == 'M':
             n_dates = 1
-        elif reb_freq == 'Q':
+        elif self.reb_freq == 'Q':
             n_dates = 3
-        elif reb_freq == 'Y':
+        elif self.reb_freq == 'Y':
             n_dates = 12
 
         # Rebalancing dates
@@ -400,24 +397,22 @@ class Portfolio:
         df_port_perf.loc[0, ['PORT_VAL', 'L_VAL', 'S_VAL']] = 100
 
         # Iteration over rebalancing dates
-        for i in tqdm(range(len(ls_reb_dates)), desc=port_name):  # range(len(ls_reb_dates))
+        for i in tqdm(range(len(ls_reb_dates)), desc=self.port_name):
             # Data at rebalancing date
-            df_tmp = dic_data[ls_reb_dates[i]]
+            df_tmp = self.dic_data[ls_reb_dates[i]]
             pos_tmp = (n_dates * i)
 
             # Long leg
-            s_long_w = get_s_port_w(df_tmp, ind_long, n_asts_long, ind_const, w_method, 'L', min_short_me, max_short_cl)
+            s_long_w = self.get_s_port_w(df_tmp, leg='L', w_meth=self.w_meth_long)
             ls_long_asts = s_long_w.index.tolist()
-            df_port_perf.at[pos_tmp, 'LS_L_ASTS'] = df_tmp.loc[df_tmp['PERMNO'].isin(ls_long_asts), 'CONM']
             df_port_perf.at[pos_tmp, 'LS_L_W'] = s_long_w.tolist()
             df_port_perf.at[pos_tmp, 'LS_L_POS'] = (s_long_w * df_port_perf.loc[pos_tmp, 'L_VAL']).tolist()
             df_long_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_long_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
             df_long_rtns.columns = ls_long_asts
 
             # Short leg
-            s_short_w = get_s_port_w(df_tmp, ind_short, n_asts_short, ind_const, w_method, 'S', min_short_me, max_short_cl)
+            s_short_w = self.get_s_port_w(df_tmp, leg='S', w_meth=self.w_meth_short)
             ls_short_asts = s_short_w.index.tolist()
-            df_port_perf.at[pos_tmp, 'LS_S_ASTS'] = df_tmp.loc[df_tmp['PERMNO'].isin(ls_short_asts), 'CONM']
             df_port_perf.at[pos_tmp, 'LS_S_W'] = s_short_w.tolist()
             df_port_perf.at[pos_tmp, 'LS_S_POS'] = (s_short_w * df_port_perf.loc[pos_tmp, 'S_VAL']).tolist()
             df_short_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_short_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
@@ -429,7 +424,7 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'DATE'] = ls_dates[pos_tmp]
 
                 # Long leg
-                df_port_perf.at[pos_tmp, 'LS_L_ASTS'] = df_tmp.loc[df_tmp['PERMNO'].isin(ls_long_asts), 'CONM']
+                df_port_perf.at[pos_tmp, 'LS_L_ASTS'] = ls_long_asts
                 a_long_rtns = np.array(df_long_rtns.loc[j - 1])
                 df_port_perf.at[pos_tmp, 'LS_L_RTNS'] = a_long_rtns.tolist()
                 df_port_perf.loc[pos_tmp, 'L_RTN'] = (np.array(df_port_perf.loc[(pos_tmp - 1), 'LS_L_W']) * a_long_rtns).sum()
@@ -438,7 +433,7 @@ class Portfolio:
                 df_port_perf.at[pos_tmp, 'LS_L_W'] = (np.array(df_port_perf.at[pos_tmp, 'LS_L_POS']) / df_port_perf.loc[pos_tmp, 'L_VAL']).tolist()
 
                 # Short leg
-                df_port_perf.at[pos_tmp, 'LS_S_ASTS'] = df_tmp.loc[df_tmp['PERMNO'].isin(ls_short_asts), 'CONM']
+                df_port_perf.at[pos_tmp, 'LS_S_ASTS'] = ls_short_asts
                 a_short_rtns = (1) * np.array(df_short_rtns.loc[j - 1])  # Take the negative (short position, approx.)
                 df_port_perf.at[pos_tmp, 'LS_S_RTNS'] = a_short_rtns.tolist()
                 df_port_perf.loc[pos_tmp, 'S_RTN'] = (np.array(df_port_perf.loc[(pos_tmp - 1), 'LS_S_W']) * a_short_rtns).sum()
@@ -451,8 +446,8 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'PORT_RTN'] = (df_port_perf.loc[pos_tmp, 'L_RTN'] - df_port_perf.loc[pos_tmp, 'S_RTN']) / 2
                 df_port_perf.loc[pos_tmp, 'PORT_VAL'] = df_port_perf.loc[(pos_tmp - 1), 'PORT_VAL'] * (1 + df_port_perf.loc[pos_tmp, 'PORT_RTN'])
         return df_port_perf
-    '''
 
+    # TODO: get_port_chars
 
 
 
@@ -461,15 +456,8 @@ class Portfolio:
 port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL', n_asts_long=25, w_meth_long='EW',
                  sig_short='ZS_QLT', n_asts_short=10, w_meth_short='EW', ind_const='I', min_short_me=1000, max_short_cl=0.4, reb_freq='Q')
 
-df_tmp = dic_data[ls_dates[0]]
+zzz = port.tab_port_perf()
 port.port_name
-
-# %%
-df = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})
-df.loc[:, ['A', 'A']]
-
-
-
 
 
 
@@ -483,31 +471,6 @@ ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='NI', leg
 zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
 
 
-s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='RP', leg='L')
-s_port_w = get_s_port_w(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='I', w_method='EW', leg='S')
-
-print(np.ones(5).tolist())
-
- 1 + pd.Series(np.ones(5))
-
-# %%
-
-
-
-
-
-
-# TODO: tab_ports_chars(ls_dfs, )
-
-
-
-
-
-# %%
-
-
-
-
 # df_VAL_25_I_EW_Q_L
 # Weighting: EW, VW, MV, RP, MN
 # Ind_const: True, False
@@ -515,12 +478,5 @@ print(np.ones(5).tolist())
 # Rebalancing: quarterly (Q), yearly (Y)
 # Performance: Mean, Vol, SR, MaxDD, FF5 (alpha, betas), Calamar, Turnover, Normalized Hierfindahl Index or Gini
 
-
-
-
-# %%
-# **************************************************
-# *** Branch: COMMENTS                           ***
-# **************************************************
 
 
