@@ -118,16 +118,21 @@ ls_selected_cols = ['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FIL
 df_data = df_data[ls_selected_cols]
 df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
+# Checkpoint data
+# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data_1.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_data_1.pkl'), 'rb') as f:
+    df_data = pickle.load(f)
+
 # ATTENTION: accounting data published in Q_t is available (out-of-sample) for investment decisions in Q_t_1
-# Push forward fundamentals (out-of-sample) ==> Example: info published on 31/03 (Q_t) available starting 30/04 (Q_t_1)
+# Push forward fundamentals (out-of-sample)
 df_data = fn.preprocessing_6(df_data)
 
 # Create additional variables (fundamental metrics)
 df_data = fn.preprocessing_7(df_data)
 
 # Checkpoint data
-# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
+# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data_2.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_data_2.pkl'), 'rb') as f:
     df_data = pickle.load(f)
 
 
@@ -167,303 +172,325 @@ for date in tqdm(ls_dates, desc='Data dictionary'):
     ls_selected_cols = ['PERMNO', 'DATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR',
                         'PRCCM', 'TRT1M', 'SPRDPCT', 'DVOL', 'SPRTRN', 'ME',
                         'VOL_TRT1M', 'VOL_SPRTRN', 'BETA',
-                        'LS_PTRT1M', 'NTRT1M', 'LS_NTRT1M_1Q', 'LS_NTRT1M_1Y',
-                        'ZS_VAL', 'ZS_PROF', 'ZS_GWTH', 'ZS_SAF', 'ZS_QLT', 'ZS_MOM', 'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM']
+                        'CTRT1M_1', 'LS_PTRT1M', 'LS_NTRT1M',
+                        'ZS_VAL', 'ZS_QLT', 'ZS_MOM_1', 'ZS_MOM_2', 'ZS_RMOM_1',
+                        'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM_1', 'ZS_VAL_QLT_MOM_2', 'ZS_VAL_QLT_RMOM', 'ZS_VAL_QLT_ARMOM']
     df_tmp = df_tmp[ls_selected_cols]
     df_tmp = df_tmp.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
     dic_data[date] = df_tmp
 
 
+
+
+# TODO: save data dictionary as json
 # %%
-# Portfolio construction
 
 
-def get_ls_asts(df_data, indicator, n_asts, ind_const, leg):
-    if indicator not in ['ZS_VAL', 'ZS_QLT', 'ZS_MOM', 'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM']:
-        raise ValueError('Unsupported indicator, try: [\'ZS_VAL\', \'ZS_QLT\', \'ZS_MOM\', \'ZS_VAL_QLT\', \'ZS_VAL_QLT_MOM\']')
-    if ind_const not in ['I', 'NI']:
-        raise ValueError('Unsupported industry constraint, try: [\'I\', \'NI\']')
-    if leg not in ['L', 'S']:
-        raise ValueError('Unsupported leg type, try: [\'L\', \'S\']')
+class Portfolio:
+    def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long,
+                 sig_short, n_asts_short, w_meth_short, ind_const, min_short_me, max_short_cl, reb_freq):
+        self.dic_data = dic_data
+        self.sig_long = sig_long
+        self.n_asts_long = n_asts_long
+        self.w_meth_long = w_meth_long
+        self.sig_short = sig_short
+        self.n_asts_short = n_asts_short
+        self.w_meth_short = w_meth_short
+        self.ind_const = ind_const
+        self.min_short_me = min_short_me
+        self.max_short_cl = max_short_cl
+        self.reb_freq = reb_freq
 
-    ls_asts = []
-    ls_secs = df_data['GSECTOR'].unique().tolist()
+        self.dic_sigs = {'ZS_VAL': 'VAL', 'ZS_QLT': 'QLT', 'ZS_MOM_1': 'MOM1', 'ZS_MOM_2': 'MOM2', 'ZS_RMOM_1': 'RMOM',
+                         'ZS_VAL_QLT': 'VQ', 'ZS_VAL_QLT_MOM_1': 'VQM1', 'ZS_VAL_QLT_MOM_2': 'VQM2', 'ZS_VAL_QLT_RMOM': 'VQRM', 'ZS_VAL_QLT_ARMOM': 'VQARM'}
+        self.port_name = '_'.join([self.dic_sigs[sig_long], str(int(n_asts_long)), w_meth_long,
+                                   self.dic_sigs[sig_short], str(int(n_asts_short)), w_meth_short,
+                                   ind_const, str(int(min_short_me)), str(int(max_short_cl * 100)), reb_freq])
 
-    if ind_const == 'I':
-        dic_asts = {}
-        for sec in ls_secs:
-            df_tmp = df_data.loc[df_data['GSECTOR'] == sec, ['PERMNO', indicator]]
+    def get_ls_asts(self, df_data, leg):
+        # Min market cap to avoid short small caps
+        # Max cumulative loss to avoid short if already big loss
+
+        ls_asts = []
+        ls_secs = df_data['GSECTOR'].unique().tolist()
+
+        if self.ind_const == 'I':
+            dic_asts = {}
+            for sec in ls_secs:
+                df_tmp = df_data.loc[df_data['GSECTOR'] == sec, ['PERMNO', 'ME', 'CTRT1M_1', self.sig_long, self.sig_short]]
+                if leg == 'L':
+                    df_tmp = df_tmp.sort_values(by=[self.sig_long], ascending=False)
+                    dic_asts[sec] = df_tmp['PERMNO'].tolist()
+                elif leg == 'S':
+                    df_tmp = df_tmp.sort_values(by=[self.sig_short], ascending=True)
+                    df_tmp = df_tmp[(df_tmp['ME'] >= self.min_short_me) & (df_tmp['CTRT1M_1'] >= -self.max_short_cl)]
+                    dic_asts[sec] = df_tmp['PERMNO'].tolist()
+                if len(dic_asts[sec]) < np.ceil((max(self.n_asts_long, self.n_asts_short) * 2) / len(ls_secs)):  # Remove too small sectors
+                    del dic_asts[sec]
+            dic_asts = dict(sorted(dic_asts.items(), key=lambda x: len(x[1]), reverse=True))  # Sort by sector size
+
+            ls_secs = list(dic_asts.keys())
             if leg == 'L':
-                dic_asts[sec] = df_tmp.sort_values(by=[indicator], ascending=False)['PERMNO'].tolist()
+                i = 0
+                while len(ls_asts) < self.n_asts_long:
+                    s = 0
+                    while (len(ls_asts) < self.n_asts_long) and (s < len(ls_secs)):
+                        ls_asts += [dic_asts[ls_secs[s]][i]]
+                        s += 1
+                    i += 1
             elif leg == 'S':
-                dic_asts[sec] = df_tmp.sort_values(by=[indicator], ascending=True)['PERMNO'].tolist()
-            if len(dic_asts[sec]) < np.ceil((n_asts * 4) / len(ls_secs)):  # Remove too small sectors
-                del dic_asts[sec]
-        dic_asts = dict(sorted(dic_asts.items(), key=lambda x: len(x[1]), reverse=True))  # Sort by sector size
+                i = 0
+                while len(ls_asts) < self.n_asts_short:
+                    s = 0
+                    while (len(ls_asts) < self.n_asts_short) and (s < len(ls_secs)):
+                        ls_asts += [dic_asts[ls_secs[s]][i]]
+                        s += 1
+                    i += 1
 
-        ls_secs = list(dic_asts.keys())
-        i = 0
-        while len(ls_asts) < n_asts:
-            s = 0
-            while (len(ls_asts) < n_asts) and (s < len(ls_secs)):
-                ls_asts += [dic_asts[ls_secs[s]][i]]
-                s += 1
-            i += 1
+        elif self.ind_const == 'NI':
+            df_tmp = df_data[['PERMNO', 'ME', 'CTRT1M_1', self.sig_long, self.sig_short]]
+            if leg == 'L':
+                ls_asts = df_tmp.loc[df_tmp[self.sig_long].nlargest(self.n_asts_long).index, 'PERMNO'].tolist()
+            elif leg == 'S':
+                df_tmp = df_tmp[(df_tmp['ME'] >= self.min_short_me) & (df_tmp['CTRT1M_1'] >= -self.max_short_cl)]
+                ls_asts = df_tmp.loc[df_tmp[self.sig_short].nsmallest(self.n_asts_short).index, 'PERMNO'].tolist()
 
-    elif ind_const == 'NI':
-        if leg == 'L':
-            ls_asts = df_data.loc[df_data[indicator].nlargest(n_asts).index, 'PERMNO'].tolist()
-        elif leg == 'S':
-            ls_asts = df_data.loc[df_data[indicator].nsmallest(n_asts).index, 'PERMNO'].tolist()
+        ls_asts = sorted(ls_asts)  # Sort PERMNO
+        return ls_asts
 
-    ls_asts = sorted(ls_asts)  # Sort by PERMNO
-    return ls_asts
+    def get_s_port_w(self, df_data, leg, w_meth):
+        s_port_w = pd.Series(dtype='float64')
+        ls_asts = self.get_ls_asts(df_data, leg)
+        n_asts = len(ls_asts)
 
-
-def get_s_port_w(df_data, indicator, n_asts, ind_const, w_method, leg):
-    if w_method not in ['EW', 'VW', 'MV', 'MN', 'RP']:
-        raise ValueError('Unsupported weighting method, try: [\'EW\', \'VW\', \'MV\', \'MN\', \'RP\']')
-
-    s_port_w = pd.Series(dtype='float64')
-    ls_asts = get_ls_asts(df_data, indicator, n_asts, ind_const, leg)
-
-    # Equal weighting
-    if w_method == 'EW':
-        s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
-
-    # Value weighting
-    elif w_method == 'VW':
-        s_me = df_data.loc[df_data['PERMNO'].isin(ls_asts), 'ME'].rename(None)
-        s_port_w = pd.Series((s_me / s_me.sum()).values, index=ls_asts, dtype='float64')
-
-    # Minimum variance
-    elif w_method == 'MV':
-        # Initialization
-        df_rtns = pd.DataFrame(df_data.loc[df_data['PERMNO'].isin(ls_asts), 'LS_PTRT1M'].tolist()).T
-        df_rtns.columns = ls_asts
-        df_covmat = df_rtns.cov()
-        a_covmat = np.array(df_covmat * 12)  # Annualized from monthly data
-
-        # Useful functions
-        def get_port_var(w):
-            return w.T @ a_covmat @ w
-
-        def cons1(w):
-            return np.sum(w) - 1
-
-        # Optimization
-        x0 = np.ones(n_asts) / n_asts
-        bnds = [(0.005, 1) for i in range(n_asts)]  # Long-only, min 0.5% per asset
-        cons = {'type': 'eq', 'fun': cons1}
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore', category=RuntimeWarning)
-            result = minimize(fun=get_port_var, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
-
-        # Return output
-        if not result.success:  # Assumption: if optimization unsuccessful, use equal weighting (at this date)
+        # Equal weighting
+        if w_meth == 'EW':
             s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
-        else:
-            s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
 
-    # Market neutral (zero beta)
-    elif w_method == 'MN':
-        # Initialization
-        s_betas = df_data.loc[df_data['PERMNO'].isin(ls_asts), 'BETA'].rename(None)
-        a_betas = np.array(s_betas)
+        # Value weighting
+        elif w_meth == 'VW':
+            s_me = df_data.loc[df_data['PERMNO'].isin(ls_asts), 'ME'].rename(None)
+            s_port_w = pd.Series((s_me / s_me.sum()).values, index=ls_asts, dtype='float64')
 
-        # Useful functions
-        def get_port_beta(w):
-            return w.T @ a_betas
+        # Minimum variance
+        elif w_meth == 'MV':
+            # Initialization
+            df_rtns = pd.DataFrame(df_data.loc[df_data['PERMNO'].isin(ls_asts), 'LS_PTRT1M'].tolist()).T  # Previous returns
+            df_rtns.columns = ls_asts
+            df_covmat = df_rtns.cov()
+            a_covmat = np.array(df_covmat * 12)  # Annualized from monthly data
 
-        def obj_fun(w):
-            diff = (get_port_beta(w) - 1) ** 2
-            return diff  # Minimize to have Beta_P = 1 (Beta_L - Beta_S = 1 - 1 = 0)
+            # Useful functions
+            def get_port_var(w):
+                return w.T @ a_covmat @ w
 
-        def cons1(w):
-            return np.sum(w) - 1
+            def cons1(w):
+                return np.sum(w) - 1
 
-        # Optimization
-        x0 = np.ones(n_asts) / n_asts
-        bnds = [(0.005, 1) for i in range(n_asts)]  # Long-only, min 0.5% per asset
-        cons = {'type': 'eq', 'fun': cons1}
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore', category=RuntimeWarning)
-            result = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
+            # Optimization
+            x0 = np.ones(n_asts) / n_asts
+            bnds = [(0.005, 1) for i in range(n_asts)]  # Long-only, min 0.5% per asset
+            cons = {'type': 'eq', 'fun': cons1}
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action='ignore', category=RuntimeWarning)
+                result = minimize(fun=get_port_var, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
 
-        # Return output
-        if not result.success:
-            s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
-        else:
-            s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
+            # Return output
+            if not result.success:  # Assumption: if optimization unsuccessful, use equal weighting (at this date)
+                s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
+            else:
+                s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
 
-    # Risk parity (equally-weighted risk contributions)
-    elif w_method == 'RP':
-        # Initialization
-        df_rtns = pd.DataFrame(df_data.loc[df_data['PERMNO'].isin(ls_asts), 'LS_PTRT1M'].tolist()).T
-        df_rtns.columns = ls_asts
-        df_covmat = df_rtns.cov()
-        a_covmat = np.array(df_covmat * 12)  # Annualized from monthly data
+        # Market neutral (zero beta)
+        elif w_meth == 'MN':
+            # Initialization
+            s_betas = df_data.loc[df_data['PERMNO'].isin(ls_asts), 'BETA'].rename(None)
+            a_betas = np.array(s_betas)
 
-        # Useful functions
-        def obj_fun(w):
-            a_Sw = a_covmat @ w
-            diff = 0
-            for i in range(n_asts):
-                for j in range(n_asts):
-                    diff += ((w[i] * a_Sw[i]) - (w[j] * a_Sw[j])) ** 2
-            return diff  # Minimize to have TRC_i = TRC_j ==> (w_i * MRC_i) = (w_j * MRC_j)
+            # Useful functions
+            def get_port_beta(w):
+                return w.T @ a_betas
 
-        def cons1(w):
-            return np.sum(w) - 1
+            def obj_fun(w):
+                diff = (get_port_beta(w) - 1) ** 2
+                return diff  # Minimize to have Beta_P = 1 (Beta_L - Beta_S = 1 - 1 = 0)
 
-        # Optimization
-        x0 = np.ones(n_asts) / n_asts
-        bnds = [(0.005, 1) for i in range(n_asts)]  # Long-only, min 0.5% per asset
-        cons = {'type': 'eq', 'fun': cons1}
-        with warnings.catch_warnings():
-            warnings.filterwarnings(action='ignore', category=RuntimeWarning)
-            result = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
+            def cons1(w):
+                return np.sum(w) - 1
 
-        # Return output
-        if not result.success:
-            s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
-        else:
-            s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
-    return s_port_w
+            # Optimization
+            x0 = np.ones(n_asts) / n_asts
+            bnds = [(0.005, 1) for i in range(n_asts)]  # Long-only, min 0.5% per asset
+            cons = {'type': 'eq', 'fun': cons1}
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action='ignore', category=RuntimeWarning)
+                result = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
+
+            # Return output
+            if not result.success:
+                s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
+            else:
+                s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
+
+        # Risk parity (equally-weighted risk contributions)
+        elif w_meth == 'RP':
+            # Initialization
+            df_rtns = pd.DataFrame(df_data.loc[df_data['PERMNO'].isin(ls_asts), 'LS_PTRT1M'].tolist()).T  # Previous returns
+            df_rtns.columns = ls_asts
+            df_covmat = df_rtns.cov()
+            a_covmat = np.array(df_covmat * 12)  # Annualized from monthly data
+
+            # Useful functions
+            def obj_fun(w):
+                a_Sw = a_covmat @ w
+                diff = 0
+                for i in range(n_asts):
+                    for j in range(n_asts):
+                        diff += ((w[i] * a_Sw[i]) - (w[j] * a_Sw[j])) ** 2
+                return diff  # Minimize to have TRC_i = TRC_j ==> (w_i * MRC_i) = (w_j * MRC_j)
+
+            def cons1(w):
+                return np.sum(w) - 1
+
+            # Optimization
+            x0 = np.ones(n_asts) / n_asts
+            bnds = [(0.005, 1) for i in range(n_asts)]  # Long-only, min 0.5% per asset
+            cons = {'type': 'eq', 'fun': cons1}
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action='ignore', category=RuntimeWarning)
+                result = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
+
+            # Return output
+            if not result.success:
+                s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
+            else:
+                s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
+        return s_port_w
+
+    '''
+    def tab_port_perf(dic_data, ind_long, n_asts_long, ind_short, n_asts_short, ind_const, w_method, min_short_me, max_short_cl, reb_freq):
+        dic_cols = {'DATE': 'datetime64[ns]', 'PORT_VAL': 'float64', 'PORT_RTN': 'float64',
+                    'L_VAL': 'float64', 'L_RTN': 'float64', 'LS_L_ASTS': 'object', 'LS_L_W': 'object', 'LS_L_POS': 'object', 'LS_L_RTNS': 'object',
+                    'S_VAL': 'float64', 'S_RTN': 'float64', 'LS_S_ASTS': 'object', 'LS_S_W': 'object', 'LS_S_POS': 'object', 'LS_S_RTNS': 'object'}
+        df_port_perf = pd.DataFrame(columns=list(dic_cols.keys())).astype(dtype=dic_cols)
+
+
+        ls_dates = list(dic_data.keys())
+
+        # Number of (EOM) dates in rebalancing period
+        n_dates = 0
+        if reb_freq == 'M':
+            n_dates = 1
+        elif reb_freq == 'Q':
+            n_dates = 3
+        elif reb_freq == 'Y':
+            n_dates = 12
+
+        # Rebalancing dates
+        ls_reb_dates = []
+        t = 0  # Include initial allocation date
+        while t < len(ls_dates):
+            if (t % n_dates) == 0:
+                ls_reb_dates += [ls_dates[t]]
+            t += 1
+        ls_reb_dates = ls_reb_dates[:-1]  # Rebalance last time @T-1 (T: end period)
+
+        # Initial allocation date
+        df_port_perf.loc[0, 'DATE'] = ls_dates[0]
+        df_port_perf.loc[0, ['PORT_VAL', 'L_VAL', 'S_VAL']] = 100
+
+        # Iteration over rebalancing dates
+        for i in tqdm(range(len(ls_reb_dates)), desc=port_name):  # range(len(ls_reb_dates))
+            # Data at rebalancing date
+            df_tmp = dic_data[ls_reb_dates[i]]
+            pos_tmp = (n_dates * i)
+
+            # Long leg
+            s_long_w = get_s_port_w(df_tmp, ind_long, n_asts_long, ind_const, w_method, 'L', min_short_me, max_short_cl)
+            ls_long_asts = s_long_w.index.tolist()
+            df_port_perf.at[pos_tmp, 'LS_L_ASTS'] = df_tmp.loc[df_tmp['PERMNO'].isin(ls_long_asts), 'CONM']
+            df_port_perf.at[pos_tmp, 'LS_L_W'] = s_long_w.tolist()
+            df_port_perf.at[pos_tmp, 'LS_L_POS'] = (s_long_w * df_port_perf.loc[pos_tmp, 'L_VAL']).tolist()
+            df_long_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_long_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
+            df_long_rtns.columns = ls_long_asts
+
+            # Short leg
+            s_short_w = get_s_port_w(df_tmp, ind_short, n_asts_short, ind_const, w_method, 'S', min_short_me, max_short_cl)
+            ls_short_asts = s_short_w.index.tolist()
+            df_port_perf.at[pos_tmp, 'LS_S_ASTS'] = df_tmp.loc[df_tmp['PERMNO'].isin(ls_short_asts), 'CONM']
+            df_port_perf.at[pos_tmp, 'LS_S_W'] = s_short_w.tolist()
+            df_port_perf.at[pos_tmp, 'LS_S_POS'] = (s_short_w * df_port_perf.loc[pos_tmp, 'S_VAL']).tolist()
+            df_short_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_short_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
+            df_short_rtns.columns = ls_short_asts
+
+            # Carry forward position in rebalancing period
+            for j in range(1, (n_dates + 1)):
+                pos_tmp = (n_dates * i) + j
+                df_port_perf.loc[pos_tmp, 'DATE'] = ls_dates[pos_tmp]
+
+                # Long leg
+                df_port_perf.at[pos_tmp, 'LS_L_ASTS'] = df_tmp.loc[df_tmp['PERMNO'].isin(ls_long_asts), 'CONM']
+                a_long_rtns = np.array(df_long_rtns.loc[j - 1])
+                df_port_perf.at[pos_tmp, 'LS_L_RTNS'] = a_long_rtns.tolist()
+                df_port_perf.loc[pos_tmp, 'L_RTN'] = (np.array(df_port_perf.loc[(pos_tmp - 1), 'LS_L_W']) * a_long_rtns).sum()
+                df_port_perf.at[pos_tmp, 'LS_L_POS'] = (np.array(df_port_perf.loc[(pos_tmp - 1), 'LS_L_POS']) * (1 + a_long_rtns)).tolist()
+                df_port_perf.loc[pos_tmp, 'L_VAL'] = np.array(df_port_perf.loc[pos_tmp, 'LS_L_POS']).sum()
+                df_port_perf.at[pos_tmp, 'LS_L_W'] = (np.array(df_port_perf.at[pos_tmp, 'LS_L_POS']) / df_port_perf.loc[pos_tmp, 'L_VAL']).tolist()
+
+                # Short leg
+                df_port_perf.at[pos_tmp, 'LS_S_ASTS'] = df_tmp.loc[df_tmp['PERMNO'].isin(ls_short_asts), 'CONM']
+                a_short_rtns = (1) * np.array(df_short_rtns.loc[j - 1])  # Take the negative (short position, approx.)
+                df_port_perf.at[pos_tmp, 'LS_S_RTNS'] = a_short_rtns.tolist()
+                df_port_perf.loc[pos_tmp, 'S_RTN'] = (np.array(df_port_perf.loc[(pos_tmp - 1), 'LS_S_W']) * a_short_rtns).sum()
+                df_port_perf.at[pos_tmp, 'LS_S_POS'] = (np.array(df_port_perf.loc[(pos_tmp - 1), 'LS_S_POS']) * (1 + a_short_rtns)).tolist()
+                df_port_perf.loc[pos_tmp, 'S_VAL'] = np.array(df_port_perf.loc[pos_tmp, 'LS_S_POS']).sum()
+                df_port_perf.at[pos_tmp, 'LS_S_W'] = (np.array(df_port_perf.at[pos_tmp, 'LS_S_POS']) / df_port_perf.loc[pos_tmp, 'S_VAL']).tolist()
+
+                # Portfolio (L/S)
+                # TODO: redo with L/S rebalancing, include long bias ==> 130/30
+                df_port_perf.loc[pos_tmp, 'PORT_RTN'] = (df_port_perf.loc[pos_tmp, 'L_RTN'] - df_port_perf.loc[pos_tmp, 'S_RTN']) / 2
+                df_port_perf.loc[pos_tmp, 'PORT_VAL'] = df_port_perf.loc[(pos_tmp - 1), 'PORT_VAL'] * (1 + df_port_perf.loc[pos_tmp, 'PORT_RTN'])
+        return df_port_perf
+    '''
 
 
 
-'''
-for date in tqdm(ls_dates):
-    df_tmp = dic_data[date]
-    s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='RP', leg='L')
-'''
 
+
+
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL', n_asts_long=25, w_meth_long='EW',
+                 sig_short='ZS_QLT', n_asts_short=10, w_meth_short='EW', ind_const='I', min_short_me=1000, max_short_cl=0.4, reb_freq='Q')
+
+df_tmp = dic_data[ls_dates[0]]
+port.port_name
+
+# %%
+df = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})
+df.loc[:, ['A', 'A']]
+
+
+
+
+
+
+
+
+# %%
 
 ls_lens = [len(dic_data[date]) for date in list(dic_data.keys())]
 df_tmp = dic_data[ls_dates[0]]
-ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='I', leg='L')
+ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='NI', leg='S')
 zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
-print(zzz['GSECTOR'].value_counts())
-s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='RP', leg='L')
-
-
-
-# TODO: tab_port_perf(df_data: , indicator, n_asts, ind_const, w_method, reb_freq)
-
-def tab_port_perf(dic_data: dict, indicator: str, n_asts: int, ind_const: str, w_method: str, reb_freq: str):
-    """
-    Function to compute portfolio performance.
-
-    :param dic_data: Dictionary containing data.
-    :param indicator: Indicator for portfolio construction ('ZS_VAL', 'ZS_QLT', 'ZS_MOM', 'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM').
-    :param n_asts: Number of assets in each leg (L/S) of the portfolio.
-    :param ind_const: Industry constraint ('I', 'NI').
-    :param w_method: Weighting method for portfolio construction ('EW', 'VW', 'MV', 'MN', 'RP').
-    :param reb_freq: Rebalancing frequency ('M', 'Q', 'Y').
-    :return: Dataframe containing portfolio composition (L/S) and performance data.
-    """
-
-    if reb_freq not in ['M', 'Q', 'Y']:
-        raise ValueError('Unsupported rebalancing frequency, try: [\'M\', \'Q\', \'Y\']')
-
-    dic_cols = {'DATE': 'datetime64[ns]', 'PORT_VAL': 'float64', 'PORT_RTN': 'float64',
-                'L_VAL': 'float64', 'L_RTN': 'float64', 'LS_L_ASTS': 'object', 'LS_L_W': 'object', 'LS_L_POS': 'object',
-                'S_VAL': 'float64', 'S_RTN': 'float64', 'LS_S_ASTS': 'object', 'LS_S_W': 'object', 'LS_S_POS': 'object'}
-    df_port_perf = pd.DataFrame(columns=list(dic_cols.keys())).astype(dtype=dic_cols)
-    port_name = '_'.join([indicator[3:], str(int(n_asts)), ind_const, w_method, reb_freq])
-    ls_dates = list(dic_data.keys())
-
-    # Number of (EOM) dates in rebalancing period
-    n_dates = 0
-    if reb_freq == 'M':
-        n_dates = 1
-    elif reb_freq == 'Q':
-        n_dates = 3
-    elif reb_freq == 'Y':
-        n_dates = 12
-
-    # Rebalancing dates
-    ls_reb_dates = []
-    t = 0  # Include initial allocation date
-    while t < len(ls_dates):
-        if (t % n_dates) == 0:
-            ls_reb_dates += [ls_dates[t]]
-        t += 1
-    ls_reb_dates = ls_reb_dates[:-1]  # Rebalance last time @T-1 (T: end period)
-
-    # Initial allocation date
-    df_port_perf.loc[0, 'DATE'] = ls_dates[0]
-    df_port_perf.loc[0, ['PORT_VAL', 'L_VAL', 'S_VAL']] = 100
-
-    # Iteration over rebalancing dates
-    for i in tqdm(range(1), desc=port_name):
-        df_tmp = dic_data[ls_reb_dates[i]]
-        s_long_w = get_s_port_w(df_tmp, indicator, n_asts, ind_const, w_method, leg='L')
-        df_port_perf.at[(n_dates * i), 'LS_L_ASTS'] = s_long_w.index.tolist()
-        df_port_perf.at[(n_dates * i), 'LS_L_W'] = s_long_w.values.tolist()
-        df_port_perf.at[(n_dates * i), 'LS_L_POS'] = (s_long_w * df_port_perf.loc[(n_dates * i), 'L_VAL']).tolist()
-
-        s_short_w = get_s_port_w(df_tmp, indicator, n_asts, ind_const, w_method, leg='S')
-        df_port_perf.at[(n_dates * i), 'LS_S_ASTS'] = s_short_w.index.tolist()
-        df_port_perf.at[(n_dates * i), 'LS_S_W'] = s_short_w.values.tolist()
-        df_port_perf.at[(n_dates * i), 'LS_S_POS'] = (s_short_w * df_port_perf.loc[(n_dates * i), 'S_VAL']).tolist()
-
-        for j in range(n_dates):
-            # TODO: carry forward, get next returns based on
-            # TODO: look only at LS_NTR1M_1Y, remove other (look at 1, 3, 12 elements)
-        # For next n_dates...
-
-
-
-
-
-    return df_port_perf
-
-
 
 
 s_port_w = get_s_port_w(df_tmp, indicator='ZS_QLT', n_asts=25, ind_const='I', w_method='RP', leg='L')
+s_port_w = get_s_port_w(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='I', w_method='EW', leg='S')
 
-df.at[0, 'LS_L_POS'] = s_port_w.index.tolist()
-print()
-print(s_port_w.values.tolist() * 3)
+print(np.ones(5).tolist())
 
-zzz = tab_port_perf(dic_data, indicator='ZS_VAL', n_asts=25, ind_const='I', w_method='EW', reb_freq='M')
+ 1 + pd.Series(np.ones(5))
 
 # %%
-
-
-
-
-
-
-def tab_port_perf(df_rtns, df_port_w):
-    df_rtns_2 = df_rtns.copy()  # Local copy, for in-scope modification
-    df_rtns_2 = df_rtns_2[df_port_w.columns]  # Restrict to assets used in allocations
-    wealth = 100
-    dic_asset_perf = {}
-    s_port_perf = pd.Series(dtype='float64')
-
-    init_all_date = df_port_w.index[0]
-    port_composition = pd.Series(df_port_w.loc[init_all_date] * wealth, dtype='float64')
-    dic_asset_perf[init_all_date] = port_composition
-    s_port_perf[init_all_date] = port_composition.sum()
-
-    ls_reb_dates = df_port_w.index.tolist()[1:-1]  # NOTA: we rebalance last time @T-1 (T: last end of month date), last weights not included!
-    ls_dates = [date for date in df_rtns_2.index if date > init_all_date]  # NOTA: we start loop at first day after initial allocation
-
-    for date in ls_dates:
-        r = np.array(df_rtns_2.loc[date] + 1)
-        port_composition = port_composition * r
-        dic_asset_perf[date] = port_composition
-        s_port_perf[date] = port_composition.sum()
-        wealth = port_composition.sum()
-        if date in ls_reb_dates:
-            port_composition = pd.Series(df_port_w.loc[date] * wealth)
-
-    df_asset_perf = pd.DataFrame.from_dict(dic_asset_perf, orient='index').fillna(0).sort_index(axis=1)
-    return df_asset_perf, s_port_perf
 
 
 
@@ -497,8 +524,3 @@ def tab_port_perf(df_rtns, df_port_w):
 # **************************************************
 
 
-'''
-df_tmp = dic_data[ls_dates[-1]]
-ls_asts = get_ls_asts(df_tmp, n_asts=25, ind_const=True, indicator='ZS_VAL', leg='long')
-zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
-'''

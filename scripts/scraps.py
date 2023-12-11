@@ -583,3 +583,40 @@ if ind_const:
             i += 1
 '''
 
+'''
+# Next month return
+df_out['NTRT1M'] = df_out['TRT1M'].shift(periods=(-1))
+df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-1))
+df_out['NTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['NTRT1M'], np.nan)
+df_out['NTRT1M'] = df_out['NTRT1M'].fillna(0)
+df_out.loc[df_out['FILLED'], 'NTRT1M'] = np.nan
+print('- Next month return: DONE')
+'''
+
+'''
+# Next quarter returns (list)
+for i in range(1, 4):
+    df_out['TRT1M_t' + str(i)] = df_out['TRT1M'].shift(periods=(-i))
+
+ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
+
+for i in range(1, 4):
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-i))
+    df_out['TRT1M_t' + str(i)] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['TRT1M_t' + str(i)], np.nan)
+
+for i in range(1, 4):
+    df_out['TRT1M_t' + str(i)] = df_out['TRT1M_t' + str(i)].fillna(0)
+
+df_out['LS_NTRT1M_1Q'] = df_out[ls_cols].values.tolist()
+df_out.loc[df_out['FILLED'], 'LS_NTRT1M_1Q'] = np.nan
+
+df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 4)])
+df_out = df_out.drop(columns=['PERMNO_t'])
+print('- Next quarter returns: DONE')
+'''
+
+'''
+df_tmp = dic_data[ls_dates[-1]]
+ls_asts = get_ls_asts(df_tmp, n_asts=25, ind_const=True, indicator='ZS_VAL', leg='long')
+zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
+'''

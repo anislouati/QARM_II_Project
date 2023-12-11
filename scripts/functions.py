@@ -228,7 +228,7 @@ def preprocessing_7(df_data):
     print('- Growth: DONE')
 
     # Safety
-    df_out['LEV'] = (-1) * (df_out['DLTTQ'] + df_out['DLCQ']) / df_out['ATQ']  # Take the negative (zscore computation)
+    df_out['LEV'] = (-1) * (df_out['DLTTQ'] + df_out['DLCQ']) / df_out['ATQ']  # Take the negative (zscore)
     df_out['AZSCORE'] = ((1.2 * df_out['WCAPQ']) + (1.4 * df_out['LTM_REQ']) + (3.3 * (df_out['LTM_PIQ'] + df_out['LTM_XINTQ'])) + (0.6 * df_out['ME']) + df_out['LTM_REVTQ']) / df_out['ATQ']
     df_out.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace inf with nan
     print('- Safety: DONE')
@@ -272,7 +272,7 @@ def preprocessing_7(df_data):
 
         # Compute Beta over the last n*12 months
         df_out['BETA'] = df_out['COV_TRT1M_SPRTRN'] / df_out['VAR_SPRTRN']
-        df_out['NBETA'] = (-1) * df_out['BETA']  # Take the negative (zscore computation)
+        df_out['NBETA'] = (-1) * df_out['BETA']  # Take the negative (zscore)
 
         df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(0, n * 12)])
         df_out = df_out.drop(columns=['SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
@@ -280,7 +280,7 @@ def preprocessing_7(df_data):
         df_out = df_out.drop(columns=['M_TRT1M', 'M_SPRTRN', 'COV_TRT1M_SPRTRN', 'VAR_SPRTRN', 'PERMNO_t'])
         print('- Beta and Volatility: DONE')
 
-        # Past years returns (last n years)
+        # Previous monthly returns (n-years period)
         for i in range(n * 12 - 1, -1, -1):
             df_out['TRT1M' + 't_' + str(i)] = df_out['TRT1M'].shift(periods=i)
 
@@ -305,51 +305,49 @@ def preprocessing_7(df_data):
 
         df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)])
         df_out = df_out.drop(columns=['M_TRT1M', 'PERMNO_t'])
-        print('- Past years returns: DONE')
+        print('- Previous monthly returns: DONE')
 
     # Momentum
-    n_lags = 6  # Lookback (n_lags months)
-    for i in range(0, n_lags):
+    n_lags_1 = 12  # Long-term (n_lags months)
+    for i in range(0, n_lags_1):
         df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=i)
 
-    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags - 1))
-    ls_cols = ['TRT1M_t' + str(i) for i in range(0, n_lags)]
-    df_out['CTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Cumulative total returns
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_1 - 1))
+    ls_cols = ['TRT1M_t' + str(i) for i in range(0, n_lags_1)]
+    df_out['CTRT1M_1'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Cumulative total returns
 
-    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, n_lags)])
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, n_lags_1)])
+    df_out = df_out.drop(columns=['PERMNO_t'])
+    print('- Momentum: DONE')
+
+    n_lags_2 = 3  # Short-term
+    for i in range(0, n_lags_2):
+        df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=i)
+
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_2 - 1))
+    ls_cols = ['TRT1M_t' + str(i) for i in range(0, n_lags_2)]
+    df_out['CTRT1M_2'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
+
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, n_lags_2)])
     df_out = df_out.drop(columns=['PERMNO_t'])
 
-    # TODO: reverse momentum, reverse (-18)-(-6) up (-6)-(0)
+    # Reverse momentum
+    df_out['NCTRT1M_1'] = (-1) * df_out['CTRT1M_1']  # Take the negative (zscore)
 
-    # Next month return
-    df_out['NTRT1M'] = df_out['TRT1M'].shift(periods=(-1))
-    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-1))
-    df_out['NTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['NTRT1M'], np.nan)
-    df_out['NTRT1M'] = df_out['NTRT1M'].fillna(0)
-    df_out.loc[df_out['FILLED'], 'NTRT1M'] = np.nan
-    print('- Next month return: DONE')
+    n_lags_3 = 3  # Short-term
+    n_lags_4 = 12  # Long-term
+    for i in range(n_lags_3, n_lags_4):
+        df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=i)
 
-    # Next quarter returns (list)
-    for i in range(1, 4):
-        df_out['TRT1M_t' + str(i)] = df_out['TRT1M'].shift(periods=(-i))
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_4 - 1))
+    ls_cols = ['TRT1M_t' + str(i) for i in range(n_lags_3, n_lags_4)]
+    df_out['NCTRT1M_2'] = (-1) * np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Take the negative (zscore)
 
-    ls_cols = ['TRT1M_t' + str(i) for i in range(1, 4)]
-
-    for i in range(1, 4):
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(-i))
-        df_out['TRT1M_t' + str(i)] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out['TRT1M_t' + str(i)], np.nan)
-
-    for i in range(1, 4):
-        df_out['TRT1M_t' + str(i)] = df_out['TRT1M_t' + str(i)].fillna(0)
-
-    df_out['LS_NTRT1M_1Q'] = df_out[ls_cols].values.tolist()
-    df_out.loc[df_out['FILLED'], 'LS_NTRT1M_1Q'] = np.nan
-
-    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 4)])
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(n_lags_3, n_lags_4)])
     df_out = df_out.drop(columns=['PERMNO_t'])
-    print('- Next quarter returns: DONE')
+    print('- Reverse momentum: DONE')
 
-    # Next year returns (list)
+    # Next monthly returns (1-year period)
     for i in range(1, 12 + 1):
         df_out['TRT1M_t' + str(i)] = df_out['TRT1M'].shift(periods=(-i))
 
@@ -362,12 +360,12 @@ def preprocessing_7(df_data):
     for i in range(1, 12 + 1):
         df_out['TRT1M_t' + str(i)] = df_out['TRT1M_t' + str(i)].fillna(0)
 
-    df_out['LS_NTRT1M_1Y'] = df_out[ls_cols].values.tolist()
-    df_out.loc[df_out['FILLED'], 'LS_NTRT1M_1Y'] = np.nan
+    df_out['LS_NTRT1M'] = df_out[ls_cols].values.tolist()
+    df_out.loc[df_out['FILLED'], 'LS_NTRT1M'] = np.nan
 
     df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(1, 12 + 1)])
     df_out = df_out.drop(columns=['PERMNO_t'])
-    print('- Next year returns: DONE')
+    print('- Next monthly returns: DONE')
     return df_out
 
 
@@ -383,7 +381,7 @@ def get_ZS(df_data):
                'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC',
                'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR',
                'LEV', 'AZSCORE', 'NBETA',
-               'CTRT1M']
+               'CTRT1M_1', 'CTRT1M_2', 'NCTRT1M_1', 'NCTRT1M_2']
 
     for var in ls_vars:
         df_out['RK_' + var] = df_out[var].rank(method='max', ascending=True)
@@ -411,16 +409,40 @@ def get_ZS(df_data):
     df_out['ZS_QLT'] = df_out[ls_cols].mean(axis=1, skipna=False)
 
     # Momentum
-    ls_cols = [('ZS_' + var) for var in ['CTRT1M']]
-    df_out['ZS_MOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
+    ls_cols = [('ZS_' + var) for var in ['CTRT1M_1']]
+    df_out['ZS_MOM_1'] = df_out[ls_cols].mean(axis=1, skipna=False)
+    ls_cols = [('ZS_' + var) for var in ['CTRT1M_2']]
+    df_out['ZS_MOM_2'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Reverse momentum
+    ls_cols = [('ZS_' + var) for var in ['NCTRT1M_1']]
+    df_out['ZS_RMOM_1'] = df_out[ls_cols].mean(axis=1, skipna=False)
+    ls_cols = [('ZS_' + var) for var in ['NCTRT1M_2']]
+    df_out['ZS_RMOM_2'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Adjusted reverse momentum
+    ls_cols = [('ZS_' + var) for var in ['MOM_2', 'RMOM_2']]
+    df_out['ZS_ARMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
 
     # Value and Quality
     ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT']]
     df_out['ZS_VAL_QLT'] = df_out[ls_cols].mean(axis=1, skipna=False)
 
-    # Value, Quality and Momentum
-    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'MOM']]
-    df_out['ZS_VAL_QLT_MOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
+    # Value, Quality and Momentum (long-term)
+    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'MOM_1']]
+    df_out['ZS_VAL_QLT_MOM_1'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Value, Quality and Momentum (short-term)
+    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'MOM_2']]
+    df_out['ZS_VAL_QLT_MOM_2'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Value, Quality and Reverse momentum (long-term)
+    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'RMOM_1']]
+    df_out['ZS_VAL_QLT_RMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Value, Quality and Adjusted reverse momentum
+    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'ARMOM']]
+    df_out['ZS_VAL_QLT_ARMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
     return df_out
 
 
