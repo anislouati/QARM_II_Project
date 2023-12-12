@@ -77,12 +77,12 @@ df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
 # Save data (uncomment)
-with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'wb') as file:
-    pickle.dump(df_fundamentals_quarterly, file)
-with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'wb') as file:
-    pickle.dump(df_security_monthly, file)
-with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'wb') as file:
-    pickle.dump(df_stock_monthly, file)
+# with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'wb') as file:
+#     pickle.dump(df_fundamentals_quarterly, file)
+# with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'wb') as file:
+#     pickle.dump(df_security_monthly, file)
+# with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'wb') as file:
+#     pickle.dump(df_stock_monthly, file)
 # Load data
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as file:
     df_fundamentals_quarterly = pickle.load(file)
@@ -167,10 +167,10 @@ df_factors_monthly.rename(columns={'DATE_NEW': 'DATE'}, inplace=True)
 df_factors_monthly = df_factors_monthly.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
 
 # Save data (uncomment)
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'wb') as file:
-    pickle.dump(df_data, file)
-with open(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'), 'wb') as file:
-    pickle.dump(df_factors_monthly, file)
+# with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'wb') as file:
+#     pickle.dump(df_data, file)
+# with open(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'), 'wb') as file:
+#     pickle.dump(df_factors_monthly, file)
 # Load data
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as file:
     df_data = pickle.load(file)
@@ -201,8 +201,8 @@ for date in tqdm(ls_dates, desc='Assets data dictionary'):
 dic_data = {'dic_asts_data': dic_asts_data, 'df_facs_data': df_factors_monthly}
 
 # Save data (uncomment)
-with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'wb') as file:
-    pickle.dump(dic_data, file)
+# with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'wb') as file:
+#     pickle.dump(dic_data, file)
 # Load data
 with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
     dic_data = pickle.load(file)
@@ -214,9 +214,7 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 # **************************************************
 
 
-# Merge datasets (2)
-df_data = pd.merge(df_data, df_factors_monthly, on='DATE', how='inner')
-df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
+
 
 # TODO: get_port_chars
 # TODO: grid search
@@ -226,7 +224,10 @@ port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_met
                  sig_short='ZS_MOM_2', n_asts_short=25, w_meth_short='MN', pct_short=30,
                  ind_const='I', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
 
-zzz = port.tab_port_perf()
+zzz = port.get_s_port_chars(output_perf=True)
+
+
+
 ls = port.get_ls_asts(df_tmp, leg='L')
 df_tmp.loc[df_tmp['PERMNO'].isin(ls), 'GSECTOR'].value_counts()
 df_tmp = dic_data[ls_dates[0]]

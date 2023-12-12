@@ -4,6 +4,7 @@ from scipy.optimize import minimize, OptimizeResult
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
+import pickle
 
 # Project directories paths (README: modify if necessary!)
 paths = {'main': Path.cwd()}
@@ -702,10 +703,14 @@ class Portfolio:
         return df_port_perf
 
     def get_s_port_chars(self, output_perf=False):
+        s_port_chars = pd.Series(index=['ANN_MEAN', 'ANN_VOL', 'SHARPE'])
 
+        df_port_perf = self.tab_port_perf()
+        if output_perf:
+            with open(Path.joinpath(paths.get('data'), 'ports', (self.port_name + '.pkl')), 'wb') as file:
+                pickle.dump(df_port_perf, file)
 
-        print(output_perf)
-
+        return s_port_chars
 
 
 '''
@@ -728,6 +733,11 @@ def tab_port_chars(name, s_port_rtns, interval, theta=0.99):
     df_port_chars['ES @' + str(int(theta * 100)) + '%'] = ES_uncond
 
     return df_port_chars
+
+
+# Merge datasets (2)
+df_data = pd.merge(df_data, df_factors_monthly, on='DATE', how='inner')
+df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 '''
 
 
