@@ -87,7 +87,7 @@ with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as 
 with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'rb') as f:
     df_stock_monthly = pickle.load(f)
 
-# Merge datasets (1)
+# Merge datasets
 df_fundamentals_quarterly = df_fundamentals_quarterly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYM'])
 df_tmp = pd.merge(df_fundamentals_quarterly, df_security_monthly, on='KEYQ', how='inner')
 
@@ -162,14 +162,13 @@ df_factors_monthly = df_factors_monthly[ls_selected_cols]
 df_factors_monthly.rename(columns={'DATE_NEW': 'DATE'}, inplace=True)
 df_factors_monthly = df_factors_monthly.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
 
-# Merge datasets (2)
-df_data = pd.merge(df_data, df_factors_monthly, on='DATE', how='inner')
-df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
-
 # Checkpoint data
 # df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+# df_factors_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'))
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
     df_data = pickle.load(f)
+with open(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'), 'rb') as f:
+    df_factors_monthly = pickle.load(f)
 
 
 # %%
@@ -178,10 +177,9 @@ with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
 # **************************************************
 
 # Create data dictionary
-dic_data = {}
+dic_asts_data = {}
 ls_dates = sorted(df_data['DATE'].unique().tolist())
-
-for date in tqdm(ls_dates, desc='Data dictionary'):
+for date in tqdm(ls_dates, desc='Assets data dictionary'):
     df_tmp = df_data[df_data['DATE'] == date]
     df_tmp = df_tmp.dropna(how='any')  # Remark: we drop all rows with at least one nan (by date)
 
@@ -195,12 +193,13 @@ for date in tqdm(ls_dates, desc='Data dictionary'):
                         'VOL_TRT1M', 'VOL_SPRTRN', 'BETA',
                         'CTRT1M_1', 'LS_PTRT1M', 'LS_NTRT1M',
                         'ZS_VAL', 'ZS_QLT', 'ZS_MOM_1', 'ZS_MOM_2', 'ZS_RMOM_1',
-                        'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM_1', 'ZS_VAL_QLT_MOM_2', 'ZS_VAL_QLT_RMOM', 'ZS_VAL_QLT_ARMOM',
-                        'RF', 'MKTRF', 'SMB', 'HML']
+                        'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM_1', 'ZS_VAL_QLT_MOM_2', 'ZS_VAL_QLT_RMOM', 'ZS_VAL_QLT_ARMOM']
     df_tmp = df_tmp[ls_selected_cols]
     df_tmp = df_tmp.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
-    dic_data[date] = df_tmp
+    dic_asts_data[date] = df_tmp
+dic_data = {'dic_asts_data': dic_asts_data, 'df_facs_data': df_factors_monthly}
 
+# Grid search
 
 # %%
 
@@ -214,21 +213,38 @@ port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_met
                  ind_const='I', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
 
 zzz = port.tab_port_perf()
-
 ls = port.get_ls_asts(df_tmp, leg='L')
-
 df_tmp.loc[df_tmp['PERMNO'].isin(ls), 'GSECTOR'].value_counts()
-
-
 df_tmp = dic_data[ls_dates[0]]
 s_port_w = port.get_s_port_w(df_tmp, leg='L', w_meth='RP')
-
-
 ls_lens = [len(dic_data[date]) for date in list(dic_data.keys())]
 ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='NI', leg='S')
 zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
 
 
+# Merge datasets (2)
+df_data = pd.merge(df_data, df_factors_monthly, on='DATE', how='inner')
+df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
 
+'''
+def tab_port_chars(name, s_port_rtns, interval, theta=0.99):
+    s_port_losses = (-1) * s_port_rtns
+    VaR_uncond = get_VaR_uncond(s_port_losses, theta)
+    ES_uncond = get_ES_uncond(s_port_losses, theta)
+    df_drawdown = get_drawdown(s_port_rtns)
+    max_drawdown = df_drawdown.iloc[df_drawdown['drawdown'].idxmin()]
+    max_drawdown_period = max_drawdown['start'].strftime('%Y-%m-%d') + ' - ' + max_drawdown['end'].strftime('%Y-%m-%d')
 
+    df_port_chars = pd.DataFrame(index=[name])
+    df_port_chars['Annualized average return'] = s_port_rtns.mean() * get_factor(interval)
+    df_port_chars['Annualized volatility'] = np.sqrt(s_port_rtns.var() * get_factor(interval))
+    df_port_chars['Minimum return'] = s_port_rtns.min()
+    df_port_chars['Maximum return'] = s_port_rtns.max()
+    df_port_chars['Max Drawdown'] = (-1) * max_drawdown['drawdown']  # Express in terms of loss (negative return)
+    df_port_chars['Max Drawdown Period'] = max_drawdown_period
+    df_port_chars['VaR @' + str(int(theta * 100)) + '%'] = VaR_uncond
+    df_port_chars['ES @' + str(int(theta * 100)) + '%'] = ES_uncond
+
+    return df_port_chars
+'''

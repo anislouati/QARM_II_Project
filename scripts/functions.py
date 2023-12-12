@@ -460,6 +460,8 @@ class Portfolio:
         self.reb_freq = reb_freq
         self.min_short_me = min_short_me
         self.max_short_cl = max_short_cl
+        self.dic_asts_data = dic_data['dic_asts_data']
+        self.df_facs_data = dic_data['df_facs_data']
         self.dic_sigs = {'ZS_VAL': 'VAL', 'ZS_QLT': 'QLT', 'ZS_MOM_1': 'MOM1', 'ZS_MOM_2': 'MOM2', 'ZS_RMOM_1': 'RMOM',
                          'ZS_VAL_QLT': 'VQ', 'ZS_VAL_QLT_MOM_1': 'VQM1', 'ZS_VAL_QLT_MOM_2': 'VQM2', 'ZS_VAL_QLT_RMOM': 'VQRM', 'ZS_VAL_QLT_ARMOM': 'VQARM'}
         self.port_name = '_'.join([self.dic_sigs[sig_long], str(int(n_asts_long)), w_meth_long, str(int(pct_long)),
@@ -609,7 +611,7 @@ class Portfolio:
                     'L_RTN': 'float64', 'L_POS': 'object', 'L_WT': 'object', 'L_RTNS': 'object',
                     'S_RTN': 'float64', 'S_POS': 'object', 'S_WT': 'object', 'S_RTNS': 'object'}
         df_port_perf = pd.DataFrame(columns=list(dic_cols.keys())).astype(dtype=dic_cols)
-        ls_dates = list(self.dic_data.keys())
+        ls_dates = list(self.dic_asts_data.keys())
 
         # Number of (EOM) dates in rebalancing period
         n_dates = 0
@@ -640,7 +642,7 @@ class Portfolio:
 
         # Iteration over rebalancing dates
         for i in tqdm(range(len(ls_reb_dates)), desc=self.port_name):
-            df_tmp = self.dic_data[ls_reb_dates[i]]
+            df_tmp = self.dic_asts_data[ls_reb_dates[i]]
             pos_tmp = (n_dates * i)
 
             # Long/Short rebalancing
@@ -699,4 +701,7 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'PORT_RTN'] = (df_port_perf.loc[pos_tmp, 'PORT_NAV'] / df_port_perf.loc[(pos_tmp - 1), 'PORT_NAV']) - 1
         return df_port_perf
 
-# CONTINUE HERE
+    #def get_s_port_chars(self, output_perf=False):
+
+
+
