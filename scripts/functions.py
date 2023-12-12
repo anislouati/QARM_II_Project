@@ -366,12 +366,6 @@ def preprocessing_7(df_data):
     return df_out
 
 
-# %%
-# **************************************************
-# *** Branch: PORTFOLIO CONSTRUCTION             ***
-# **************************************************
-
-
 def get_ZS(df_data):
     df_out = df_data
     ls_vars = ['BE/ME', 'E/P', 'CF/P',
@@ -441,6 +435,12 @@ def get_ZS(df_data):
     ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'ARMOM']]
     df_out['ZS_VAL_QLT_ARMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
     return df_out
+
+
+# %%
+# **************************************************
+# *** Branch: PORTFOLIO CONSTRUCTION             ***
+# **************************************************
 
 
 class Portfolio:
