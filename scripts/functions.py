@@ -464,7 +464,6 @@ class Portfolio:
         self.reb_freq = reb_freq
         self.min_short_me = min_short_me
         self.max_short_cl = max_short_cl
-
         self.dic_sigs = {'ZS_VAL': 'VAL', 'ZS_QLT': 'QLT', 'ZS_MOM_1': 'MOM1', 'ZS_MOM_2': 'MOM2', 'ZS_RMOM_1': 'RMOM',
                          'ZS_VAL_QLT': 'VQ', 'ZS_VAL_QLT_MOM_1': 'VQM1', 'ZS_VAL_QLT_MOM_2': 'VQM2', 'ZS_VAL_QLT_RMOM': 'VQRM', 'ZS_VAL_QLT_ARMOM': 'VQARM'}
         self.port_name = '_'.join([self.dic_sigs[sig_long], str(int(n_asts_long)), w_meth_long, str(int(pct_long)),
@@ -476,48 +475,47 @@ class Portfolio:
         # Max cumulative loss to avoid short if already big loss
 
         ls_asts = []
+        n_asts = 0
         ls_secs = df_data['GSECTOR'].unique().tolist()
+        df_tmp = pd.DataFrame()
+
+        if leg == 'L':
+            n_asts = self.n_asts_long
+            df_tmp = df_data[['PERMNO', 'GSECTOR', 'ME', 'CTRT1M_1', self.sig_long]]
+        elif leg == 'S':
+            n_asts = self.n_asts_short
+            df_tmp = df_data[['PERMNO', 'GSECTOR', 'ME', 'CTRT1M_1', self.sig_short]]
 
         if self.ind_const == 'I':
             dic_asts = {}
             for sec in ls_secs:
-                df_tmp = df_data.loc[df_data['GSECTOR'] == sec, ['PERMNO', 'ME', 'CTRT1M_1', self.sig_long, self.sig_short]]
+                df_tmp_sec = df_tmp[df_tmp['GSECTOR'] == sec]
                 if leg == 'L':
-                    df_tmp = df_tmp.sort_values(by=[self.sig_long], ascending=False)
-                    dic_asts[sec] = df_tmp['PERMNO'].tolist()
+                    df_tmp_sec = df_tmp_sec.sort_values(by=[self.sig_long], ascending=False)
+                    dic_asts[sec] = df_tmp_sec['PERMNO'].tolist()
                 elif leg == 'S':
-                    df_tmp = df_tmp.sort_values(by=[self.sig_short], ascending=True)
-                    df_tmp = df_tmp[(df_tmp['ME'] >= self.min_short_me) & (df_tmp['CTRT1M_1'] >= -self.max_short_cl)]
-                    dic_asts[sec] = df_tmp['PERMNO'].tolist()
+                    df_tmp_sec = df_tmp_sec.sort_values(by=[self.sig_short], ascending=True)
+                    df_tmp_sec = df_tmp_sec[(df_tmp_sec['ME'] >= self.min_short_me) & (df_tmp_sec['CTRT1M_1'] >= -self.max_short_cl)]
+                    dic_asts[sec] = df_tmp_sec['PERMNO'].tolist()
                 if len(dic_asts[sec]) < np.ceil((max(self.n_asts_long, self.n_asts_short) * 2) / len(ls_secs)):  # Remove too small sectors
                     del dic_asts[sec]
             dic_asts = dict(sorted(dic_asts.items(), key=lambda x: len(x[1]), reverse=True))  # Sort by sector size
 
             ls_secs = list(dic_asts.keys())
-            if leg == 'L':
-                i = 0
-                while len(ls_asts) < self.n_asts_long:
-                    s = 0
-                    while (len(ls_asts) < self.n_asts_long) and (s < len(ls_secs)):
-                        ls_asts += [dic_asts[ls_secs[s]][i]]
-                        s += 1
-                    i += 1
-            elif leg == 'S':
-                i = 0
-                while len(ls_asts) < self.n_asts_short:
-                    s = 0
-                    while (len(ls_asts) < self.n_asts_short) and (s < len(ls_secs)):
-                        ls_asts += [dic_asts[ls_secs[s]][i]]
-                        s += 1
-                    i += 1
+            i = 0
+            while len(ls_asts) < n_asts:
+                s = 0
+                while (len(ls_asts) < n_asts) and (s < len(ls_secs)):
+                    ls_asts += [dic_asts[ls_secs[s]][i]]
+                    s += 1
+                i += 1
 
         elif self.ind_const == 'NI':
-            df_tmp = df_data[['PERMNO', 'ME', 'CTRT1M_1', self.sig_long, self.sig_short]]
             if leg == 'L':
-                ls_asts = df_tmp.loc[df_tmp[self.sig_long].nlargest(self.n_asts_long).index, 'PERMNO'].tolist()
+                ls_asts = df_tmp.loc[df_tmp[self.sig_long].nlargest(n_asts).index, 'PERMNO'].tolist()
             elif leg == 'S':
                 df_tmp = df_tmp[(df_tmp['ME'] >= self.min_short_me) & (df_tmp['CTRT1M_1'] >= -self.max_short_cl)]
-                ls_asts = df_tmp.loc[df_tmp[self.sig_short].nsmallest(self.n_asts_short).index, 'PERMNO'].tolist()
+                ls_asts = df_tmp.loc[df_tmp[self.sig_short].nsmallest(n_asts).index, 'PERMNO'].tolist()
 
         ls_asts = sorted(ls_asts)  # Sort PERMNO
         return ls_asts

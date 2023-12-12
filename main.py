@@ -3,6 +3,7 @@ from datetime import datetime
 from operator import attrgetter
 from pathlib import Path
 from scipy.optimize import minimize
+from scripts.functions import Portfolio
 from scripts.functions import paths
 from tqdm import tqdm
 import numpy as np
@@ -179,37 +180,33 @@ for date in tqdm(ls_dates, desc='Data dictionary'):
     df_tmp = df_tmp.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
     dic_data[date] = df_tmp
 
-
+# %%
 
 
 # TODO: save data dictionary as json
 # TODO: get_port_chars
 # TODO: import FF5 data from WRDS
 
-port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL', n_asts_long=25, w_meth_long='MN', pct_long=100,
-                 sig_short='ZS_VAL', n_asts_short=25, w_meth_short='MN', pct_short=90,
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='MN', pct_long=100,
+                 sig_short='ZS_VAL_QLT', n_asts_short=25, w_meth_short='MN', pct_short=90,
                  ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.4)
 
+
+df_tmp = dic_data[ls_dates[0]]
+ls = port.get_ls_asts(df_tmp, leg='L')
+
+df_tmp.loc[df_tmp['PERMNO'].isin(ls), 'GSECTOR'].value_counts()
 zzz = port.tab_port_perf()
 
 # Performance: Mean, Vol, SR, MaxDD, FF5 (alpha, betas), Calamar, Turnover, Normalized Hierfindahl Index or Gini
 
+
 # %%
-df_tmp = dic_data[ls_dates[0]]
+
 s_port_w = port.get_s_port_w(df_tmp, leg='L', w_meth='VW')
-dic = dict(zip(s_port_w.index.tolist(), s_port_w.values.tolist()))
-
-print(type(list(dic.values())[0]))
-list(dic.values())
-
-np.array(dic.values()).tolist()
-
 ls_lens = [len(dic_data[date]) for date in list(dic_data.keys())]
-
 ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='NI', leg='S')
 zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
-
-
 
 
 
