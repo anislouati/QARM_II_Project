@@ -703,6 +703,7 @@ class Portfolio:
 
     def get_s_port_chars(self, output_perf=False):
 
+
         print(output_perf)
 
 

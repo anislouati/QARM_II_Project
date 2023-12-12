@@ -214,6 +214,9 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 # **************************************************
 
 
+# Merge datasets (2)
+df_data = pd.merge(df_data, df_factors_monthly, on='DATE', how='inner')
+df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
 # TODO: get_port_chars
 # TODO: grid search
@@ -233,9 +236,7 @@ ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='NI', leg
 zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
 
 
-# Merge datasets (2)
-df_data = pd.merge(df_data, df_factors_monthly, on='DATE', how='inner')
-df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
+
 
 
 
