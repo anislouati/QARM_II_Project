@@ -2,11 +2,9 @@
 from datetime import datetime
 from operator import attrgetter
 from pathlib import Path
-from scipy.optimize import minimize
 from scripts.functions import Portfolio
 from scripts.functions import paths
 from tqdm import tqdm
-import numpy as np
 import pandas as pd
 import pickle
 import scripts.functions as fn
@@ -49,7 +47,6 @@ df_stock_monthly = df_stock_monthly[ls_selected_cols_3]
 
 ls_selected_cols_4 = ['DATEFF', 'RF', 'MKTRF', 'SMB', 'HML']
 df_factors_monthly = df_factors_monthly[ls_selected_cols_4]
-df_factors_monthly.rename(columns={'DATEFF': 'DATE'}, inplace=True)
 
 # Create keys/identifiers (KEYQ, KEYM)
 df_fundamentals_quarterly = fn.preprocessing_1(df_fundamentals_quarterly)
@@ -62,7 +59,6 @@ max_year = 2022
 df_fundamentals_quarterly = df_fundamentals_quarterly[(df_fundamentals_quarterly['YEAR'] >= min_year) & (df_fundamentals_quarterly['YEAR'] <= max_year)]
 df_security_monthly = df_security_monthly[(df_security_monthly['YEAR'] >= min_year) & (df_security_monthly['YEAR'] <= max_year)]
 df_stock_monthly = df_stock_monthly[(df_stock_monthly['YEAR'] >= min_year) & (df_stock_monthly['YEAR'] <= max_year)]
-df_factors_monthly = df_factors_monthly[(df_factors_monthly['YEAR'] >= min_year) & (df_factors_monthly['YEAR'] <= max_year)]
 
 # Filter stock exchanges (11: NYSE, 12: AMEX, 14: NASDAQ-NMS)
 df_fundamentals_quarterly = df_fundamentals_quarterly[df_fundamentals_quarterly['EXCHG'].isin([11, 12, 14])]
@@ -80,7 +76,7 @@ df_fundamentals_quarterly = fn.preprocessing_2(df_fundamentals_quarterly)
 df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
-# # Checkpoint data
+# Checkpoint data
 # df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
 # df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
 # df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
@@ -91,7 +87,7 @@ with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as 
 with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'rb') as f:
     df_stock_monthly = pickle.load(f)
 
-# Merge datasets
+# Merge datasets (1)
 df_fundamentals_quarterly = df_fundamentals_quarterly.drop(columns=['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYM'])
 df_tmp = pd.merge(df_fundamentals_quarterly, df_security_monthly, on='KEYQ', how='inner')
 
@@ -129,28 +125,12 @@ ls_selected_cols = ['PERMNO', 'DATE', 'YEAR', 'QTR', 'MTH', 'KEYQ', 'KEYM', 'FIL
 df_data = df_data[ls_selected_cols]
 df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
-# Checkpoint data
-# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data_1.pkl'))
-with open(Path.joinpath(paths.get('data'), 'df_data_1.pkl'), 'rb') as f:
-    df_data = pickle.load(f)
-
 # ATTENTION: accounting data published in Q_t is available (out-of-sample) for investment decisions in Q_t_1
 # Push forward fundamentals (out-of-sample)
 df_data = fn.preprocessing_6(df_data)
 
 # Create additional variables (fundamental metrics)
 df_data = fn.preprocessing_7(df_data)
-
-# Checkpoint data
-# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data_2.pkl'))
-with open(Path.joinpath(paths.get('data'), 'df_data_2.pkl'), 'rb') as f:
-    df_data = pickle.load(f)
-
-
-# %%
-# **************************************************
-# *** Branch: PORTFOLIO CONSTRUCTION             ***
-# **************************************************
 
 # Filter clean dates (31/12/min_year-31/12/max_year)
 min_year = 1994
@@ -166,6 +146,43 @@ n_asts_2 = len(df_data['PERMNO'].unique().tolist())
 print('Assets before filter: {}'.format(n_asts_1))
 print('Assets after filter: {}'.format(n_asts_2))
 '''
+
+
+# Checkpoint data
+# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
+    df_data = pickle.load(f)
+
+#%%
+
+
+# Sync dates (EOM) for factors data
+ls_dates = sorted(df_data['DATE'].unique().tolist())
+ls_year_mth = [(str(date.year) + '_' + str(date.month)) for date in ls_dates]
+dic_dates = dict(zip(ls_year_mth, ls_dates))
+for i in range(len(df_factors_monthly)):
+    date = df_factors_monthly.loc[i, 'DATEFF']
+    year_mth = str(date.year) + '_' + str(date.month)
+    if year_mth in list(dic_dates.keys()):
+        df_factors_monthly.loc[i, 'DATE_NEW'] = dic_dates[year_mth]
+df_factors_monthly = df_factors_monthly[~pd.isnull(df_factors_monthly['DATE_NEW'])].drop(columns=['DATEFF'])
+ls_selected_cols = ['DATE_NEW', 'RF', 'MKTRF', 'SMB', 'HML']
+df_factors_monthly = df_factors_monthly[ls_selected_cols]
+df_factors_monthly.rename(columns={'DATE_NEW': 'DATE'}, inplace=True)
+df_factors_monthly = df_factors_monthly.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
+
+# Merge datasets (2)
+df_data = pd.merge(df_data, df_factors_monthly, on='DATE', how='inner')
+df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
+
+
+
+
+
+# %%
+# **************************************************
+# *** Branch: PORTFOLIO CONSTRUCTION             ***
+# **************************************************
 
 # Create data dictionary
 dic_data = {}
@@ -216,7 +233,6 @@ s_port_w = port.get_s_port_w(df_tmp, leg='L', w_meth='RP')
 ls_lens = [len(dic_data[date]) for date in list(dic_data.keys())]
 ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='NI', leg='S')
 zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
-
 
 
 
