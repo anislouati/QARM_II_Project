@@ -76,13 +76,14 @@ df_fundamentals_quarterly = fn.preprocessing_2(df_fundamentals_quarterly)
 df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
-# Checkpoint data
+# Save data (uncomment)
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'wb') as file:
     pickle.dump(df_fundamentals_quarterly, file)
 with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'wb') as file:
     pickle.dump(df_security_monthly, file)
 with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'wb') as file:
     pickle.dump(df_stock_monthly, file)
+# Load data
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as file:
     df_fundamentals_quarterly = pickle.load(file)
 with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'rb') as file:
@@ -165,18 +166,16 @@ df_factors_monthly = df_factors_monthly[ls_selected_cols]
 df_factors_monthly.rename(columns={'DATE_NEW': 'DATE'}, inplace=True)
 df_factors_monthly = df_factors_monthly.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
 
-# Checkpoint data
+# Save data (uncomment)
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'wb') as file:
     pickle.dump(df_data, file)
 with open(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'), 'wb') as file:
     pickle.dump(df_factors_monthly, file)
+# Load data
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as file:
     df_data = pickle.load(file)
 with open(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'), 'rb') as file:
     df_factors_monthly = pickle.load(file)
-
-
-
 
 # Create data dictionary
 dic_asts_data = {}
@@ -201,13 +200,12 @@ for date in tqdm(ls_dates, desc='Assets data dictionary'):
     dic_asts_data[date] = df_tmp
 dic_data = {'dic_asts_data': dic_asts_data, 'df_facs_data': df_factors_monthly}
 
-# Checkpoint data
+# Save data (uncomment)
 # with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'wb') as file:
 #     pickle.dump(dic_data, file)
+# Load data
 with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
     dic_data = pickle.load(file)
-
-
 
 
 # %%
@@ -215,8 +213,6 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 # *** Branch: PORTFOLIO CONSTRUCTION             ***
 # **************************************************
 
-
-# %%
 
 # Grid search
 
