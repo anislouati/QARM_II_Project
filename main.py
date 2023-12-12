@@ -16,6 +16,10 @@ import warnings
 pd.set_option('display.width', 400)
 pd.set_option('display.max_columns', 10)
 
+# Warnings management
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+warnings.filterwarnings(action='ignore', category=RuntimeWarning)
+
 
 # %%
 # **************************************************

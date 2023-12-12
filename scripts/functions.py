@@ -1,10 +1,9 @@
 # Import packages
 from pathlib import Path
-from scipy.optimize import minimize
+from scipy.optimize import minimize, OptimizeResult
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-import warnings
 
 # Project directories paths (README: modify if necessary!)
 paths = {'main': Path.cwd()}
@@ -235,78 +234,75 @@ def preprocessing_7(df_data):
     print('- Safety: DONE')
 
     # Beta and Volatility (benchmark: S&P 500 Composite Index)
-    with warnings.catch_warnings():
-        warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+    n = 5
+    for i in range(0, n * 12):
+        df_out['TRT1M' + 't_' + str(i)] = df_out['TRT1M'].shift(periods=i)
+    for i in range(0, n * 12):
+        df_out['SPRTRN' + 't_' + str(i)] = df_out['SPRTRN'].shift(periods=i)
 
-        n = 5
-        for i in range(0, n * 12):
-            df_out['TRT1M' + 't_' + str(i)] = df_out['TRT1M'].shift(periods=i)
-        for i in range(0, n * 12):
-            df_out['SPRTRN' + 't_' + str(i)] = df_out['SPRTRN'].shift(periods=i)
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months (first date: n*12 - 1)
+    ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(0, n * 12)]
+    ls_cols_SPRTRN = ['SPRTRN' + 't_' + str(i) for i in range(0, n * 12)]
 
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months (first date: n*12 - 1)
-        ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(0, n * 12)]
-        ls_cols_SPRTRN = ['SPRTRN' + 't_' + str(i) for i in range(0, n * 12)]
+    # Compute (-1)* mean return over the last n*12 months
+    df_out['M_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], -df_out[ls_cols_TRT1M].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
+    df_out['M_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], -df_out[ls_cols_SPRTRN].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
 
-        # Compute (-1)* mean return over the last n*12 months
-        df_out['M_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], -df_out[ls_cols_TRT1M].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
-        df_out['M_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], -df_out[ls_cols_SPRTRN].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
+    # Compute return + (-1)* mean return
+    for i in range(0, n * 12):
+        df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
+    for i in range(0, n * 12):
+        df_out['SPRTRN' + 't_' + str(i)] = df_out[['SPRTRN' + 't_' + str(i), 'M_SPRTRN']].sum(axis=1, skipna=False)
 
-        # Compute return + (-1)* mean return
-        for i in range(0, n * 12):
-            df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
-        for i in range(0, n * 12):
-            df_out['SPRTRN' + 't_' + str(i)] = df_out[['SPRTRN' + 't_' + str(i), 'M_SPRTRN']].sum(axis=1, skipna=False)
+    # Compute product of (TRT1M - mean TRT1M) * (SPRTRN - mean SPRTRN)
+    for i in range(0, n * 12):
+        df_out['PROD_TRT1M_SPRTRN' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'SPRTRN' + 't_' + str(i)]].product(axis=1, skipna=False)
 
-        # Compute product of (TRT1M - mean TRT1M) * (SPRTRN - mean SPRTRN)
-        for i in range(0, n * 12):
-            df_out['PROD_TRT1M_SPRTRN' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'SPRTRN' + 't_' + str(i)]].product(axis=1, skipna=False)
+    # Compute Cov(TRT1M, SPRTRN) over the last n*12 months
+    ls_cols_COV_TRT1M_SPRTRN = ['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)]
+    df_out['COV_TRT1M_SPRTRN'] = df_out[ls_cols_COV_TRT1M_SPRTRN].sum(axis=1, skipna=False) / (len(range(0, n * 12)) - 1)  # Unbiased estimator
 
-        # Compute Cov(TRT1M, SPRTRN) over the last n*12 months
-        ls_cols_COV_TRT1M_SPRTRN = ['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)]
-        df_out['COV_TRT1M_SPRTRN'] = df_out[ls_cols_COV_TRT1M_SPRTRN].sum(axis=1, skipna=False) / (len(range(0, n * 12)) - 1)  # Unbiased estimator
+    # Compute Vol over the last n*12 months (Vol(return - mean return) = Vol(return))
+    df_out['VOL_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_TRT1M].std(axis=1, skipna=False, ddof=1), np.nan)
+    df_out['VOL_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_SPRTRN].std(axis=1, skipna=False, ddof=1), np.nan)
+    df_out['VAR_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_SPRTRN].var(axis=1, skipna=False, ddof=1), np.nan)
 
-        # Compute Vol over the last n*12 months (Vol(return - mean return) = Vol(return))
-        df_out['VOL_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_TRT1M].std(axis=1, skipna=False, ddof=1), np.nan)
-        df_out['VOL_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_SPRTRN].std(axis=1, skipna=False, ddof=1), np.nan)
-        df_out['VAR_SPRTRN'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_SPRTRN].var(axis=1, skipna=False, ddof=1), np.nan)
+    # Compute Beta over the last n*12 months
+    df_out['BETA'] = df_out['COV_TRT1M_SPRTRN'] / df_out['VAR_SPRTRN']
+    df_out['NBETA'] = (-1) * df_out['BETA']  # Take the negative (zscore)
 
-        # Compute Beta over the last n*12 months
-        df_out['BETA'] = df_out['COV_TRT1M_SPRTRN'] / df_out['VAR_SPRTRN']
-        df_out['NBETA'] = (-1) * df_out['BETA']  # Take the negative (zscore)
+    df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(0, n * 12)])
+    df_out = df_out.drop(columns=['SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
+    df_out = df_out.drop(columns=['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
+    df_out = df_out.drop(columns=['M_TRT1M', 'M_SPRTRN', 'COV_TRT1M_SPRTRN', 'VAR_SPRTRN', 'PERMNO_t'])
+    print('- Beta and Volatility: DONE')
 
-        df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(0, n * 12)])
-        df_out = df_out.drop(columns=['SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
-        df_out = df_out.drop(columns=['PROD_TRT1M_SPRTRN' + 't_' + str(i) for i in range(0, n * 12)])
-        df_out = df_out.drop(columns=['M_TRT1M', 'M_SPRTRN', 'COV_TRT1M_SPRTRN', 'VAR_SPRTRN', 'PERMNO_t'])
-        print('- Beta and Volatility: DONE')
+    # Previous monthly returns (n-years period)
+    for i in range(n * 12 - 1, -1, -1):
+        df_out['TRT1M' + 't_' + str(i)] = df_out['TRT1M'].shift(periods=i)
 
-        # Previous monthly returns (n-years period)
-        for i in range(n * 12 - 1, -1, -1):
-            df_out['TRT1M' + 't_' + str(i)] = df_out['TRT1M'].shift(periods=i)
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months (first date: n*12 - 1)
+    ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)]
 
-        df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=n * 4 * 3 - 1)  # Take n*12 months taking the current months (first date: n*12 - 1)
-        ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)]
+    # Compute (-1)* mean return over the last n*12 months
+    df_out['M_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_TRT1M].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
 
-        # Compute (-1)* mean return over the last n*12 months
-        df_out['M_TRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols_TRT1M].mean(axis=1, skipna=False), np.nan)  # Check the PERMNO
+    # Compute return + (-1)* mean return
+    for i in range(n * 12 - 1, -1, -1):
+        df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
 
-        # Compute return + (-1)* mean return
-        for i in range(n * 12 - 1, -1, -1):
-            df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
+    df_out['M_TRT1M'] = -df_out['M_TRT1M']
 
-        df_out['M_TRT1M'] = -df_out['M_TRT1M']
+    for i in range(n * 12 - 1, -1, -1):
+        df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
 
-        for i in range(n * 12 - 1, -1, -1):
-            df_out['TRT1M' + 't_' + str(i)] = df_out[['TRT1M' + 't_' + str(i), 'M_TRT1M']].sum(axis=1, skipna=False)
+    ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)]
+    df_out['LS_PTRT1M'] = df_out[ls_cols_TRT1M].values.tolist()
+    df_out.loc[df_out['FILLED'], 'LS_PTRT1M'] = np.nan
 
-        ls_cols_TRT1M = ['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)]
-        df_out['LS_PTRT1M'] = df_out[ls_cols_TRT1M].values.tolist()
-        df_out.loc[df_out['FILLED'], 'LS_PTRT1M'] = np.nan
-
-        df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)])
-        df_out = df_out.drop(columns=['M_TRT1M', 'PERMNO_t'])
-        print('- Previous monthly returns: DONE')
+    df_out = df_out.drop(columns=['TRT1M' + 't_' + str(i) for i in range(n * 12 - 1, -1, -1)])
+    df_out = df_out.drop(columns=['M_TRT1M', 'PERMNO_t'])
+    print('- Previous monthly returns: DONE')
 
     # Momentum
     n_lags_1 = 12  # Long-term (n_lags months)
@@ -319,7 +315,6 @@ def preprocessing_7(df_data):
 
     df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, n_lags_1)])
     df_out = df_out.drop(columns=['PERMNO_t'])
-    print('- Momentum: DONE')
 
     n_lags_2 = 3  # Short-term
     for i in range(0, n_lags_2):
@@ -331,6 +326,7 @@ def preprocessing_7(df_data):
 
     df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, n_lags_2)])
     df_out = df_out.drop(columns=['PERMNO_t'])
+    print('- Momentum: DONE')
 
     # Reverse momentum
     df_out['NCTRT1M_1'] = (-1) * df_out['CTRT1M_1']  # Take the negative (zscore)
@@ -525,6 +521,16 @@ class Portfolio:
         ls_asts = self.get_ls_asts(df_data, leg)
         n_asts = len(ls_asts)
 
+        # Optimization constraints
+        def cons1(w):
+            return np.sum(w) - 1
+
+        # Optimization settings
+        x0 = np.ones(n_asts) / n_asts
+        bnds = [(0.005, 1) for i in range(n_asts)]  # Long-only, min 0.5% per asset
+        cons = {'type': 'eq', 'fun': cons1}
+        res = OptimizeResult()
+
         # Equal weighting
         if w_meth == 'EW':
             s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
@@ -546,22 +552,8 @@ class Portfolio:
             def get_port_var(w):
                 return w.T @ a_covmat @ w
 
-            def cons1(w):
-                return np.sum(w) - 1
-
             # Optimization
-            x0 = np.ones(n_asts) / n_asts
-            bnds = [(0.005, 1) for i in range(n_asts)]  # Long-only, min 0.5% per asset
-            cons = {'type': 'eq', 'fun': cons1}
-            with warnings.catch_warnings():
-                warnings.filterwarnings(action='ignore', category=RuntimeWarning)
-                result = minimize(fun=get_port_var, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
-
-            # Return output
-            if not result.success:  # Assumption: if optimization unsuccessful, use equal weighting (at this date)
-                s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
-            else:
-                s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
+            res = minimize(fun=get_port_var, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
 
         # Market neutral (zero beta)
         elif w_meth == 'MN':
@@ -577,22 +569,8 @@ class Portfolio:
                 diff = (get_port_beta(w) - 1) ** 2
                 return diff  # Minimize to have Beta_P = 1 (Beta_L - Beta_S = 1 - 1 = 0)
 
-            def cons1(w):
-                return np.sum(w) - 1
-
             # Optimization
-            x0 = np.ones(n_asts) / n_asts
-            bnds = [(0.005, 1) for i in range(n_asts)]  # Long-only, min 0.5% per asset
-            cons = {'type': 'eq', 'fun': cons1}
-            with warnings.catch_warnings():
-                warnings.filterwarnings(action='ignore', category=RuntimeWarning)
-                result = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
-
-            # Return output
-            if not result.success:
-                s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
-            else:
-                s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
+            res = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
 
         # Risk parity (equally-weighted risk contributions)
         elif w_meth == 'RP':
@@ -611,22 +589,14 @@ class Portfolio:
                         diff += ((w[i] * a_Sw[i]) - (w[j] * a_Sw[j])) ** 2
                 return diff  # Minimize to have TRC_i = TRC_j ==> (w_i * MRC_i) = (w_j * MRC_j)
 
-            def cons1(w):
-                return np.sum(w) - 1
-
             # Optimization
-            x0 = np.ones(n_asts) / n_asts
-            bnds = [(0.005, 1) for i in range(n_asts)]  # Long-only, min 0.5% per asset
-            cons = {'type': 'eq', 'fun': cons1}
-            with warnings.catch_warnings():
-                warnings.filterwarnings(action='ignore', category=RuntimeWarning)
-                result = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
+            res = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
 
-            # Return output
-            if not result.success:
-                s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')
-            else:
-                s_port_w = pd.Series(result.x, index=ls_asts, dtype='float64')
+        # Return output
+        if not res.success:
+            s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')  # Assumption: if optimization fails (at this date), use equal weighting
+        else:
+            s_port_w = pd.Series(res.x, index=ls_asts, dtype='float64')
         return s_port_w
 
     def tab_port_perf(self):
