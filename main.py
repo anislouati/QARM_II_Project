@@ -30,6 +30,7 @@ warnings.filterwarnings(action='ignore', category=RuntimeWarning)
 df_fundamentals_quarterly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compustat_merged_fundamentals_quarterly.sas7bdat'))
 df_security_monthly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compustat_merged_security_monthly.sas7bdat'))
 df_stock_monthly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_security_files_monthly_stock.sas7bdat'))
+df_factors_monthly = pd.read_sas(Path.joinpath(paths.get('data'), 'factors_monthly.sas7bdat'))
 
 # Filter selected cols
 ls_selected_cols_1 = ['LPERMNO', 'DATADATE',
@@ -46,6 +47,10 @@ df_security_monthly.rename(columns={'LPERMNO': 'PERMNO', 'DATADATE': 'DATE'}, in
 ls_selected_cols_3 = ['PERMNO', 'DATE', 'BID', 'ASK', 'VOL', 'SPRTRN']
 df_stock_monthly = df_stock_monthly[ls_selected_cols_3]
 
+ls_selected_cols_4 = ['DATEFF', 'RF', 'MKTRF', 'SMB', 'HML']
+df_factors_monthly = df_factors_monthly[ls_selected_cols_4]
+df_factors_monthly.rename(columns={'DATEFF': 'DATE'}, inplace=True)
+
 # Create keys/identifiers (KEYQ, KEYM)
 df_fundamentals_quarterly = fn.preprocessing_1(df_fundamentals_quarterly)
 df_security_monthly = fn.preprocessing_1(df_security_monthly)
@@ -57,6 +62,7 @@ max_year = 2022
 df_fundamentals_quarterly = df_fundamentals_quarterly[(df_fundamentals_quarterly['YEAR'] >= min_year) & (df_fundamentals_quarterly['YEAR'] <= max_year)]
 df_security_monthly = df_security_monthly[(df_security_monthly['YEAR'] >= min_year) & (df_security_monthly['YEAR'] <= max_year)]
 df_stock_monthly = df_stock_monthly[(df_stock_monthly['YEAR'] >= min_year) & (df_stock_monthly['YEAR'] <= max_year)]
+df_factors_monthly = df_factors_monthly[(df_factors_monthly['YEAR'] >= min_year) & (df_factors_monthly['YEAR'] <= max_year)]
 
 # Filter stock exchanges (11: NYSE, 12: AMEX, 14: NASDAQ-NMS)
 df_fundamentals_quarterly = df_fundamentals_quarterly[df_fundamentals_quarterly['EXCHG'].isin([11, 12, 14])]
@@ -190,27 +196,27 @@ for date in tqdm(ls_dates, desc='Data dictionary'):
 # TODO: save data dictionary as json
 # TODO: get_port_chars
 # TODO: import FF5 data from WRDS
+# Performance: Mean, Vol, SR, MaxDD, FF5 (alpha, betas), Calamar, Turnover, Normalized Hierfindahl Index or Gini
 
-port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='MN', pct_long=100,
-                 sig_short='ZS_VAL_QLT', n_asts_short=25, w_meth_short='MN', pct_short=90,
-                 ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.4)
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='MN', pct_long=130,
+                 sig_short='ZS_MOM_2', n_asts_short=25, w_meth_short='MN', pct_short=30,
+                 ind_const='I', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
 
+zzz = port.tab_port_perf()
 
-df_tmp = dic_data[ls_dates[0]]
 ls = port.get_ls_asts(df_tmp, leg='L')
 
 df_tmp.loc[df_tmp['PERMNO'].isin(ls), 'GSECTOR'].value_counts()
-zzz = port.tab_port_perf()
-
-# Performance: Mean, Vol, SR, MaxDD, FF5 (alpha, betas), Calamar, Turnover, Normalized Hierfindahl Index or Gini
 
 
-# %%
+df_tmp = dic_data[ls_dates[0]]
+s_port_w = port.get_s_port_w(df_tmp, leg='L', w_meth='RP')
 
-s_port_w = port.get_s_port_w(df_tmp, leg='L', w_meth='VW')
+
 ls_lens = [len(dic_data[date]) for date in list(dic_data.keys())]
 ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='NI', leg='S')
 zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
+
 
 
 

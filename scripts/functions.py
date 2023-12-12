@@ -520,6 +520,7 @@ class Portfolio:
         s_port_w = pd.Series(dtype='float64')
         ls_asts = self.get_ls_asts(df_data, leg)
         n_asts = len(ls_asts)
+        opt_prob = False
 
         # Optimization constraints
         def cons1(w):
@@ -543,6 +544,7 @@ class Portfolio:
         # Minimum variance
         elif w_meth == 'MV':
             # Initialization
+            opt_prob = True
             df_rtns = pd.DataFrame(df_data.loc[df_data['PERMNO'].isin(ls_asts), 'LS_PTRT1M'].tolist()).T  # Previous returns
             df_rtns.columns = ls_asts
             df_covmat = df_rtns.cov()
@@ -558,6 +560,7 @@ class Portfolio:
         # Market neutral (zero beta)
         elif w_meth == 'MN':
             # Initialization
+            opt_prob = True
             s_betas = df_data.loc[df_data['PERMNO'].isin(ls_asts), 'BETA'].rename(None)
             a_betas = np.array(s_betas)
 
@@ -575,6 +578,7 @@ class Portfolio:
         # Risk parity (equally-weighted risk contributions)
         elif w_meth == 'RP':
             # Initialization
+            opt_prob = True
             df_rtns = pd.DataFrame(df_data.loc[df_data['PERMNO'].isin(ls_asts), 'LS_PTRT1M'].tolist()).T  # Previous returns
             df_rtns.columns = ls_asts
             df_covmat = df_rtns.cov()
@@ -593,10 +597,11 @@ class Portfolio:
             res = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
 
         # Return output
-        if not res.success:
-            s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')  # Assumption: if optimization fails (at this date), use equal weighting
-        else:
-            s_port_w = pd.Series(res.x, index=ls_asts, dtype='float64')
+        if opt_prob:
+            if not res.success:
+                s_port_w = pd.Series((1 / n_asts), index=ls_asts, dtype='float64')  # Assumption: if optimization fails (at this date), use equal weighting
+            else:
+                s_port_w = pd.Series(res.x, index=ls_asts, dtype='float64')
         return s_port_w
 
     def tab_port_perf(self):
@@ -694,3 +699,4 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'PORT_RTN'] = (df_port_perf.loc[pos_tmp, 'PORT_NAV'] / df_port_perf.loc[(pos_tmp - 1), 'PORT_NAV']) - 1
         return df_port_perf
 
+# CONTINUE HERE
