@@ -147,15 +147,6 @@ print('Assets before filter: {}'.format(n_asts_1))
 print('Assets after filter: {}'.format(n_asts_2))
 '''
 
-
-# Checkpoint data
-# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
-    df_data = pickle.load(f)
-
-#%%
-
-
 # Sync dates (EOM) for factors data
 ls_dates = sorted(df_data['DATE'].unique().tolist())
 ls_year_mth = [(str(date.year) + '_' + str(date.month)) for date in ls_dates]
@@ -175,8 +166,10 @@ df_factors_monthly = df_factors_monthly.sort_values(by=['DATE'], ascending=[True
 df_data = pd.merge(df_data, df_factors_monthly, on='DATE', how='inner')
 df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
-
-
+# Checkpoint data
+# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as f:
+    df_data = pickle.load(f)
 
 
 # %%
@@ -202,17 +195,18 @@ for date in tqdm(ls_dates, desc='Data dictionary'):
                         'VOL_TRT1M', 'VOL_SPRTRN', 'BETA',
                         'CTRT1M_1', 'LS_PTRT1M', 'LS_NTRT1M',
                         'ZS_VAL', 'ZS_QLT', 'ZS_MOM_1', 'ZS_MOM_2', 'ZS_RMOM_1',
-                        'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM_1', 'ZS_VAL_QLT_MOM_2', 'ZS_VAL_QLT_RMOM', 'ZS_VAL_QLT_ARMOM']
+                        'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM_1', 'ZS_VAL_QLT_MOM_2', 'ZS_VAL_QLT_RMOM', 'ZS_VAL_QLT_ARMOM',
+                        'RF', 'MKTRF', 'SMB', 'HML']
     df_tmp = df_tmp[ls_selected_cols]
     df_tmp = df_tmp.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
     dic_data[date] = df_tmp
 
+
 # %%
 
 
-# TODO: save data dictionary as json
+
 # TODO: get_port_chars
-# TODO: import FF5 data from WRDS
 # Performance: Mean, Vol, SR, MaxDD, FF5 (alpha, betas), Calamar, Turnover, Normalized Hierfindahl Index or Gini
 
 port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='MN', pct_long=130,
