@@ -224,7 +224,9 @@ port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_met
                  sig_short='ZS_MOM_2', n_asts_short=25, w_meth_short='MN', pct_short=30,
                  ind_const='I', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
 
-zzz = port.get_s_port_chars(output_perf=True)
+s_port_chars = port.get_s_port_chars(output_perf=True)
+
+df_port_perf = port.tab_port_perf()
 
 
 

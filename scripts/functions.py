@@ -608,9 +608,9 @@ class Portfolio:
         return s_port_w
 
     def tab_port_perf(self):
-        dic_cols = {'DATE': 'datetime64[ns]', 'PORT_C': 'float64', 'PORT_L': 'float64', 'PORT_S': 'float64', 'PORT_NAV': 'float64', 'PORT_RTN': 'float64',
-                    'L_RTN': 'float64', 'L_POS': 'object', 'L_WT': 'object', 'L_RTNS': 'object',
-                    'S_RTN': 'float64', 'S_POS': 'object', 'S_WT': 'object', 'S_RTNS': 'object'}
+        dic_cols = {'DATE': 'datetime64[ns]', 'PORT_C': 'float64', 'PORT_L': 'float64', 'PORT_S': 'float64', 'PORT_NAV': 'float64', 'PORT_RTNS': 'float64',
+                    'L_RTNS': 'float64', 'L_POS': 'object', 'L_WT': 'object', 'L_ASTS_RTNS': 'object',
+                    'S_RTNS': 'float64', 'S_POS': 'object', 'S_WT': 'object', 'S_ASTS_RTNS': 'object'}
         df_port_perf = pd.DataFrame(columns=list(dic_cols.keys())).astype(dtype=dic_cols)
         ls_dates = list(self.dic_asts_data.keys())
 
@@ -647,7 +647,7 @@ class Portfolio:
             pos_tmp = (n_dates * i)
 
             # Long/Short rebalancing
-            if ls_reb_dates[i] != ls_dates[0]:
+            if ls_reb_dates[i] != ls_dates[0]:  # Remark: initial allocation already done
                 # Liquidate positions
                 df_port_perf.loc[pos_tmp, 'PORT_C'] += df_port_perf.loc[pos_tmp, 'PORT_L']
                 df_port_perf.loc[pos_tmp, 'PORT_L'] = 0
@@ -662,16 +662,16 @@ class Portfolio:
             # Long leg
             s_long_w = self.get_s_port_w(df_tmp, leg='L', w_meth=self.w_meth_long)
             ls_long_asts = s_long_w.index.tolist()
-            df_long_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_long_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
-            df_long_rtns.columns = ls_long_asts
+            df_long_asts_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_long_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
+            df_long_asts_rtns.columns = ls_long_asts
             df_port_perf.at[pos_tmp, 'L_POS'] = dict(zip(ls_long_asts, (s_long_w * df_port_perf.loc[pos_tmp, 'PORT_L']).tolist()))
             df_port_perf.at[pos_tmp, 'L_WT'] = dict(zip(ls_long_asts, s_long_w.tolist()))
 
             # Short leg
             s_short_w = self.get_s_port_w(df_tmp, leg='S', w_meth=self.w_meth_short)
             ls_short_asts = s_short_w.index.tolist()
-            df_short_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_short_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
-            df_short_rtns.columns = ls_short_asts
+            df_short_asts_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_short_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
+            df_short_asts_rtns.columns = ls_short_asts
             df_port_perf.at[pos_tmp, 'S_POS'] = dict(zip(ls_short_asts, (s_short_w * df_port_perf.loc[pos_tmp, 'PORT_S']).tolist()))
             df_port_perf.at[pos_tmp, 'S_WT'] = dict(zip(ls_short_asts, s_short_w.tolist()))
 
@@ -681,25 +681,25 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'DATE'] = ls_dates[pos_tmp]
 
                 # Long leg
-                a_long_rtns = np.array(df_long_rtns.loc[j - 1])
-                df_port_perf.at[pos_tmp, 'L_RTNS'] = dict(zip(ls_long_asts, a_long_rtns.tolist()))
-                df_port_perf.loc[pos_tmp, 'L_RTN'] = (np.array(list(df_port_perf.loc[(pos_tmp - 1), 'L_WT'].values())) * a_long_rtns).sum()
-                df_port_perf.at[pos_tmp, 'L_POS'] = dict(zip(ls_long_asts, (np.array(list(df_port_perf.loc[(pos_tmp - 1), 'L_POS'].values())) * (1 + a_long_rtns)).tolist()))
+                a_long_asts_rtns = np.array(df_long_asts_rtns.loc[j - 1])
+                df_port_perf.at[pos_tmp, 'L_ASTS_RTNS'] = dict(zip(ls_long_asts, a_long_asts_rtns.tolist()))
+                df_port_perf.loc[pos_tmp, 'L_RTNS'] = (np.array(list(df_port_perf.loc[(pos_tmp - 1), 'L_WT'].values())) * a_long_asts_rtns).sum()
+                df_port_perf.at[pos_tmp, 'L_POS'] = dict(zip(ls_long_asts, (np.array(list(df_port_perf.loc[(pos_tmp - 1), 'L_POS'].values())) * (1 + a_long_asts_rtns)).tolist()))
                 df_port_perf.loc[pos_tmp, 'PORT_L'] = np.array(list(df_port_perf.loc[pos_tmp, 'L_POS'].values())).sum()
                 df_port_perf.at[pos_tmp, 'L_WT'] = dict(zip(ls_long_asts, (np.array(list(df_port_perf.at[pos_tmp, 'L_POS'].values())) / df_port_perf.loc[pos_tmp, 'PORT_L']).tolist()))
 
                 # Short leg
-                a_short_rtns = np.array(df_short_rtns.loc[j - 1])
-                df_port_perf.at[pos_tmp, 'S_RTNS'] = dict(zip(ls_short_asts, a_short_rtns.tolist()))
-                df_port_perf.loc[pos_tmp, 'S_RTN'] = (np.array(list(df_port_perf.loc[(pos_tmp - 1), 'S_WT'].values())) * a_short_rtns).sum()
-                df_port_perf.at[pos_tmp, 'S_POS'] = dict(zip(ls_short_asts, (np.array(list(df_port_perf.loc[(pos_tmp - 1), 'S_POS'].values())) * (1 + a_short_rtns)).tolist()))
+                a_short_asts_rtns = np.array(df_short_asts_rtns.loc[j - 1])
+                df_port_perf.at[pos_tmp, 'S_ASTS_RTNS'] = dict(zip(ls_short_asts, a_short_asts_rtns.tolist()))
+                df_port_perf.loc[pos_tmp, 'S_RTNS'] = (np.array(list(df_port_perf.loc[(pos_tmp - 1), 'S_WT'].values())) * a_short_asts_rtns).sum()
+                df_port_perf.at[pos_tmp, 'S_POS'] = dict(zip(ls_short_asts, (np.array(list(df_port_perf.loc[(pos_tmp - 1), 'S_POS'].values())) * (1 + a_short_asts_rtns)).tolist()))
                 df_port_perf.loc[pos_tmp, 'PORT_S'] = np.array(list(df_port_perf.loc[pos_tmp, 'S_POS'].values())).sum()
                 df_port_perf.at[pos_tmp, 'S_WT'] = dict(zip(ls_short_asts, (np.array(list(df_port_perf.at[pos_tmp, 'S_POS'].values())) / df_port_perf.loc[pos_tmp, 'PORT_S']).tolist()))
 
                 # Portfolio (L/S)
                 df_port_perf.loc[pos_tmp, 'PORT_C'] = df_port_perf.loc[(pos_tmp - 1), 'PORT_C']  # Assumption: no interest on cash (possible to use risk-free rate)
                 df_port_perf.loc[pos_tmp, 'PORT_NAV'] = df_port_perf.loc[pos_tmp, 'PORT_C'] + df_port_perf.loc[pos_tmp, 'PORT_L'] - df_port_perf.loc[pos_tmp, 'PORT_S']
-                df_port_perf.loc[pos_tmp, 'PORT_RTN'] = (df_port_perf.loc[pos_tmp, 'PORT_NAV'] / df_port_perf.loc[(pos_tmp - 1), 'PORT_NAV']) - 1
+                df_port_perf.loc[pos_tmp, 'PORT_RTNS'] = (df_port_perf.loc[pos_tmp, 'PORT_NAV'] / df_port_perf.loc[(pos_tmp - 1), 'PORT_NAV']) - 1
         return df_port_perf
 
     def get_s_port_chars(self, output_perf=False):
@@ -707,8 +707,10 @@ class Portfolio:
 
         df_port_perf = self.tab_port_perf()
         if output_perf:
-            with open(Path.joinpath(paths.get('data'), 'ports', (self.port_name + '.pkl')), 'wb') as file:
+            with open(Path.joinpath(paths.get('output'), 'ports', (self.port_name + '.pkl')), 'wb') as file:
                 pickle.dump(df_port_perf, file)
+
+
 
         return s_port_chars
 
