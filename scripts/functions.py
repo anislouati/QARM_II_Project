@@ -701,7 +701,34 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'PORT_RTN'] = (df_port_perf.loc[pos_tmp, 'PORT_NAV'] / df_port_perf.loc[(pos_tmp - 1), 'PORT_NAV']) - 1
         return df_port_perf
 
-    #def get_s_port_chars(self, output_perf=False):
+    def get_s_port_chars(self, output_perf=False):
+
+        print(output_perf)
+
+
+
+'''
+def tab_port_chars(name, s_port_rtns, interval, theta=0.99):
+    s_port_losses = (-1) * s_port_rtns
+    VaR_uncond = get_VaR_uncond(s_port_losses, theta)
+    ES_uncond = get_ES_uncond(s_port_losses, theta)
+    df_drawdown = get_drawdown(s_port_rtns)
+    max_drawdown = df_drawdown.iloc[df_drawdown['drawdown'].idxmin()]
+    max_drawdown_period = max_drawdown['start'].strftime('%Y-%m-%d') + ' - ' + max_drawdown['end'].strftime('%Y-%m-%d')
+
+    df_port_chars = pd.DataFrame(index=[name])
+    df_port_chars['Annualized average return'] = s_port_rtns.mean() * get_factor(interval)
+    df_port_chars['Annualized volatility'] = np.sqrt(s_port_rtns.var() * get_factor(interval))
+    df_port_chars['Minimum return'] = s_port_rtns.min()
+    df_port_chars['Maximum return'] = s_port_rtns.max()
+    df_port_chars['Max Drawdown'] = (-1) * max_drawdown['drawdown']  # Express in terms of loss (negative return)
+    df_port_chars['Max Drawdown Period'] = max_drawdown_period
+    df_port_chars['VaR @' + str(int(theta * 100)) + '%'] = VaR_uncond
+    df_port_chars['ES @' + str(int(theta * 100)) + '%'] = ES_uncond
+
+    return df_port_chars
+'''
+
 
 
 

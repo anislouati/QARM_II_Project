@@ -201,8 +201,8 @@ for date in tqdm(ls_dates, desc='Assets data dictionary'):
 dic_data = {'dic_asts_data': dic_asts_data, 'df_facs_data': df_factors_monthly}
 
 # Save data (uncomment)
-# with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'wb') as file:
-#     pickle.dump(dic_data, file)
+with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'wb') as file:
+    pickle.dump(dic_data, file)
 # Load data
 with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
     dic_data = pickle.load(file)
@@ -214,9 +214,9 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 # **************************************************
 
 
-# Grid search
 
 # TODO: get_port_chars
+# TODO: grid search
 # Performance: Mean, Vol, SR, MaxDD, FF5 (alpha, betas), Calamar, Turnover, Normalized Hierfindahl Index or Gini
 
 port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='MN', pct_long=130,
@@ -238,26 +238,6 @@ df_data = pd.merge(df_data, df_factors_monthly, on='DATE', how='inner')
 df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
 
 
-'''
-def tab_port_chars(name, s_port_rtns, interval, theta=0.99):
-    s_port_losses = (-1) * s_port_rtns
-    VaR_uncond = get_VaR_uncond(s_port_losses, theta)
-    ES_uncond = get_ES_uncond(s_port_losses, theta)
-    df_drawdown = get_drawdown(s_port_rtns)
-    max_drawdown = df_drawdown.iloc[df_drawdown['drawdown'].idxmin()]
-    max_drawdown_period = max_drawdown['start'].strftime('%Y-%m-%d') + ' - ' + max_drawdown['end'].strftime('%Y-%m-%d')
 
-    df_port_chars = pd.DataFrame(index=[name])
-    df_port_chars['Annualized average return'] = s_port_rtns.mean() * get_factor(interval)
-    df_port_chars['Annualized volatility'] = np.sqrt(s_port_rtns.var() * get_factor(interval))
-    df_port_chars['Minimum return'] = s_port_rtns.min()
-    df_port_chars['Maximum return'] = s_port_rtns.max()
-    df_port_chars['Max Drawdown'] = (-1) * max_drawdown['drawdown']  # Express in terms of loss (negative return)
-    df_port_chars['Max Drawdown Period'] = max_drawdown_period
-    df_port_chars['VaR @' + str(int(theta * 100)) + '%'] = VaR_uncond
-    df_port_chars['ES @' + str(int(theta * 100)) + '%'] = ES_uncond
-
-    return df_port_chars
-'''
 
 
