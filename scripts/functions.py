@@ -443,7 +443,7 @@ def get_ZS(df_data):
 # *** Branch: PORTFOLIO CONSTRUCTION             ***
 # **************************************************
 
-
+'''
 class Portfolio:
     def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
                  sig_short, n_asts_short, w_meth_short, pct_short,
@@ -705,42 +705,34 @@ class Portfolio:
     def get_s_port_chars(self, output_perf=False):
         s_port_chars = pd.Series(index=['ANN_MEAN', 'ANN_VOL', 'SHARPE'])
 
+        # Portfolio performance
         df_port_perf = self.tab_port_perf()
         if output_perf:
             with open(Path.joinpath(paths.get('output'), 'ports', (self.port_name + '.pkl')), 'wb') as file:
                 pickle.dump(df_port_perf, file)
 
+        # Merge factors data
+        df_port_perf = pd.merge(df_port_perf, self.df_facs_data, on='DATE', how='inner')
+        df_port_perf = df_port_perf.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
+
+        # Performance analysis
+        s_port_rtns = df_port_perf['PORT_RTNS']
+        s_port_chars['ANN_MEAN'] = s_port_rtns.mean() * 12
+        s_port_chars['ANN_VOL'] = np.sqrt(s_port_rtns.var() * 12)
+        s_port_chars['SHARPE'] = () / df_port_perf.iloc[-1]['']
 
 
-        return s_port_chars
+        # Merge datasets (2)
+        print('hello')
 
 
+
+
+
+        return df_port_perf
 '''
-def tab_port_chars(name, s_port_rtns, interval, theta=0.99):
-    s_port_losses = (-1) * s_port_rtns
-    VaR_uncond = get_VaR_uncond(s_port_losses, theta)
-    ES_uncond = get_ES_uncond(s_port_losses, theta)
-    df_drawdown = get_drawdown(s_port_rtns)
-    max_drawdown = df_drawdown.iloc[df_drawdown['drawdown'].idxmin()]
-    max_drawdown_period = max_drawdown['start'].strftime('%Y-%m-%d') + ' - ' + max_drawdown['end'].strftime('%Y-%m-%d')
-
-    df_port_chars = pd.DataFrame(index=[name])
-    df_port_chars['Annualized average return'] = s_port_rtns.mean() * get_factor(interval)
-    df_port_chars['Annualized volatility'] = np.sqrt(s_port_rtns.var() * get_factor(interval))
-    df_port_chars['Minimum return'] = s_port_rtns.min()
-    df_port_chars['Maximum return'] = s_port_rtns.max()
-    df_port_chars['Max Drawdown'] = (-1) * max_drawdown['drawdown']  # Express in terms of loss (negative return)
-    df_port_chars['Max Drawdown Period'] = max_drawdown_period
-    df_port_chars['VaR @' + str(int(theta * 100)) + '%'] = VaR_uncond
-    df_port_chars['ES @' + str(int(theta * 100)) + '%'] = ES_uncond
-
-    return df_port_chars
 
 
-# Merge datasets (2)
-df_data = pd.merge(df_data, df_factors_monthly, on='DATE', how='inner')
-df_data = df_data.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
-'''
 
 
 
