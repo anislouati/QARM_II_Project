@@ -762,7 +762,6 @@ class Portfolio:
             norm_H = (H - (1 / n_asts)) / (1 - (1 / n_asts))
             return norm_H
 
-
         # Portfolio performance
         df_port_perf = self.tab_port_perf()
         if output_perf:

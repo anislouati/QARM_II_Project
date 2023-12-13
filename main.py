@@ -215,46 +215,27 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 # *** Branch: PORTFOLIO CONSTRUCTION             ***
 # **************************************************
 
+# Grid search
+ls_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_MOM_1', 'ZS_MOM_2', 'ZS_RMOM_1', 'ZS_VAL_QLT',
+           'ZS_VAL_QLT_MOM_1', 'ZS_VAL_QLT_MOM_2', 'ZS_VAL_QLT_RMOM', 'ZS_VAL_QLT_ARMOM']
+ls_n_asts = [15, 20, 25]
+ls_w_meth = ['EW', 'VW', 'MV', 'MN', 'RP']
+ls_pct_long_short = [(130, 30), (150, 50), (130, 60), (120, 50), (100, 90), (200, 100)]
+ls_ind_const = ['I', 'NI']
+ls_reb_freq = ['Q', 'Y']
 
 
 
-# TODO: get_port_chars
 # TODO: grid search
-# Performance: Mean, Vol, SR, MaxDD, FF5 (alpha, betas), Calamar, Turnover, Normalized Hierfindahl Index or Gini
+
+
+
 
 port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='MN', pct_long=130,
                  sig_short='ZS_MOM_2', n_asts_short=25, w_meth_short='MN', pct_short=30,
                  ind_const='NI', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
-
-
-df_port_chars = port.tab_port_chars(output_perf=True)
-
-
-
+df_1 = port.tab_port_chars(output_perf=False)
 
 
 # %%
-
-
-
-
-
-
-
-
-
-ls = port.get_ls_asts(df_tmp, leg='L')
-df_tmp.loc[df_tmp['PERMNO'].isin(ls), 'GSECTOR'].value_counts()
-df_tmp = dic_data[ls_dates[0]]
-s_port_w = port.get_s_port_w(df_tmp, leg='L', w_meth='RP')
-ls_lens = [len(dic_data[date]) for date in list(dic_data.keys())]
-ls_asts = get_ls_asts(df_tmp, indicator='ZS_VAL', n_asts=25, ind_const='NI', leg='S')
-zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
-
-
-
-
-
-
-
 
