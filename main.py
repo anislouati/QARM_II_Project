@@ -11,6 +11,7 @@ import pandas as pd
 import pickle
 import scripts.functions as fn
 import warnings
+import time
 
 # Project settings
 pd.set_option('display.width', 400)
@@ -216,25 +217,53 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 # **************************************************
 
 # Grid search
-ls_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_MOM_1', 'ZS_MOM_2', 'ZS_RMOM_1', 'ZS_VAL_QLT',
-           'ZS_VAL_QLT_MOM_1', 'ZS_VAL_QLT_MOM_2', 'ZS_VAL_QLT_RMOM', 'ZS_VAL_QLT_ARMOM']
-ls_n_asts = [15, 20, 25]
-ls_w_meth = ['EW', 'VW', 'MV', 'MN', 'RP']
-ls_pct_long_short = [(130, 30), (150, 50), (130, 60), (120, 50), (100, 90), (200, 100)]
+df_ports_chars = pd.DataFrame()
+ls_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT']  # V, Q, VQ, MOM
+ls_n_asts = [15, 25]  # TODO: 25
+ls_w_meth = ['EW', 'MV', 'MN', 'RP']  # EW MN RP MV
+ls_pct_long_short = [(150, 50), (120, 50), (100, 90)]  # (130, 30) (150, 50) (120, 50) (130, 40) (100, 100) (100, 90)
 ls_ind_const = ['I', 'NI']
 ls_reb_freq = ['Q', 'Y']
+n_ports = len(ls_sigs) * len(ls_n_asts) * len(ls_w_meth) * len(ls_pct_long_short) * len(ls_ind_const) * len(ls_reb_freq)
+
+i = 0
+start_time = time.time()
+for sig in ls_sigs:
+    for n_asts in ls_n_asts:
+        for w_meth in ls_w_meth:
+            for (pct_long, pct_short) in ls_pct_long_short:
+                for ind_const in ls_ind_const:
+                    for reb_freq in ls_reb_freq:
+                        port = Portfolio(dic_data=dic_data, sig_long=sig, n_asts_long=n_asts, w_meth_long=w_meth, pct_long=pct_long,
+                                         sig_short=sig, n_asts_short=n_asts, w_meth_short=w_meth, pct_short=pct_short,
+                                         ind_const=ind_const, reb_freq=reb_freq, min_short_me=1000, max_short_cl=0.4)
+                        df_port_chars = port.tab_port_chars(output_perf=False)
+                        df_ports_chars = pd.concat([df_ports_chars, df_port_chars], axis=0, ignore_index=True)
+                        with open(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'), 'wb') as file:
+                            pickle.dump(df_ports_chars, file)
+                        i += 1
+                        print('Port {}/{}: DONE'.format(i, n_ports))
+end_time = time.time()
+print('Elapsed time: {} seconds'.format(end_time - start_time))
+
+# Load data
+with open(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'), 'rb') as file:
+    df_ports_chars = pickle.load(file)
 
 
 
-# TODO: grid search
 
-
-
-
-port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='MN', pct_long=130,
-                 sig_short='ZS_MOM_2', n_asts_short=25, w_meth_short='MN', pct_short=30,
-                 ind_const='NI', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
+#%%
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_MOM_1', n_asts_long=25, w_meth_long='MN', pct_long=100,
+                 sig_short='ZS_VAL_QLT_MOM_1', n_asts_short=25, w_meth_short='MN', pct_short=100,
+                 ind_const='NI', reb_freq='M', min_short_me=1000, max_short_cl=0.4)
 df_1 = port.tab_port_chars(output_perf=False)
+
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_MOM_1', n_asts_long=20, w_meth_long='RP', pct_long=200,
+                 sig_short='ZS_VAL_QLT_MOM_1', n_asts_short=20, w_meth_short='RP', pct_short=100,
+                 ind_const='NI', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
+df_2 = port.tab_port_chars(output_perf=False)
+
 
 
 # %%

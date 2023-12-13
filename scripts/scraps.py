@@ -620,3 +620,66 @@ df_tmp = dic_data[ls_dates[-1]]
 ls_asts = get_ls_asts(df_tmp, n_asts=25, ind_const=True, indicator='ZS_VAL', leg='long')
 zzz = df_tmp[df_tmp['PERMNO'].isin(ls_asts)]
 '''
+
+'''
+for sig_long in ls_sigs:
+    for n_asts_long in ls_n_asts:
+        for w_meth_long in ls_w_meth:
+            for sig_short in ls_sigs:
+                for n_asts_short in ls_n_asts:
+                    for w_meth_short in ls_w_meth:
+                        for (pct_long, pct_short) in ls_pct_long_short:
+                            for ind_const in ls_ind_const:
+                                for reb_freq in ls_reb_freq:
+                                    port = Portfolio(dic_data=dic_data, sig_long=sig_long, n_asts_long=n_asts_long, w_meth_long=w_meth_long, pct_long=pct_long,
+                                                     sig_short=sig_short, n_asts_short=n_asts_short, w_meth_short=w_meth_short, pct_short=pct_short,
+                                                     ind_const=ind_const, reb_freq=reb_freq, min_short_me=1000, max_short_cl=0.4)
+                                    df_port_chars = port.tab_port_chars(output_perf=False)
+                                    df_ports_chars = pd.concat([df_ports_chars, df_port_chars], axis=0, ignore_index=True)
+'''
+
+'''
+# Momentum
+n_lags_1 = 12  # Long-term (n_lags months)
+for i in range(0, n_lags_1):
+    df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=i)
+
+df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_1 - 1))
+ls_cols = ['TRT1M_t' + str(i) for i in range(0, n_lags_1)]
+df_out['CTRT1M_1'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Cumulative total returns
+
+df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, n_lags_1)])
+df_out = df_out.drop(columns=['PERMNO_t'])
+'''
+
+'''
+n_lags_2 = 3  # Short-term
+for i in range(0, n_lags_2):
+    df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=i)
+
+df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_2 - 1))
+ls_cols = ['TRT1M_t' + str(i) for i in range(0, n_lags_2)]
+df_out['CTRT1M_2'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
+
+df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(0, n_lags_2)])
+df_out = df_out.drop(columns=['PERMNO_t'])
+'''
+
+'''
+df_out['NCTRT1M_1'] = (-1) * df_out['CTRT1M_1']  # Take the negative (zscore)
+'''
+
+'''
+n_lags_3 = 3  # Short-term
+n_lags_4 = 12  # Long-term
+for i in range(n_lags_3, n_lags_4):
+    df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=i)
+
+df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_4 - 1))
+ls_cols = ['TRT1M_t' + str(i) for i in range(n_lags_3, n_lags_4)]
+df_out['NCTRT1M_2'] = (-1) * np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Take the negative (zscore)
+
+df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(n_lags_3, n_lags_4)])
+df_out = df_out.drop(columns=['PERMNO_t'])
+'''
+

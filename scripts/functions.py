@@ -338,9 +338,9 @@ def preprocessing_7(df_data):
     for i in range(n_lags_3, n_lags_4):
         df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=i)
 
-    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_4 - 1))
-    ls_cols = ['TRT1M_t' + str(i) for i in range(n_lags_3, n_lags_4)]
-    df_out['NCTRT1M_2'] = (-1) * np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Take the negative (zscore)
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_2 - 1))
+    ls_cols = ['TRT1M_t' + str(i) for i in range(n_lags_1, n_lags_2)]
+    df_out['NCTRT1M_1'] = (-1) * np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Take the negative (zscore)
 
     df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(n_lags_3, n_lags_4)])
     df_out = df_out.drop(columns=['PERMNO_t'])
