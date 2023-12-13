@@ -683,3 +683,25 @@ df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(n_lags_3, n_lags
 df_out = df_out.drop(columns=['PERMNO_t'])
 '''
 
+'''
+    ls_cols = [('ZS_' + var) for var in ['CTRT1M_2']]
+    df_out['ZS_MOM_2'] = df_out[ls_cols].mean(axis=1, skipna=False)
+'''
+
+'''
+    ls_cols = [('ZS_' + var) for var in ['NCTRT1M_2']]
+    df_out['ZS_RMOM_2'] = df_out[ls_cols].mean(axis=1, skipna=False)
+'''
+
+'''
+    # Value, Quality and Momentum (short-term)
+    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'MOM_2']]
+    df_out['ZS_VAL_QLT_MOM_2'] = df_out[ls_cols].mean(axis=1, skipna=False)
+'''
+
+'''
+# Value, Quality and Reverse momentum
+ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'RMOM']]
+df_out['ZS_VAL_QLT_RMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
+'''
+

@@ -314,7 +314,7 @@ def preprocessing_7(df_data):
 
     df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_2 - 1))
     ls_cols = ['TRT1M_t' + str(i) for i in range(n_lags_1, n_lags_2)]
-    df_out['CTRT1M_1'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
+    df_out['CTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
 
     df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(n_lags_1, n_lags_2)])
     df_out = df_out.drop(columns=['PERMNO_t'])
@@ -328,13 +328,10 @@ def preprocessing_7(df_data):
 
     df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_2 - 1))
     ls_cols = ['TRT1M_t' + str(i) for i in range(n_lags_1, n_lags_2)]
-    df_out['NCTRT1M_1'] = (-1) * np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Take the negative (zscore)
+    df_out['NCTRT1M'] = (-1) * np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)  # Take the negative (zscore)
 
-    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(n_lags_3, n_lags_4)])
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(n_lags_1, n_lags_2)])
     df_out = df_out.drop(columns=['PERMNO_t'])
-
-
-
     print('- Reverse momentum: DONE')
 
     # Next monthly returns (1-year period)
@@ -365,7 +362,7 @@ def get_ZS(df_data):
                'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC',
                'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR',
                'LEV', 'AZSCORE', 'NBETA',
-               'CTRT1M_1', 'CTRT1M_2', 'NCTRT1M_1', 'NCTRT1M_2']
+               'CTRT1M', 'NCTRT1M']
 
     for var in ls_vars:
         df_out['RK_' + var] = df_out[var].rank(method='max', ascending=True)
@@ -393,44 +390,28 @@ def get_ZS(df_data):
     df_out['ZS_QLT'] = df_out[ls_cols].mean(axis=1, skipna=False)
 
     # Momentum
-    ls_cols = [('ZS_' + var) for var in ['CTRT1M_1']]
-    df_out['ZS_MOM_1'] = df_out[ls_cols].mean(axis=1, skipna=False)
-    '''
-    ls_cols = [('ZS_' + var) for var in ['CTRT1M_2']]
-    df_out['ZS_MOM_2'] = df_out[ls_cols].mean(axis=1, skipna=False)
-    '''
+    ls_cols = [('ZS_' + var) for var in ['CTRT1M']]
+    df_out['ZS_MOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
     # Reverse momentum
-    ls_cols = [('ZS_' + var) for var in ['NCTRT1M_1']]
-    df_out['ZS_RMOM_1'] = df_out[ls_cols].mean(axis=1, skipna=False)
-    '''
-    ls_cols = [('ZS_' + var) for var in ['NCTRT1M_2']]
-    df_out['ZS_RMOM_2'] = df_out[ls_cols].mean(axis=1, skipna=False)
-    '''
-    # Adjusted reverse momentum
-    ls_cols = [('ZS_' + var) for var in ['MOM_1', 'RMOM_1']]
+    ls_cols = [('ZS_' + var) for var in ['NCTRT1M']]
+    df_out['ZS_RMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
+
+    # Adjusted momentum
+    ls_cols = [('ZS_' + var) for var in ['MOM', 'RMOM']]
     df_out['ZS_AMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
 
     # Value and Quality
     ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT']]
     df_out['ZS_VAL_QLT'] = df_out[ls_cols].mean(axis=1, skipna=False)
 
-    # Value, Quality and Momentum (long-term)
-    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'MOM_1']]
-    df_out['ZS_VAL_QLT_MOM_1'] = df_out[ls_cols].mean(axis=1, skipna=False)
+    # Value, Quality and Momentum
+    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'MOM']]
+    df_out['ZS_VAL_QLT_MOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
 
-    '''
-    # Value, Quality and Momentum (short-term)
-    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'MOM_2']]
-    df_out['ZS_VAL_QLT_MOM_2'] = df_out[ls_cols].mean(axis=1, skipna=False)
-    '''
-
-    # Value, Quality and Reverse momentum (long-term)
-    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'RMOM_1']]
-    df_out['ZS_VAL_QLT_RMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
-
-    # Value, Quality and Adjusted reverse momentum
-    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'ARMOM']]
-    df_out['ZS_VAL_QLT_ARMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
+    # Value, Quality and Adjusted momentum
+    ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'AMOM']]
+    df_out['ZS_VAL_QLT_AMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
     return df_out
 
 
@@ -459,8 +440,8 @@ class Portfolio:
         self.max_short_cl = max_short_cl
         self.dic_asts_data = dic_data['dic_asts_data']
         self.df_facs_data = dic_data['df_facs_data']
-        self.dic_sigs = {'ZS_VAL': 'VAL', 'ZS_QLT': 'QLT', 'ZS_MOM_1': 'MOM1', 'ZS_MOM_2': 'MOM2', 'ZS_RMOM_1': 'RMOM',
-                         'ZS_VAL_QLT': 'VQ', 'ZS_VAL_QLT_MOM_1': 'VQM1', 'ZS_VAL_QLT_MOM_2': 'VQM2', 'ZS_VAL_QLT_RMOM': 'VQRM', 'ZS_VAL_QLT_ARMOM': 'VQARM'}
+        self.dic_sigs = {'ZS_VAL': 'VAL', 'ZS_QLT': 'QLT', 'ZS_MOM': 'MOM', 'ZS_RMOM': 'RMOM', 'ZS_AMOM': 'AMOM',
+                         'ZS_VAL_QLT': 'VQ', 'ZS_VAL_QLT_MOM': 'VQM', 'ZS_VAL_QLT_AMOM': 'VQAM'}
         self.port_name = '_'.join([self.dic_sigs[sig_long], str(int(n_asts_long)), w_meth_long, str(int(pct_long)),
                                    self.dic_sigs[sig_short], str(int(n_asts_short)), w_meth_short, str(int(pct_short)),
                                    ind_const, str(int(min_short_me)), str(int(max_short_cl * 100)), reb_freq])
@@ -476,10 +457,10 @@ class Portfolio:
 
         if leg == 'L':
             n_asts = self.n_asts_long
-            df_tmp = df_data[['PERMNO', 'GSECTOR', 'ME', 'CTRT1M_1', self.sig_long]]
+            df_tmp = df_data[['PERMNO', 'GSECTOR', 'ME', 'CTRT1M', self.sig_long]]
         elif leg == 'S':
             n_asts = self.n_asts_short
-            df_tmp = df_data[['PERMNO', 'GSECTOR', 'ME', 'CTRT1M_1', self.sig_short]]
+            df_tmp = df_data[['PERMNO', 'GSECTOR', 'ME', 'CTRT1M', self.sig_short]]
 
         if self.ind_const == 'I':
             dic_asts = {}
@@ -490,7 +471,7 @@ class Portfolio:
                     dic_asts[sec] = df_tmp_sec['PERMNO'].tolist()
                 elif leg == 'S':
                     df_tmp_sec = df_tmp_sec.sort_values(by=[self.sig_short], ascending=True)
-                    df_tmp_sec = df_tmp_sec[(df_tmp_sec['ME'] >= self.min_short_me) & (df_tmp_sec['CTRT1M_1'] >= -self.max_short_cl)]
+                    df_tmp_sec = df_tmp_sec[(df_tmp_sec['ME'] >= self.min_short_me) & (df_tmp_sec['CTRT1M'] >= -self.max_short_cl)]
                     dic_asts[sec] = df_tmp_sec['PERMNO'].tolist()
                 if len(dic_asts[sec]) < np.ceil((max(self.n_asts_long, self.n_asts_short) * 2) / len(ls_secs)):  # Remove too small sectors
                     del dic_asts[sec]
@@ -509,7 +490,7 @@ class Portfolio:
             if leg == 'L':
                 ls_asts = df_tmp.loc[df_tmp[self.sig_long].nlargest(n_asts).index, 'PERMNO'].tolist()
             elif leg == 'S':
-                df_tmp = df_tmp[(df_tmp['ME'] >= self.min_short_me) & (df_tmp['CTRT1M_1'] >= -self.max_short_cl)]
+                df_tmp = df_tmp[(df_tmp['ME'] >= self.min_short_me) & (df_tmp['CTRT1M'] >= -self.max_short_cl)]
                 ls_asts = df_tmp.loc[df_tmp[self.sig_short].nsmallest(n_asts).index, 'PERMNO'].tolist()
 
         ls_asts = sorted(ls_asts)  # Sort PERMNO

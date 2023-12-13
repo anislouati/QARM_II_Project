@@ -1,17 +1,15 @@
 # Import packages
-from scripts.functions import Portfolio
 from datetime import datetime
 from operator import attrgetter
 from pathlib import Path
-from scipy.optimize import minimize, OptimizeResult
+from scripts.functions import Portfolio
 from scripts.functions import paths
 from tqdm import tqdm
-import numpy as np
 import pandas as pd
 import pickle
 import scripts.functions as fn
-import warnings
 import time
+import warnings
 
 # Project settings
 pd.set_option('display.width', 400)
@@ -80,12 +78,12 @@ df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
 # Save data (uncomment)
-# with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'wb') as file:
-#     pickle.dump(df_fundamentals_quarterly, file)
-# with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'wb') as file:
-#     pickle.dump(df_security_monthly, file)
-# with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'wb') as file:
-#     pickle.dump(df_stock_monthly, file)
+with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'wb') as file:
+    pickle.dump(df_fundamentals_quarterly, file)
+with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'wb') as file:
+    pickle.dump(df_security_monthly, file)
+with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'wb') as file:
+    pickle.dump(df_stock_monthly, file)
 # Load data
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as file:
     df_fundamentals_quarterly = pickle.load(file)
@@ -170,10 +168,10 @@ df_factors_monthly.rename(columns={'DATE_NEW': 'DATE'}, inplace=True)
 df_factors_monthly = df_factors_monthly.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
 
 # Save data (uncomment)
-# with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'wb') as file:
-#     pickle.dump(df_data, file)
-# with open(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'), 'wb') as file:
-#     pickle.dump(df_factors_monthly, file)
+with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'wb') as file:
+    pickle.dump(df_data, file)
+with open(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'), 'wb') as file:
+    pickle.dump(df_factors_monthly, file)
 # Load data
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as file:
     df_data = pickle.load(file)
@@ -195,17 +193,17 @@ for date in tqdm(ls_dates, desc='Assets data dictionary'):
     ls_selected_cols = ['PERMNO', 'DATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR',
                         'PRCCM', 'TRT1M', 'SPRDPCT', 'DVOL', 'SPRTRN', 'ME',
                         'VOL_TRT1M', 'VOL_SPRTRN', 'BETA',
-                        'CTRT1M_1', 'LS_PTRT1M', 'LS_NTRT1M',
-                        'ZS_VAL', 'ZS_QLT', 'ZS_MOM_1', 'ZS_MOM_2', 'ZS_RMOM_1',
-                        'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM_1', 'ZS_VAL_QLT_MOM_2', 'ZS_VAL_QLT_RMOM', 'ZS_VAL_QLT_ARMOM']
+                        'CTRT1M', 'LS_PTRT1M', 'LS_NTRT1M',
+                        'ZS_VAL', 'ZS_QLT', 'ZS_MOM', 'ZS_RMOM', 'ZS_AMOM',
+                        'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM', 'ZS_VAL_QLT_AMOM']
     df_tmp = df_tmp[ls_selected_cols]
     df_tmp = df_tmp.sort_values(by=['PERMNO', 'DATE'], ascending=[True, True]).reset_index(drop=True)
     dic_asts_data[date] = df_tmp
 dic_data = {'dic_asts_data': dic_asts_data, 'df_facs_data': df_factors_monthly}
 
 # Save data (uncomment)
-# with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'wb') as file:
-#     pickle.dump(dic_data, file)
+with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'wb') as file:
+    pickle.dump(dic_data, file)
 # Load data
 with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
     dic_data = pickle.load(file)
@@ -259,12 +257,4 @@ port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_MOM_1', n_asts_long=25,
                  ind_const='NI', reb_freq='M', min_short_me=1000, max_short_cl=0.4)
 df_1 = port.tab_port_chars(output_perf=False)
 
-port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_MOM_1', n_asts_long=20, w_meth_long='RP', pct_long=200,
-                 sig_short='ZS_VAL_QLT_MOM_1', n_asts_short=20, w_meth_short='RP', pct_short=100,
-                 ind_const='NI', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
-df_2 = port.tab_port_chars(output_perf=False)
-
-
-
-# %%
 
