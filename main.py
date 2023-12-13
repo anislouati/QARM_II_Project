@@ -216,12 +216,12 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 
 # Grid search
 df_ports_chars = pd.DataFrame()
-ls_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT']  # V, Q, VQ, MOM
-ls_n_asts = [15, 25]  # TODO: 25
-ls_w_meth = ['EW', 'MV', 'MN', 'RP']  # EW MN RP MV
-ls_pct_long_short = [(150, 50), (120, 50), (100, 90)]  # (130, 30) (150, 50) (120, 50) (130, 40) (100, 100) (100, 90)
+ls_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM', 'ZS_VAL_QLT_AMOM']
+ls_n_asts = [15, 25]
+ls_w_meth = ['EW', 'MV', 'MN', 'RP']
+ls_pct_long_short = [(130, 30), (150, 50), (120, 50), (130, 40), (100, 100), (100, 90)]
 ls_ind_const = ['I', 'NI']
-ls_reb_freq = ['Q', 'Y']
+ls_reb_freq = ['M', 'Q', 'Y']
 n_ports = len(ls_sigs) * len(ls_n_asts) * len(ls_w_meth) * len(ls_pct_long_short) * len(ls_ind_const) * len(ls_reb_freq)
 
 i = 0
