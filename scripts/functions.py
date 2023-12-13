@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import pickle
+import statsmodels.api as sm
 
 # Project directories paths (README: modify if necessary!)
 paths = {'main': Path.cwd()}
@@ -443,7 +444,7 @@ def get_ZS(df_data):
 # *** Branch: PORTFOLIO CONSTRUCTION             ***
 # **************************************************
 
-'''
+
 class Portfolio:
     def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
                  sig_short, n_asts_short, w_meth_short, pct_short,
@@ -608,9 +609,26 @@ class Portfolio:
         return s_port_w
 
     def tab_port_perf(self):
+        # Useful functions
+        def get_turnover(df_port_perf, pos_tmp, leg):
+            dic_tmp = df_port_perf.loc[(pos_tmp - 1), (leg + '_WT')]
+            s_w_t_1 = pd.Series(list(dic_tmp.values()), index=list(dic_tmp.keys()), dtype='float64').rename(None)
+
+            dic_tmp = df_port_perf.loc[pos_tmp, (leg + '_ASTS_RTNS')]
+            s_r_t = pd.Series(list(dic_tmp.values()), index=list(dic_tmp.keys()), dtype='float64').rename(None)
+            s_w_t_1_a = s_w_t_1 * ((1 + s_r_t) / (1 + df_port_perf.loc[pos_tmp, (leg + '_RTNS')]))
+
+            dic_tmp = df_port_perf.loc[pos_tmp, (leg + '_WT')]
+            s_w_t = pd.Series(list(dic_tmp.values()), index=list(dic_tmp.keys()), dtype='float64').rename(None)
+
+            dic = {0: s_w_t_1_a, 1: s_w_t}
+            df = pd.DataFrame.from_dict(dic, orient='index').fillna(0).sort_index(axis=1)
+            return (df.iloc[1] - df.iloc[0]).abs().sum()
+
+        # Initialization
         dic_cols = {'DATE': 'datetime64[ns]', 'PORT_C': 'float64', 'PORT_L': 'float64', 'PORT_S': 'float64', 'PORT_NAV': 'float64', 'PORT_RTNS': 'float64',
-                    'L_RTNS': 'float64', 'L_POS': 'object', 'L_WT': 'object', 'L_ASTS_RTNS': 'object',
-                    'S_RTNS': 'float64', 'S_POS': 'object', 'S_WT': 'object', 'S_ASTS_RTNS': 'object'}
+                    'L_RTNS': 'float64', 'L_POS': 'object', 'L_WT': 'object', 'L_TO': 'float64', 'L_ASTS_RTNS': 'object',
+                    'S_RTNS': 'float64', 'S_POS': 'object', 'S_WT': 'object', 'S_TO': 'float64', 'S_ASTS_RTNS': 'object'}
         df_port_perf = pd.DataFrame(columns=list(dic_cols.keys())).astype(dtype=dic_cols)
         ls_dates = list(self.dic_asts_data.keys())
 
@@ -647,7 +665,7 @@ class Portfolio:
             pos_tmp = (n_dates * i)
 
             # Long/Short rebalancing
-            if ls_reb_dates[i] != ls_dates[0]:  # Remark: initial allocation already done
+            if ls_reb_dates[i] != ls_dates[0]:  # Initial allocation already done
                 # Liquidate positions
                 df_port_perf.loc[pos_tmp, 'PORT_C'] += df_port_perf.loc[pos_tmp, 'PORT_L']
                 df_port_perf.loc[pos_tmp, 'PORT_L'] = 0
@@ -675,6 +693,11 @@ class Portfolio:
             df_port_perf.at[pos_tmp, 'S_POS'] = dict(zip(ls_short_asts, (s_short_w * df_port_perf.loc[pos_tmp, 'PORT_S']).tolist()))
             df_port_perf.at[pos_tmp, 'S_WT'] = dict(zip(ls_short_asts, s_short_w.tolist()))
 
+            # Turnover (after rebalancing)
+            if ls_reb_dates[i] != ls_dates[0]:  # No turnover at initial allocation
+                df_port_perf.loc[pos_tmp, 'L_TO'] = get_turnover(df_port_perf, pos_tmp, leg='L')
+                df_port_perf.loc[pos_tmp, 'S_TO'] = get_turnover(df_port_perf, pos_tmp, leg='S')
+
             # Carry forward position in rebalancing period
             for j in range(1, (n_dates + 1)):
                 pos_tmp = (n_dates * i) + j
@@ -696,14 +719,49 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'PORT_S'] = np.array(list(df_port_perf.loc[pos_tmp, 'S_POS'].values())).sum()
                 df_port_perf.at[pos_tmp, 'S_WT'] = dict(zip(ls_short_asts, (np.array(list(df_port_perf.at[pos_tmp, 'S_POS'].values())) / df_port_perf.loc[pos_tmp, 'PORT_S']).tolist()))
 
+                # Turnover
+                df_port_perf.loc[pos_tmp, 'L_TO'] = get_turnover(df_port_perf, pos_tmp, leg='L')
+                df_port_perf.loc[pos_tmp, 'S_TO'] = get_turnover(df_port_perf, pos_tmp, leg='S')
+
                 # Portfolio (L/S)
                 df_port_perf.loc[pos_tmp, 'PORT_C'] = df_port_perf.loc[(pos_tmp - 1), 'PORT_C']  # Assumption: no interest on cash (possible to use risk-free rate)
                 df_port_perf.loc[pos_tmp, 'PORT_NAV'] = df_port_perf.loc[pos_tmp, 'PORT_C'] + df_port_perf.loc[pos_tmp, 'PORT_L'] - df_port_perf.loc[pos_tmp, 'PORT_S']
                 df_port_perf.loc[pos_tmp, 'PORT_RTNS'] = (df_port_perf.loc[pos_tmp, 'PORT_NAV'] / df_port_perf.loc[(pos_tmp - 1), 'PORT_NAV']) - 1
         return df_port_perf
 
-    def get_s_port_chars(self, output_perf=False):
-        s_port_chars = pd.Series(index=['ANN_MEAN', 'ANN_VOL', 'SHARPE'])
+    def tab_port_chars(self, output_perf=False):
+        # Useful functions
+        def get_drawdown(s_port_rtns):
+            max = 0
+            dt_max = s_port_rtns.index[0]
+            old_max = 0
+            dt_old_max = s_port_rtns.index[0]
+            df_drawdown = pd.DataFrame()
+            s_min = pd.Series(dtype='float64')
+            s_port_cum_rtns = pd.Series(np.cumprod(1 + np.array(s_port_rtns)), index=s_port_rtns.index)
+
+            for i in s_port_cum_rtns.index:
+                if s_port_cum_rtns[i] > max:
+                    old_max = max
+                    dt_old_max = dt_max
+                    max = s_port_cum_rtns[i]
+                    dt_max = i
+                if max == s_port_cum_rtns[i]:
+                    if not s_min.empty:
+                        drawdown = s_min.min() / old_max - 1
+                        df_drawdown_tmp = pd.DataFrame({'DD': [drawdown], 'START': [dt_old_max], 'END': [s_min.idxmin()]})
+                        df_drawdown = pd.concat([df_drawdown, df_drawdown_tmp], ignore_index=True)
+                        s_min = pd.Series(dtype='float64')
+                if s_port_cum_rtns[i] < max:
+                    s_min[i] = s_port_cum_rtns[i]
+            return df_drawdown
+
+        def get_norm_herfindahl_idx(a_port_w):
+            n_asts = len(a_port_w)
+            H = (a_port_w ** 2).sum()
+            norm_H = (H - (1 / n_asts)) / (1 - (1 / n_asts))
+            return norm_H
+
 
         # Portfolio performance
         df_port_perf = self.tab_port_perf()
@@ -715,25 +773,39 @@ class Portfolio:
         df_port_perf = pd.merge(df_port_perf, self.df_facs_data, on='DATE', how='inner')
         df_port_perf = df_port_perf.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
 
+        # Initialization
+        df_port_chars = pd.DataFrame()
+        s_port_rtns = pd.Series(df_port_perf.loc[1:, 'PORT_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
+        s_port_losses = (-1) * s_port_rtns
+        df_drawdown = get_drawdown(s_port_rtns)
+        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
+        X = sm.add_constant(df_port_perf.loc[1:, ['MKTRF', 'SMB', 'HML']])
+        model = sm.OLS((df_port_perf.loc[1:, 'PORT_RTNS'] - df_port_perf.loc[1:, 'RF']), X).fit()
+
         # Performance analysis
-        s_port_rtns = df_port_perf['PORT_RTNS']
-        s_port_chars['ANN_MEAN'] = s_port_rtns.mean() * 12
-        s_port_chars['ANN_VOL'] = np.sqrt(s_port_rtns.var() * 12)
-        s_port_chars['SHARPE'] = () / df_port_perf.iloc[-1]['']
-
-
-        # Merge datasets (2)
-        print('hello')
-
-
-
-
-
-        return df_port_perf
-'''
-
-
-
-
-
+        df_port_chars.loc[0, 'PORT_NAME'] = self.port_name
+        df_port_chars.loc[0, 'ANN_MEAN'] = s_port_rtns.mean() * 12
+        df_port_chars.loc[0, 'ANN_VOL'] = np.sqrt(s_port_rtns.var() * 12)
+        df_port_chars.loc[0, 'SHARPE'] = (df_port_chars.loc[0, 'ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'ANN_VOL']
+        df_port_chars.loc[0, 'MIN_RTN'] = s_port_rtns.min()
+        df_port_chars.loc[0, 'MIN_DATE'] = (s_port_rtns.idxmin()).strftime('%Y-%m')
+        df_port_chars.loc[0, 'MAX_RTN'] = s_port_rtns.max()
+        df_port_chars.loc[0, 'MAX_DATE'] = (s_port_rtns.idxmax()).strftime('%Y-%m')
+        df_port_chars.loc[0, 'MAX_DD'] = (-1) * s_max_drawdown['DD']  # Expressed in terms of loss (negative return)
+        df_port_chars.loc[0, 'MAX_DD_PRD'] = s_max_drawdown['START'].strftime('%Y-%m') + '_' + s_max_drawdown['END'].strftime('%Y-%m')
+        df_port_chars.loc[0, 'CALMAR'] = (df_port_chars.loc[0, 'ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'MAX_DD']
+        df_port_chars.loc[0, 'ANN_ALPHA'] = model.params.iloc[0] * 12
+        df_port_chars.loc[0, 't_ALPHA'] = model.tvalues.iloc[0]
+        df_port_chars.loc[0, 'B_MKTRF'] = model.params.iloc[1]
+        df_port_chars.loc[0, 't_MKTRF'] = model.tvalues.iloc[1]
+        df_port_chars.loc[0, 'B_SMB'] = model.params.iloc[2]
+        df_port_chars.loc[0, 't_SMB'] = model.tvalues.iloc[2]
+        df_port_chars.loc[0, 'B_HML'] = model.params.iloc[3]
+        df_port_chars.loc[0, 't_HML'] = model.tvalues.iloc[3]
+        df_port_chars.loc[0, 'LEV'] = df_port_perf.iloc[-1]['PORT_S'] / df_port_perf.iloc[-1]['PORT_NAV']
+        df_port_chars.loc[0, 'L_AVG_TO'] = df_port_perf.loc[1:, 'L_TO'].mean()
+        df_port_chars.loc[0, 'S_AVG_TO'] = df_port_perf.loc[1:, 'S_TO'].mean()
+        df_port_chars.loc[0, 'L_NORM_HI'] = get_norm_herfindahl_idx(np.array(list(df_port_perf.iloc[-1]['L_WT'].values())))
+        df_port_chars.loc[0, 'S_NORM_HI'] = get_norm_herfindahl_idx(np.array(list(df_port_perf.iloc[-1]['S_WT'].values())))
+        return df_port_chars
 
