@@ -78,12 +78,9 @@ df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
 # Save data (uncomment)
-with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'wb') as file:
-    pickle.dump(df_fundamentals_quarterly, file)
-with open(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'), 'wb') as file:
-    pickle.dump(df_security_monthly, file)
-with open(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'), 'wb') as file:
-    pickle.dump(df_stock_monthly, file)
+df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
+df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
+df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
 # Load data
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as file:
     df_fundamentals_quarterly = pickle.load(file)
@@ -168,10 +165,8 @@ df_factors_monthly.rename(columns={'DATE_NEW': 'DATE'}, inplace=True)
 df_factors_monthly = df_factors_monthly.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
 
 # Save data (uncomment)
-with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'wb') as file:
-    pickle.dump(df_data, file)
-with open(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'), 'wb') as file:
-    pickle.dump(df_factors_monthly, file)
+df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+df_factors_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'))
 # Load data
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as file:
     df_data = pickle.load(file)
@@ -222,7 +217,7 @@ ls_w_meth = ['EW', 'MV', 'MN', 'RP']
 ls_pct_long_short = [(130, 30), (150, 50), (120, 50), (130, 40), (100, 100), (100, 90)]
 ls_ind_const = ['I', 'NI']
 ls_reb_freq = ['M', 'Q', 'Y']
-n_ports = len(ls_sigs) * len(ls_n_asts) * len(ls_w_meth) * len(ls_pct_long_short) * len(ls_ind_const) * len(ls_reb_freq)
+n_ports = (len(ls_sigs) ** 2) * len(ls_n_asts) * len(ls_w_meth) * len(ls_pct_long_short) * len(ls_ind_const) * len(ls_reb_freq)
 
 i = 0
 start_time = time.time()
@@ -237,8 +232,7 @@ for sig in ls_sigs:
                                          ind_const=ind_const, reb_freq=reb_freq, min_short_me=1000, max_short_cl=0.4)
                         df_port_chars = port.tab_port_chars(output_perf=False)
                         df_ports_chars = pd.concat([df_ports_chars, df_port_chars], axis=0, ignore_index=True)
-                        with open(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'), 'wb') as file:
-                            pickle.dump(df_ports_chars, file)
+                        df_ports_chars.to_pickle(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'))
                         i += 1
                         print('Port {}/{}: DONE'.format(i, n_ports))
 end_time = time.time()

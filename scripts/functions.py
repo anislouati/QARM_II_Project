@@ -741,8 +741,7 @@ class Portfolio:
         # Portfolio performance
         df_port_perf = self.tab_port_perf()
         if output_perf:
-            with open(Path.joinpath(paths.get('output'), 'ports', (self.port_name + '.pkl')), 'wb') as file:
-                pickle.dump(df_port_perf, file)
+            df_port_perf.to_pickle(Path.joinpath(paths.get('output'), 'ports', (self.port_name + '.pkl')))
 
         # Merge factors data
         df_port_perf = pd.merge(df_port_perf, self.df_facs_data, on='DATE', how='inner')
