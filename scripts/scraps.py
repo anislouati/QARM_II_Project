@@ -705,3 +705,47 @@ ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'RMOM']]
 df_out['ZS_VAL_QLT_RMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
 '''
 
+'''
+ls_dates = list(dic_data['dic_asts_data'].keys())
+df_tmp = dic_data['dic_asts_data'][ls_dates[0]]
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_long=25, w_meth_long='EW', pct_long=150,
+                 sig_short='ZS_VAL_QLT_AMOM', n_asts_short=25, w_meth_short='EW', pct_short=50,
+                 ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.4)
+df_port_perf = port.tab_port_perf()
+df_port_chars = port.tab_port_chars(output_perf=False)
+'''
+
+'''
+def get_df_port_chars(sig_long, sig_short, n_asts, w_meth, pct_long_short, ind_const, reb_freq):
+    port = Portfolio(dic_data=dic_data, sig_long=sig_long, n_asts_long=n_asts, w_meth_long=w_meth, pct_long=pct_long_short[0],
+                     sig_short=sig_short, n_asts_short=n_asts, w_meth_short=w_meth, pct_short=pct_long_short[1],
+                     ind_const=ind_const, reb_freq=reb_freq, min_short_me=1000, max_short_cl=0.4)
+    df_port_chars = port.tab_port_chars(output_perf=False)
+    return df_port_chars
+
+def process_combo(combo):
+    sig_long, sig_short, n_asts, w_meth, pct_long_short, ind_const, reb_freq = combo
+    return get_df_port_chars(sig_long=sig_long, sig_short=sig_short, n_asts=n_asts,
+                             w_meth=w_meth, pct_long_short=pct_long_short, ind_const=ind_const, reb_freq=reb_freq)
+'''
+
+'''
+i = 0
+start_time = time.time()
+for sig in ls_sigs:
+    for n_asts in ls_n_asts:
+        for w_meth in ls_w_meth:
+            for (pct_long, pct_short) in ls_pct_long_short:
+                for ind_const in ls_ind_const:
+                    for reb_freq in ls_reb_freq:
+                        port = Portfolio(dic_data=dic_data, sig_long=sig, n_asts_long=n_asts, w_meth_long=w_meth, pct_long=pct_long,
+                                         sig_short=sig, n_asts_short=n_asts, w_meth_short=w_meth, pct_short=pct_short,
+                                         ind_const=ind_const, reb_freq=reb_freq, min_short_me=1000, max_short_cl=0.4)
+                        df_port_chars = port.tab_port_chars(output_perf=False)
+                        df_ports_chars = pd.concat([df_ports_chars, df_port_chars], axis=0, ignore_index=True)
+                        df_ports_chars.to_pickle(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'))
+                        i += 1
+                        print('Port {}/{}: DONE'.format(i, n_ports))
+end_time = time.time()
+print('Elapsed time: {} seconds'.format(end_time - start_time))
+'''

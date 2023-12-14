@@ -6,12 +6,16 @@ import numpy as np
 import pandas as pd
 import pickle
 import statsmodels.api as sm
+import warnings
 
 # Project directories paths (README: modify if necessary!)
 paths = {'main': Path.cwd()}
 paths.update({'data': Path.joinpath(paths.get('main'), 'data')})
 paths.update({'output': Path.joinpath(paths.get('main'), 'output')})
 paths.update({'scripts': Path.joinpath(paths.get('main'), 'scripts')})
+
+# Warnings management
+warnings.simplefilter('ignore')
 
 
 # %%
@@ -307,6 +311,18 @@ def preprocessing_7(df_data):
     print('- Previous monthly returns: DONE')
 
     # Momentum
+    n_lags_1 = 0  # Short-term
+    n_lags_2 = 12  # Long-term
+    for i in range(n_lags_1, n_lags_2):
+        df_out['TRT1M_t' + str(i)] = 1 + df_out['TRT1M'].shift(periods=i)
+
+    df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_2 - 1))
+    ls_cols = ['TRT1M_t' + str(i) for i in range(n_lags_1, n_lags_2)]
+    df_out['CTRT1M_1'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
+
+    df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(n_lags_1, n_lags_2)])
+    df_out = df_out.drop(columns=['PERMNO_t'])
+
     n_lags_1 = 1  # Short-term
     n_lags_2 = 12  # Long-term
     for i in range(n_lags_1, n_lags_2):
@@ -314,7 +330,7 @@ def preprocessing_7(df_data):
 
     df_out['PERMNO_t'] = df_out['PERMNO'].shift(periods=(n_lags_2 - 1))
     ls_cols = ['TRT1M_t' + str(i) for i in range(n_lags_1, n_lags_2)]
-    df_out['CTRT1M'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
+    df_out['CTRT1M_2'] = np.where(df_out['PERMNO'] == df_out['PERMNO_t'], df_out[ls_cols].product(axis=1, skipna=False) - 1, np.nan)
 
     df_out = df_out.drop(columns=['TRT1M_t' + str(i) for i in range(n_lags_1, n_lags_2)])
     df_out = df_out.drop(columns=['PERMNO_t'])
@@ -362,7 +378,7 @@ def get_ZS(df_data):
                'GPOA', 'ROE', 'ROA', 'CFOA', 'GMAR', 'ACC',
                'D_GPOA', 'D_ROE', 'D_ROA', 'D_CFOA', 'D_GMAR',
                'LEV', 'AZSCORE', 'NBETA',
-               'CTRT1M', 'NCTRT1M']
+               'CTRT1M_2', 'NCTRT1M']
 
     for var in ls_vars:
         df_out['RK_' + var] = df_out[var].rank(method='max', ascending=True)
@@ -390,7 +406,7 @@ def get_ZS(df_data):
     df_out['ZS_QLT'] = df_out[ls_cols].mean(axis=1, skipna=False)
 
     # Momentum
-    ls_cols = [('ZS_' + var) for var in ['CTRT1M']]
+    ls_cols = [('ZS_' + var) for var in ['CTRT1M_2']]
     df_out['ZS_MOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
 
     # Reverse momentum
@@ -420,7 +436,7 @@ def get_ZS(df_data):
 # *** Branch: PORTFOLIO CONSTRUCTION             ***
 # **************************************************
 
-
+# COPY HERE
 class Portfolio:
     def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
                  sig_short, n_asts_short, w_meth_short, pct_short,
@@ -457,10 +473,10 @@ class Portfolio:
 
         if leg == 'L':
             n_asts = self.n_asts_long
-            df_tmp = df_data[['PERMNO', 'GSECTOR', 'ME', 'CTRT1M', self.sig_long]]
+            df_tmp = df_data[['PERMNO', 'GSECTOR', 'ME', 'CTRT1M_1', self.sig_long]]
         elif leg == 'S':
             n_asts = self.n_asts_short
-            df_tmp = df_data[['PERMNO', 'GSECTOR', 'ME', 'CTRT1M', self.sig_short]]
+            df_tmp = df_data[['PERMNO', 'GSECTOR', 'ME', 'CTRT1M_1', self.sig_short]]
 
         if self.ind_const == 'I':
             dic_asts = {}
@@ -471,7 +487,7 @@ class Portfolio:
                     dic_asts[sec] = df_tmp_sec['PERMNO'].tolist()
                 elif leg == 'S':
                     df_tmp_sec = df_tmp_sec.sort_values(by=[self.sig_short], ascending=True)
-                    df_tmp_sec = df_tmp_sec[(df_tmp_sec['ME'] >= self.min_short_me) & (df_tmp_sec['CTRT1M'] >= -self.max_short_cl)]
+                    df_tmp_sec = df_tmp_sec[(df_tmp_sec['ME'] >= self.min_short_me) & (df_tmp_sec['CTRT1M_1'] >= -self.max_short_cl)]
                     dic_asts[sec] = df_tmp_sec['PERMNO'].tolist()
                 if len(dic_asts[sec]) < np.ceil((max(self.n_asts_long, self.n_asts_short) * 2) / len(ls_secs)):  # Remove too small sectors
                     del dic_asts[sec]
@@ -490,7 +506,7 @@ class Portfolio:
             if leg == 'L':
                 ls_asts = df_tmp.loc[df_tmp[self.sig_long].nlargest(n_asts).index, 'PERMNO'].tolist()
             elif leg == 'S':
-                df_tmp = df_tmp[(df_tmp['ME'] >= self.min_short_me) & (df_tmp['CTRT1M'] >= -self.max_short_cl)]
+                df_tmp = df_tmp[(df_tmp['ME'] >= self.min_short_me) & (df_tmp['CTRT1M_1'] >= -self.max_short_cl)]
                 ls_asts = df_tmp.loc[df_tmp[self.sig_short].nsmallest(n_asts).index, 'PERMNO'].tolist()
 
         ls_asts = sorted(ls_asts)  # Sort PERMNO
@@ -535,7 +551,7 @@ class Portfolio:
                 return w.T @ a_covmat @ w
 
             # Optimization
-            res = minimize(fun=get_port_var, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
+            res = minimize(fun=get_port_var, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-6, options={'maxiter': 500})
 
         # Market neutral (zero beta)
         elif w_meth == 'MN':
@@ -553,7 +569,7 @@ class Portfolio:
                 return diff  # Minimize to have Beta_P = 1 (Beta_L - Beta_S = 1 - 1 = 0)
 
             # Optimization
-            res = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
+            res = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-6, options={'maxiter': 500})
 
         # Risk parity (equally-weighted risk contributions)
         elif w_meth == 'RP':
@@ -574,7 +590,7 @@ class Portfolio:
                 return diff  # Minimize to have TRC_i = TRC_j ==> (w_i * MRC_i) = (w_j * MRC_j)
 
             # Optimization
-            res = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12, options={'maxiter': 1000})
+            res = minimize(fun=obj_fun, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-6, options={'maxiter': 500})
 
         # Return output
         if opt_prob:
@@ -602,7 +618,8 @@ class Portfolio:
             return (df.iloc[1] - df.iloc[0]).abs().sum()
 
         # Initialization
-        dic_cols = {'DATE': 'datetime64[ns]', 'PORT_C': 'float64', 'PORT_L': 'float64', 'PORT_S': 'float64', 'PORT_NAV': 'float64', 'PORT_RTNS': 'float64',
+        dic_cols = {'DATE': 'datetime64[ns]', 'PORT_C': 'float64', 'PORT_L': 'float64',
+                    'PORT_S': 'float64', 'PORT_NAV': 'float64', 'PORT_LEV': 'float64', 'PORT_RTNS': 'float64',
                     'L_RTNS': 'float64', 'L_POS': 'object', 'L_WT': 'object', 'L_TO': 'float64', 'L_ASTS_RTNS': 'object',
                     'S_RTNS': 'float64', 'S_POS': 'object', 'S_WT': 'object', 'S_TO': 'float64', 'S_ASTS_RTNS': 'object'}
         df_port_perf = pd.DataFrame(columns=list(dic_cols.keys())).astype(dtype=dic_cols)
@@ -634,9 +651,10 @@ class Portfolio:
         df_port_perf.loc[0, 'PORT_L'] += (self.pct_long / 100) * df_port_perf.loc[0, 'PORT_NAV']  # Open long
         df_port_perf.loc[0, 'PORT_C'] += (self.pct_short / 100) * df_port_perf.loc[0, 'PORT_NAV']
         df_port_perf.loc[0, 'PORT_S'] += (self.pct_short / 100) * df_port_perf.loc[0, 'PORT_NAV']  # Open short
+        df_port_perf.loc[0, 'PORT_LEV'] = df_port_perf.loc[0, 'PORT_S'] / df_port_perf.loc[0, 'PORT_NAV']  # Leverage (D/E)
 
         # Iteration over rebalancing dates
-        for i in tqdm(range(len(ls_reb_dates)), desc=self.port_name):
+        for i in tqdm(range(len(ls_reb_dates)), desc=self.port_name, disable=True):
             df_tmp = self.dic_asts_data[ls_reb_dates[i]]
             pos_tmp = (n_dates * i)
 
@@ -652,6 +670,7 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'PORT_L'] += (self.pct_long / 100) * df_port_perf.loc[pos_tmp, 'PORT_NAV']
                 df_port_perf.loc[pos_tmp, 'PORT_C'] += (self.pct_short / 100) * df_port_perf.loc[pos_tmp, 'PORT_NAV']
                 df_port_perf.loc[pos_tmp, 'PORT_S'] += (self.pct_short / 100) * df_port_perf.loc[pos_tmp, 'PORT_NAV']
+                df_port_perf.loc[pos_tmp, 'PORT_LEV'] = df_port_perf.loc[pos_tmp, 'PORT_S'] / df_port_perf.loc[pos_tmp, 'PORT_NAV']
 
             # Long leg
             s_long_w = self.get_s_port_w(df_tmp, leg='L', w_meth=self.w_meth_long)
@@ -702,6 +721,7 @@ class Portfolio:
                 # Portfolio (L/S)
                 df_port_perf.loc[pos_tmp, 'PORT_C'] = df_port_perf.loc[(pos_tmp - 1), 'PORT_C']  # Assumption: no interest on cash (possible to use risk-free rate)
                 df_port_perf.loc[pos_tmp, 'PORT_NAV'] = df_port_perf.loc[pos_tmp, 'PORT_C'] + df_port_perf.loc[pos_tmp, 'PORT_L'] - df_port_perf.loc[pos_tmp, 'PORT_S']
+                df_port_perf.loc[pos_tmp, 'PORT_LEV'] = df_port_perf.loc[pos_tmp, 'PORT_S'] / df_port_perf.loc[pos_tmp, 'PORT_NAV']
                 df_port_perf.loc[pos_tmp, 'PORT_RTNS'] = (df_port_perf.loc[pos_tmp, 'PORT_NAV'] / df_port_perf.loc[(pos_tmp - 1), 'PORT_NAV']) - 1
         return df_port_perf
 
@@ -753,11 +773,13 @@ class Portfolio:
         s_port_losses = (-1) * s_port_rtns
         df_drawdown = get_drawdown(s_port_rtns)
         s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
-        X = sm.add_constant(df_port_perf.loc[1:, ['MKTRF', 'SMB', 'HML']])
+        X = sm.add_constant(df_port_perf.loc[1:, ['MKTRF', 'SMB', 'HML', 'UMD']])
         model = sm.OLS((df_port_perf.loc[1:, 'PORT_RTNS'] - df_port_perf.loc[1:, 'RF']), X).fit()
+        s_long_rtns = pd.Series(df_port_perf.loc[1:, 'L_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
+        s_short_rtns = pd.Series(df_port_perf.loc[1:, 'S_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
 
-        # Performance analysis
-        df_port_chars.loc[0, 'PORT_NAME'] = self.port_name
+        # Portfolio (L/S)
+        df_port_chars.loc[0, 'NAME'] = self.port_name
         df_port_chars.loc[0, 'ANN_MEAN'] = s_port_rtns.mean() * 12
         df_port_chars.loc[0, 'ANN_VOL'] = np.sqrt(s_port_rtns.var() * 12)
         df_port_chars.loc[0, 'SHARPE'] = (df_port_chars.loc[0, 'ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'ANN_VOL']
@@ -776,10 +798,50 @@ class Portfolio:
         df_port_chars.loc[0, 't_SMB'] = model.tvalues.iloc[2]
         df_port_chars.loc[0, 'B_HML'] = model.params.iloc[3]
         df_port_chars.loc[0, 't_HML'] = model.tvalues.iloc[3]
-        df_port_chars.loc[0, 'LEV'] = df_port_perf.iloc[-1]['PORT_S'] / df_port_perf.iloc[-1]['PORT_NAV']
+        df_port_chars.loc[0, 'B_UMD'] = model.params.iloc[4]
+        df_port_chars.loc[0, 't_UMD'] = model.tvalues.iloc[4]
+        df_port_chars.loc[0, 'R_SQUARED'] = model.rsquared
+        df_port_chars.loc[0, 'AVG_LEV'] = df_port_perf.loc[1:, 'PORT_LEV'].mean()
+
+        # Long leg
+        df_drawdown = get_drawdown(s_long_rtns)
+        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
+        df_port_chars.loc[0, 'L_ANN_MEAN'] = s_long_rtns.mean() * 12
+        df_port_chars.loc[0, 'L_ANN_VOL'] = np.sqrt(s_long_rtns.var() * 12)
+        df_port_chars.loc[0, 'L_SHARPE'] = (df_port_chars.loc[0, 'L_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'L_ANN_VOL']
+        df_port_chars.loc[0, 'L_MAX_DD'] = (-1) * s_max_drawdown['DD']
+        df_port_chars.loc[0, 'L_CALMAR'] = (df_port_chars.loc[0, 'L_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'L_MAX_DD']
         df_port_chars.loc[0, 'L_AVG_TO'] = df_port_perf.loc[1:, 'L_TO'].mean()
-        df_port_chars.loc[0, 'S_AVG_TO'] = df_port_perf.loc[1:, 'S_TO'].mean()
         df_port_chars.loc[0, 'L_NORM_HI'] = get_norm_herfindahl_idx(np.array(list(df_port_perf.iloc[-1]['L_WT'].values())))
+
+        # Short leg
+        df_drawdown = get_drawdown(s_short_rtns)
+        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
+        df_port_chars.loc[0, 'S_ANN_MEAN'] = s_short_rtns.mean() * 12
+        df_port_chars.loc[0, 'S_ANN_VOL'] = np.sqrt(s_short_rtns.var() * 12)
+        df_port_chars.loc[0, 'S_SHARPE'] = (df_port_chars.loc[0, 'S_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'S_ANN_VOL']
+        df_port_chars.loc[0, 'S_MAX_DD'] = (-1) * s_max_drawdown['DD']
+        df_port_chars.loc[0, 'S_CALMAR'] = (df_port_chars.loc[0, 'S_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'S_MAX_DD']
+        df_port_chars.loc[0, 'S_AVG_TO'] = df_port_perf.loc[1:, 'S_TO'].mean()
         df_port_chars.loc[0, 'S_NORM_HI'] = get_norm_herfindahl_idx(np.array(list(df_port_perf.iloc[-1]['S_WT'].values())))
         return df_port_chars
+
+'''
+def get_df_port_chars(dic_data, combo):
+    
+    port = Portfolio(dic_data=dic_data, sig_long=combo[0], n_asts_long=combo[2], w_meth_long=combo[3], pct_long=combo[4][0],
+                     sig_short=combo[1], n_asts_short=combo[2], w_meth_short=combo[3], pct_short=combo[4][1],
+                     ind_const=combo[5], reb_freq=combo[6], min_short_me=1000, max_short_cl=0.4)
+    df_port_chars = port.tab_port_chars(output_perf=False)
+    return df_port_chars
+'''
+
+def get_df_port_chars(combo):
+    with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
+        dic_data = pickle.load(file)
+    port = Portfolio(dic_data, sig_long=combo[0], n_asts_long=combo[2], w_meth_long=combo[3], pct_long=combo[4][0],
+                     sig_short=combo[1], n_asts_short=combo[2], w_meth_short=combo[3], pct_short=combo[4][1],
+                     ind_const=combo[5], reb_freq=combo[6], min_short_me=1000, max_short_cl=0.4)
+    df_port_chars = port.tab_port_chars(output_perf=False)
+    return df_port_chars
 

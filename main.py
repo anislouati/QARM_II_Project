@@ -1,13 +1,17 @@
 # Import packages
 from datetime import datetime
+from itertools import product
 from operator import attrgetter
 from pathlib import Path
+from scipy.optimize import minimize, OptimizeResult
 from scripts.functions import Portfolio
 from scripts.functions import paths
 from tqdm import tqdm
+import numpy as np
 import pandas as pd
 import pickle
 import scripts.functions as fn
+import statsmodels.api as sm
 import time
 import warnings
 
@@ -46,7 +50,7 @@ df_security_monthly.rename(columns={'LPERMNO': 'PERMNO', 'DATADATE': 'DATE'}, in
 ls_selected_cols_3 = ['PERMNO', 'DATE', 'BID', 'ASK', 'VOL', 'SPRTRN']
 df_stock_monthly = df_stock_monthly[ls_selected_cols_3]
 
-ls_selected_cols_4 = ['DATEFF', 'RF', 'MKTRF', 'SMB', 'HML']
+ls_selected_cols_4 = ['DATEFF', 'RF', 'MKTRF', 'SMB', 'HML', 'UMD']
 df_factors_monthly = df_factors_monthly[ls_selected_cols_4]
 
 # Create keys/identifiers (KEYQ, KEYM)
@@ -78,9 +82,9 @@ df_security_monthly = fn.preprocessing_3(df_security_monthly)
 df_stock_monthly = fn.preprocessing_3(df_stock_monthly)
 
 # Save data (uncomment)
-df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
-df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
-df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
+# df_fundamentals_quarterly.to_pickle(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'))
+# df_security_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_security_monthly.pkl'))
+# df_stock_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_stock_monthly.pkl'))
 # Load data
 with open(Path.joinpath(paths.get('data'), 'df_fundamentals_quarterly.pkl'), 'rb') as file:
     df_fundamentals_quarterly = pickle.load(file)
@@ -159,14 +163,14 @@ for i in range(len(df_factors_monthly)):
     if year_mth in list(dic_dates.keys()):
         df_factors_monthly.loc[i, 'DATE_NEW'] = dic_dates[year_mth]
 df_factors_monthly = df_factors_monthly[~pd.isnull(df_factors_monthly['DATE_NEW'])].drop(columns=['DATEFF'])
-ls_selected_cols = ['DATE_NEW', 'RF', 'MKTRF', 'SMB', 'HML']
+ls_selected_cols = ['DATE_NEW', 'RF', 'MKTRF', 'SMB', 'HML', 'UMD']
 df_factors_monthly = df_factors_monthly[ls_selected_cols]
 df_factors_monthly.rename(columns={'DATE_NEW': 'DATE'}, inplace=True)
 df_factors_monthly = df_factors_monthly.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
 
 # Save data (uncomment)
-df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
-df_factors_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'))
+# df_data.to_pickle(Path.joinpath(paths.get('data'), 'df_data.pkl'))
+# df_factors_monthly.to_pickle(Path.joinpath(paths.get('data'), 'df_factors_monthly.pkl'))
 # Load data
 with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as file:
     df_data = pickle.load(file)
@@ -188,7 +192,7 @@ for date in tqdm(ls_dates, desc='Assets data dictionary'):
     ls_selected_cols = ['PERMNO', 'DATE', 'CONM', 'TIC', 'EXCHG', 'GSECTOR',
                         'PRCCM', 'TRT1M', 'SPRDPCT', 'DVOL', 'SPRTRN', 'ME',
                         'VOL_TRT1M', 'VOL_SPRTRN', 'BETA',
-                        'CTRT1M', 'LS_PTRT1M', 'LS_NTRT1M',
+                        'CTRT1M_1', 'LS_PTRT1M', 'LS_NTRT1M',
                         'ZS_VAL', 'ZS_QLT', 'ZS_MOM', 'ZS_RMOM', 'ZS_AMOM',
                         'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM', 'ZS_VAL_QLT_AMOM']
     df_tmp = df_tmp[ls_selected_cols]
@@ -197,8 +201,8 @@ for date in tqdm(ls_dates, desc='Assets data dictionary'):
 dic_data = {'dic_asts_data': dic_asts_data, 'df_facs_data': df_factors_monthly}
 
 # Save data (uncomment)
-with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'wb') as file:
-    pickle.dump(dic_data, file)
+# with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'wb') as file:
+#     pickle.dump(dic_data, file)
 # Load data
 with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
     dic_data = pickle.load(file)
@@ -209,46 +213,38 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 # *** Branch: PORTFOLIO CONSTRUCTION             ***
 # **************************************************
 
-# Grid search
-df_ports_chars = pd.DataFrame()
-ls_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM', 'ZS_VAL_QLT_AMOM']
-ls_n_asts = [15, 25]
-ls_w_meth = ['EW', 'MV', 'MN', 'RP']
-ls_pct_long_short = [(130, 30), (150, 50), (120, 50), (130, 40), (100, 100), (100, 90)]
+# Get parameters combos using itertools.product
+ls_long_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_AMOM']
+ls_short_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_AMOM']
+ls_n_asts = [25]
+ls_w_meth = ['EW', 'MN', 'RP']
+ls_pct_long_short = [(130, 30), (120, 50), (100, 90), (200, 100), (300, 200)]
 ls_ind_const = ['I', 'NI']
 ls_reb_freq = ['M', 'Q', 'Y']
-n_ports = (len(ls_sigs) ** 2) * len(ls_n_asts) * len(ls_w_meth) * len(ls_pct_long_short) * len(ls_ind_const) * len(ls_reb_freq)
+ls_combos = list(product(ls_long_sigs, ls_short_sigs, ls_n_asts, ls_w_meth, ls_pct_long_short, ls_ind_const, ls_reb_freq))
 
-i = 0
-start_time = time.time()
-for sig in ls_sigs:
-    for n_asts in ls_n_asts:
-        for w_meth in ls_w_meth:
-            for (pct_long, pct_short) in ls_pct_long_short:
-                for ind_const in ls_ind_const:
-                    for reb_freq in ls_reb_freq:
-                        port = Portfolio(dic_data=dic_data, sig_long=sig, n_asts_long=n_asts, w_meth_long=w_meth, pct_long=pct_long,
-                                         sig_short=sig, n_asts_short=n_asts, w_meth_short=w_meth, pct_short=pct_short,
-                                         ind_const=ind_const, reb_freq=reb_freq, min_short_me=1000, max_short_cl=0.4)
-                        df_port_chars = port.tab_port_chars(output_perf=False)
-                        df_ports_chars = pd.concat([df_ports_chars, df_port_chars], axis=0, ignore_index=True)
-                        df_ports_chars.to_pickle(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'))
-                        i += 1
-                        print('Port {}/{}: DONE'.format(i, n_ports))
-end_time = time.time()
-print('Elapsed time: {} seconds'.format(end_time - start_time))
+# Grid search
+df_ports_chars = pd.DataFrame()
+for i in tqdm(range(len(ls_combos))):
+    combo = ls_combos[i]
+    df_port_chars = fn.get_df_port_chars(dic_data, combo)
+    df_ports_chars = pd.concat([df_ports_chars, df_port_chars], axis=0, ignore_index=True)
+    df_ports_chars.to_pickle(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'))
 
-# Load data
+
+
+# TODO: check results
+
+
+# %%
 with open(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'), 'rb') as file:
     df_ports_chars = pickle.load(file)
 
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_long=25, w_meth_long='EW', pct_long=300,
+                 sig_short='ZS_VAL_QLT_AMOM', n_asts_short=25, w_meth_short='EW', pct_short=200,
+                 ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.4)
+df_port_perf = port.tab_port_perf()
+df_port_chars = port.tab_port_chars(output_perf=False)
 
-
-
-#%%
-port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_MOM_1', n_asts_long=25, w_meth_long='MN', pct_long=100,
-                 sig_short='ZS_VAL_QLT_MOM_1', n_asts_short=25, w_meth_short='MN', pct_short=100,
-                 ind_const='NI', reb_freq='M', min_short_me=1000, max_short_cl=0.4)
-df_1 = port.tab_port_chars(output_perf=False)
 
 
