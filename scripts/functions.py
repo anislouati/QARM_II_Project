@@ -15,7 +15,8 @@ paths.update({'output': Path.joinpath(paths.get('main'), 'output')})
 paths.update({'scripts': Path.joinpath(paths.get('main'), 'scripts')})
 
 # Warnings management
-warnings.simplefilter('ignore')
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+warnings.filterwarnings(action='ignore', category=RuntimeWarning)
 
 
 # %%
@@ -826,22 +827,13 @@ class Portfolio:
         df_port_chars.loc[0, 'S_NORM_HI'] = get_norm_herfindahl_idx(np.array(list(df_port_perf.iloc[-1]['S_WT'].values())))
         return df_port_chars
 
-'''
-def get_df_port_chars(dic_data, combo):
-    
-    port = Portfolio(dic_data=dic_data, sig_long=combo[0], n_asts_long=combo[2], w_meth_long=combo[3], pct_long=combo[4][0],
-                     sig_short=combo[1], n_asts_short=combo[2], w_meth_short=combo[3], pct_short=combo[4][1],
-                     ind_const=combo[5], reb_freq=combo[6], min_short_me=1000, max_short_cl=0.4)
-    df_port_chars = port.tab_port_chars(output_perf=False)
-    return df_port_chars
-'''
 
 def get_df_port_chars(combo):
     with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
         dic_data = pickle.load(file)
-    port = Portfolio(dic_data, sig_long=combo[0], n_asts_long=combo[2], w_meth_long=combo[3], pct_long=combo[4][0],
-                     sig_short=combo[1], n_asts_short=combo[2], w_meth_short=combo[3], pct_short=combo[4][1],
-                     ind_const=combo[5], reb_freq=combo[6], min_short_me=1000, max_short_cl=0.4)
+    port = Portfolio(dic_data, sig_long=combo[0], n_asts_long=combo[1], w_meth_long=combo[4], pct_long=combo[5][0],
+                     sig_short=combo[2], n_asts_short=combo[3], w_meth_short=combo[4], pct_short=combo[5][1],
+                     ind_const=combo[6], reb_freq=combo[7], min_short_me=1000, max_short_cl=0.5)
     df_port_chars = port.tab_port_chars(output_perf=False)
     return df_port_chars
 

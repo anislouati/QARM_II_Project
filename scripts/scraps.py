@@ -749,3 +749,33 @@ for sig in ls_sigs:
 end_time = time.time()
 print('Elapsed time: {} seconds'.format(end_time - start_time))
 '''
+
+'''
+# Get parameters combos using itertools.product
+ls_long_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_AMOM']
+ls_short_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_AMOM']
+ls_n_asts = [25]
+ls_w_meth = ['EW', 'MN', 'RP']
+ls_pct_long_short = [(130, 30), (120, 50), (100, 90), (200, 100), (300, 200)]
+ls_ind_const = ['I', 'NI']
+ls_reb_freq = ['M', 'Q', 'Y']
+ls_combos = list(product(ls_long_sigs, ls_short_sigs, ls_n_asts, ls_w_meth, ls_pct_long_short, ls_ind_const, ls_reb_freq))
+
+# Grid search
+df_ports_chars = pd.DataFrame()
+for i in tqdm(range(len(ls_combos))):
+    combo = ls_combos[i]
+    df_port_chars = fn.get_df_port_chars(dic_data, combo)
+    df_ports_chars = pd.concat([df_ports_chars, df_port_chars], axis=0, ignore_index=True)
+    df_ports_chars.to_pickle(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'))
+'''
+
+'''
+def get_df_port_chars(dic_data, combo):
+
+    port = Portfolio(dic_data=dic_data, sig_long=combo[0], n_asts_long=combo[2], w_meth_long=combo[3], pct_long=combo[4][0],
+                     sig_short=combo[1], n_asts_short=combo[2], w_meth_short=combo[3], pct_short=combo[4][1],
+                     ind_const=combo[5], reb_freq=combo[6], min_short_me=1000, max_short_cl=0.4)
+    df_port_chars = port.tab_port_chars(output_perf=False)
+    return df_port_chars
+'''

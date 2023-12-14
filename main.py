@@ -213,38 +213,13 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 # *** Branch: PORTFOLIO CONSTRUCTION             ***
 # **************************************************
 
-# Get parameters combos using itertools.product
-ls_long_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_AMOM']
-ls_short_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_AMOM']
-ls_n_asts = [25]
-ls_w_meth = ['EW', 'MN', 'RP']
-ls_pct_long_short = [(130, 30), (120, 50), (100, 90), (200, 100), (300, 200)]
-ls_ind_const = ['I', 'NI']
-ls_reb_freq = ['M', 'Q', 'Y']
-ls_combos = list(product(ls_long_sigs, ls_short_sigs, ls_n_asts, ls_w_meth, ls_pct_long_short, ls_ind_const, ls_reb_freq))
-
-# Grid search
-df_ports_chars = pd.DataFrame()
-for i in tqdm(range(len(ls_combos))):
-    combo = ls_combos[i]
-    df_port_chars = fn.get_df_port_chars(dic_data, combo)
-    df_ports_chars = pd.concat([df_ports_chars, df_port_chars], axis=0, ignore_index=True)
-    df_ports_chars.to_pickle(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'))
-
-
-
 # TODO: check results
-
-
-# %%
 with open(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'), 'rb') as file:
     df_ports_chars = pickle.load(file)
 
-port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_long=25, w_meth_long='EW', pct_long=300,
-                 sig_short='ZS_VAL_QLT_AMOM', n_asts_short=25, w_meth_short='EW', pct_short=200,
-                 ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.4)
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL', n_asts_long=25, w_meth_long='MN', pct_long=300,
+                 sig_short='ZS_VAL', n_asts_short=25, w_meth_short='MN', pct_short=200,
+                 ind_const='NI', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
 df_port_perf = port.tab_port_perf()
 df_port_chars = port.tab_port_chars(output_perf=False)
-
-
 
