@@ -705,6 +705,169 @@ ls_cols = [('ZS_' + var) for var in ['VAL', 'QLT', 'RMOM']]
 df_out['ZS_VAL_QLT_RMOM'] = df_out[ls_cols].mean(axis=1, skipna=False)
 '''
 
+#%%
+# Test
+
+'''
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_MOM_1', n_asts_long=20, w_meth_long='RP', pct_long=200,
+                 sig_short='ZS_VAL_QLT_MOM_1', n_asts_short=20, w_meth_short='RP', pct_short=100,
+                 ind_const='NI', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
+df_2 = port.tab_port_chars(output_perf=False)
+
+
+
+
+
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=100,
+                 sig_short='ZS_VAL_QLT', n_asts_short=25, w_meth_short='EW', pct_short=100,
+                 ind_const='NI', reb_freq='M', min_short_me=1000, max_short_cl=0.4)
+df_3 = port.tab_port_chars(output_perf=False)
+
+df_test = dic_data['dic_asts_data'][list(dic_data['dic_asts_data'].keys())[0]]
+print(port.get_ls_asts(df_test,'L'))
+print(port.get_ls_asts(df_test,'S'))
+
+port = Portfolio(dic_data=dic_data, sig_long='ZS_QLT', n_asts_long=25, w_meth_long='EW', pct_long=100,
+                 sig_short='ZS_VAL_QLT', n_asts_short=25, w_meth_short='EW', pct_short=100,
+                 ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.4)
+df_3 = port.tab_port_chars(output_perf=False)
+df_4 = port.tab_port_perf()
+
+df_test = dic_data['dic_asts_data'][list(dic_data['dic_asts_data'].keys())[0]]
+print(port.get_ls_asts(df_test,'L'))
+print(port.get_ls_asts(df_test,'S'))
+
+print(port.get_s_port_w(df_test,'L','MN').sum())
+
+'''
+
+'''
+s_port_w = pd.Series(dtype='float64')
+ls_asts = port.get_ls_asts(df_test, 'L')
+n_asts = len(ls_asts)
+opt_prob = False
+
+opt_prob = True
+df_rtns = pd.DataFrame(df_test.loc[df_test['PERMNO'].isin(ls_asts), 'LS_PTRT1M'].tolist()).T  # Previous returns
+df_rtns.columns = ls_asts
+df_covmat = df_rtns.cov()
+a_covmat = np.array(df_covmat * 12)  # Annualized from monthly data
+
+df_test.loc[df_test['PERMNO'].isin(ls_asts), 'LS_PTRT1M'].iloc[0][-1]
+# Useful functions
+def get_port_var(w):
+    return w.T @ a_covmat @ w
+
+
+# Optimization
+res = minimize(fun=get_port_var, x0=x0, method='SLSQP', bounds=bnds, constraints=cons, tol=1e-12,
+               options={'maxiter': 1000})
+'''
+'''
+# Initialization
+dic_cols = {'DATE': 'datetime64[ns]', 'PORT_C': 'float64', 'PORT_L': 'float64', 'PORT_S': 'float64',
+            'PORT_NAV': 'float64', 'PORT_RTNS': 'float64',
+            'L_RTNS': 'float64', 'L_POS': 'object', 'L_WT': 'object', 'L_TO': 'float64', 'L_ASTS_RTNS': 'object',
+            'S_RTNS': 'float64', 'S_POS': 'object', 'S_WT': 'object', 'S_TO': 'float64', 'S_ASTS_RTNS': 'object'}
+df_port_perf = pd.DataFrame(columns=list(dic_cols.keys())).astype(dtype=dic_cols)
+ls_dates = list(dic_data['dic_asts_data'].keys())
+
+# Number of (EOM) dates in rebalancing period
+
+
+n_dates = 1
+
+
+# Rebalancing dates
+ls_reb_dates = []
+t = 0  # Include initial allocation date
+while t < len(ls_dates):
+    if (t % n_dates) == 0:
+        ls_reb_dates += [ls_dates[t]]
+    t += 1
+
+zzz = pd.DataFrame(ls_reb_dates)
+
+ls_reb_dates = ls_reb_dates[:-1]
+
+pct_long = 100
+pct_short = 100
+
+# Initial allocation date
+df_port_perf.loc[0, 'DATE'] = ls_dates[0]
+df_port_perf.loc[0, ['PORT_L', 'PORT_S']] = 0
+df_port_perf.loc[0, ['PORT_C', 'PORT_NAV']] = 100  # Initial equity (normalized)
+df_port_perf.loc[0, 'PORT_C'] -= (pct_long / 100) * df_port_perf.loc[0, 'PORT_NAV']
+df_port_perf.loc[0, 'PORT_L'] += (pct_long / 100) * df_port_perf.loc[0, 'PORT_NAV']  # Open long
+df_port_perf.loc[0, 'PORT_C'] += (pct_short / 100) * df_port_perf.loc[0, 'PORT_NAV']
+df_port_perf.loc[0, 'PORT_S'] += (pct_short / 100) * df_port_perf.loc[0, 'PORT_NAV']
+
+
+
+s_long_w = port.get_s_port_w(df_test, leg='L', w_meth='EW')
+
+ls_long_asts = s_long_w.index.tolist()
+
+
+df_long_asts_rtns = pd.DataFrame(df_test.loc[df_test['PERMNO'].isin(ls_long_asts), 'LS_NTRT1M'].tolist()).T
+df_long_asts_rtns.columns = ls_long_asts
+'''
+
+
+'''
+df_port_perf.at[1, 'L_POS'] = dict(zip(ls_long_asts, (s_long_w * df_port_perf.loc[1, 'PORT_L']).tolist()))
+df_port_perf.at[1, 'L_WT'] = dict(zip(ls_long_asts, s_long_w.tolist()))
+'''
+'''
+for j in range(1,1):
+    print(j)
+# Dont' excute for the firts date
+'''
+'''
+df_test = dic_data['dic_asts_data'][list(dic_data['dic_asts_data'].keys())[1]]
+
+s_long_w = port.get_s_port_w(df_test, leg='L', w_meth='EW')
+
+ls_long_asts = s_long_w.index.tolist()
+'''
+'''
+pos_tmp = 2
+
+# Long leg
+a_long_asts_rtns = np.array(df_long_asts_rtns.loc[j - 1])
+df_port_perf.at[pos_tmp, 'L_ASTS_RTNS'] = dict(zip(ls_long_asts, a_long_asts_rtns.tolist()))
+df_port_perf.loc[pos_tmp, 'L_RTNS'] = (np.array(list(df_port_perf.loc[(pos_tmp - 1), 'L_WT'].values())) * a_long_asts_rtns).sum()
+df_port_perf.at[pos_tmp, 'L_POS'] = dict(zip(ls_long_asts, (np.array(list(df_port_perf.loc[(pos_tmp - 1), 'L_POS'].values())) * (1 + a_long_asts_rtns)).tolist()))
+df_port_perf.loc[pos_tmp, 'PORT_L'] = np.array(list(df_port_perf.loc[pos_tmp, 'L_POS'].values())).sum()
+df_port_perf.at[pos_tmp, 'L_WT'] = dict(zip(ls_long_asts, (np.array(list(df_port_perf.at[pos_tmp, 'L_POS'].values())) / df_port_perf.loc[pos_tmp, 'PORT_L']).tolist()))
+
+
+leg = 'L'
+
+dic_tmp = df_4.loc[(pos_tmp - 1), (leg + '_WT')]
+s_w_t_1 = pd.Series(list(dic_tmp.values()), index=list(dic_tmp.keys()), dtype='float64').rename(None)
+
+dic_tmp = df_4.loc[pos_tmp, (leg + '_ASTS_RTNS')]
+s_r_t = pd.Series(list(dic_tmp.values()), index=list(dic_tmp.keys()), dtype='float64').rename(None)
+s_w_t_1_a = s_w_t_1 * ((1 + s_r_t) / (1 + df_4.loc[pos_tmp, (leg + '_RTNS')]))
+
+dic_tmp = df_4.loc[pos_tmp, (leg + '_WT')]
+s_w_t = pd.Series(list(dic_tmp.values()), index=list(dic_tmp.keys()), dtype='float64').rename(None)
+
+dic = {0: s_w_t_1_a, 1: s_w_t}
+df = pd.DataFrame.from_dict(dic, orient='index').fillna(0).sort_index(axis=1)
+
+(df.iloc[1] - df.iloc[0]).abs().sum()
+
+
+
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=280,
+                 sig_short='ZS_VAL_QLT', n_asts_short=25, w_meth_short='EW', pct_short=180,
+                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.4)
+df_5 = port.tab_port_perf()
+df_6 = port.tab_port_chars()
+
+'''
 '''
 ls_dates = list(dic_data['dic_asts_data'].keys())
 df_tmp = dic_data['dic_asts_data'][ls_dates[0]]
