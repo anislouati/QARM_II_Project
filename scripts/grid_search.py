@@ -16,10 +16,7 @@ warnings.filterwarnings(action='ignore', category=RuntimeWarning)
 
 # %%
 
-
-# Branch: GRID SEARCH
 def main():
-    '''
     ls_sigs_long = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_AMOM']
     ls_n_asts_long = [20, 25]
     ls_sigs_short = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_AMOM']
@@ -28,18 +25,6 @@ def main():
     ls_pct_long_short = [(130, 30), (120, 50), (100, 100), (300, 200), (500, 400)]
     ls_ind_const = ['I', 'NI']
     ls_reb_freq = ['M', 'Q', 'Y']
-    ls_combos = list(product(ls_sigs_long, ls_n_asts_long, ls_sigs_short, ls_n_asts_short,
-                             ls_w_meth, ls_pct_long_short, ls_ind_const, ls_reb_freq))
-    '''
-
-    ls_sigs_long = ['ZS_VAL', 'ZS_QLT']
-    ls_n_asts_long = [20, 25]
-    ls_sigs_short = ['ZS_VAL', 'ZS_QLT']
-    ls_n_asts_short = [15, 20]
-    ls_w_meth = ['EW']
-    ls_pct_long_short = [(130, 30), (120, 50)]
-    ls_ind_const = ['I']
-    ls_reb_freq = ['M']
     ls_combos = list(product(ls_sigs_long, ls_n_asts_long, ls_sigs_short, ls_n_asts_short,
                              ls_w_meth, ls_pct_long_short, ls_ind_const, ls_reb_freq))
 

@@ -216,15 +216,32 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 # *** Branch: PORTFOLIO CONSTRUCTION             ***
 # **************************************************
 
-# TODO: check results
-with open(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'), 'rb') as file:
-    df_ports_chars = pickle.load(file)
+
 
 port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL', n_asts_long=25, w_meth_long='MN', pct_long=300,
                  sig_short='ZS_VAL', n_asts_short=25, w_meth_short='MN', pct_short=200,
                  ind_const='NI', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
 df_port_perf = port.tab_port_perf()
 df_port_chars = port.tab_port_chars(output_perf=False)
+
+
+
+# TODO: check results
+with open(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'), 'rb') as file:
+    df_ports_chars = pickle.load(file)
+
+
+
+
+with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
+    dic_data = pickle.load(file)
+
+
+# %%
+df_sec_avg_counts = get_df_sec_avg_counts(dic_data)
+
+
+
 
 
 
