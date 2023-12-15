@@ -236,3 +236,6 @@ port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_met
                  ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5)
 df_port_perf = port.tab_port_perf()
 df_port_chars = port.tab_port_chars(output_perf=False)
+
+
+print('TEST')
