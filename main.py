@@ -14,6 +14,9 @@ import scripts.functions as fn
 import statsmodels.api as sm
 import time
 import warnings
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 # Project settings
 pd.set_option('display.width', 400)
@@ -231,15 +234,46 @@ df_port_chars = port.tab_port_chars(output_perf=False)
 # *** Branch: PORTFOLIO ANALYSIS                 ***
 # **************************************************
 
-port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=300,
-                 sig_short='ZS_VAL_QLT', n_asts_short=25, w_meth_short='EW', pct_short=200,
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=130,
+                 sig_short='ZS_VAL_QLT', n_asts_short=25, w_meth_short='EW', pct_short=30,
                  ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5)
 df_port_perf = port.tab_port_perf()
 df_port_chars = port.tab_port_chars(output_perf=False)
 
 
 
+test = dic_data['df_facs_data']
 
 
+def perf_output():
+    return
+
+
+for i in range(len(df_port_perf)):
+    if i == 0:
+        df_port_perf.loc[i, ['L_NAV']] = 100
+        df_port_perf.loc[i, ['S_NAV']] = 100
+    else:
+        df_port_perf.loc[i, ['L_NAV']] = np.array(df_port_perf.loc[i - 1, ['L_NAV']])[0] * (1 + np.array(df_port_perf.loc[i, ['L_RTNS']])[0])
+        df_port_perf.loc[i, ['S_NAV']] = np.array(df_port_perf.loc[i - 1, ['S_NAV']])[0] * (1 + np.array(df_port_perf.loc[i, ['S_RTNS']])[0])
+
+df_tpm = df_port_perf.set_index('DATE')
+
+# Plot portfolio performances
+sns.set(context='paper', style='ticks', font_scale=1.0)
+fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
+#ax.set_title('Portfolios Performances', size=28)
+ax.axhline(y=100, color='black', ls='--', lw=1)
+ax.plot(df_tpm['PORT_NAV'],
+        label='PORT_NAV' + ' (L = ' + str(port.pct_long) + ', S = ' + str(port.pct_short) + ', C = ' + str(100 - (port.pct_long - port.pct_short)) + ')',
+        color='red', lw=3)
+ax.plot(df_tpm['L_NAV'], label='L_NAV' + ' (' + str(port.sig_long) + ', ' + str(port.n_asts_long) + ', ' + str(port.w_meth_long) + ', ' + str(port.ind_const) + ', ' + str(port.reb_freq) + ')', color='green', lw=3)
+ax.plot(df_tpm['S_NAV'], label='S_NAV' + ' (' + str(port.sig_short) + ', ' + str(port.n_asts_short) + ', ' + str(port.w_meth_short) + ', ' + str(port.ind_const) + ', ' + str(port.reb_freq) + ')', color='blue', lw=3)
+ax.tick_params(axis='both', labelsize=18)
+ax.legend(loc='upper left', fontsize=16)
+fig.tight_layout()
+plt.show()
+fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_' + port.port_name + '.png'))
+plt.close()
 
 

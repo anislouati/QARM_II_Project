@@ -942,3 +942,121 @@ def get_df_port_chars(dic_data, combo):
     df_port_chars = port.tab_port_chars(output_perf=False)
     return df_port_chars
 '''
+
+'''
+# Plot portfolio performances (OS)
+sns.set(context='paper', style='ticks', font_scale=1.0)
+fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
+ax.set_title('Portfolios Performances (OS, Init=100)', size=28)
+ax.axhline(y=100, color='black', ls='--', lw=1)
+ax.plot(s_min_var_os_port_perf, label='Min-Var', color='red', lw=3)
+ax.plot(s_value_w_os_port_perf, label='Val-Weight', color='green', lw=3)
+ax.plot(s_equal_w_os_port_perf, label='Eq-Weight', color='blue', lw=3)
+ax.tick_params(axis='both', labelsize=18)
+ax.legend(loc='upper left', fontsize=16)
+fig.tight_layout()
+plt.show()
+fig.savefig(Path.joinpath(paths.get('output'), 'Project1', 'P1_Q1.5_os_port_perfs.png'))
+plt.close()
+'''
+
+'''
+# Plot distribution of carbon intensity
+sns.set(context='paper', style='ticks', font_scale=1.5)
+fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
+ax.set_title('Distribution of Carbon Intensity (Y=2021)', size=28)
+sns.histplot(df_carb_int_1m.iloc[-1], bins=25, stat='density', kde=False, color='royalblue', edgecolor='white', alpha=0.8)
+sns.kdeplot(df_carb_int_1m.iloc[-1], color='red', lw=3)
+ax.tick_params(axis='both', labelsize=18)
+ax.set_xlim(left=0)
+ax.set_xlabel('Carbon Intensity', size=20)
+ax.set_ylabel('Density', size=20)
+ax.grid(axis='y', alpha=0.4)
+fig.tight_layout()
+plt.show()
+fig.savefig(Path.joinpath(paths.get('output'), 'Project1', 'P1_Q2.1_dist_carbon_intensity.png'))
+plt.close()
+'''
+
+'''
+# Compare the efficient frontier
+sns.set(context='paper', style='ticks', font_scale=1.0)
+fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
+fig.suptitle('Classic and Resampled Efficient Frontiers', size=28)
+x_1 = df_sample_EF_plugin['std']
+y_1 = df_sample_EF_plugin['mean']
+ax.plot(x_1, y_1, linewidth=3)
+x_2 = df_resampled_EF['std']
+y_2 = df_resampled_EF['mean']
+ax.plot(x_2, y_2, linewidth=3)
+ax.tick_params(axis='both', labelsize=18)
+ax.set_xlabel('Annualised standard deviation', size=20)
+ax.set_ylabel('Annualised average return', size=20)
+ax.legend(['Classic Efficient Frontier', 'Resampled Efficient Frontier'], fontsize=16)
+fig.tight_layout()
+plt.show()
+fig.savefig(Path.joinpath(paths.get('output'), 'Project1', 'P1_Q1.3_sample_vs_resampled_EF_Q=' + str(Q) + '.png'))
+plt.close()
+'''
+
+'''
+# Compare repartition of the weights in the efficient frontier for each expected return level
+sns.set(context='paper', style='ticks', font_scale=1.0)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10), dpi=300)
+fig.suptitle('Classic and Resampled Efficient Frontiers Weights', size=28)
+
+ax1.stackplot(df_sample_EF_plugin['mean'], abs(df_sample_EF_plugin_w))
+ax1.set_title('Classic Efficient Frontier Weights', size=24)
+ax.tick_params(axis='both', labelsize=16)
+ax1.set_xlabel('Annualised average return', size=20)
+ax1.set_ylabel('Cumulative of weights absolute value', size=20)
+ax1.set_xlim(0.1, 0.25)
+ax1.set_ylim(0, 5)
+
+ax2.stackplot(df_resampled_EF_w_p.T.index, abs(df_resampled_EF_w_p))
+ax2.set_title('Resampled Efficient Frontier Weights', size=24)
+ax.tick_params(axis='both', labelsize=16)
+ax2.set_xlabel('Annualised average return', size=20)
+ax2.set_ylabel('Cumulative of weights absolute value', size=20)
+ax2.set_xlim(0.1, 0.25)
+ax2.set_ylim(0, 5)
+
+fig.tight_layout()
+plt.show()
+fig.savefig(Path.joinpath(paths.get('output'), 'Project1', 'P1_Q1.3_sample_vs_resampled_EF_weights_Q=' + str(Q) + '.png'))
+plt.close()
+'''
+
+'''
+# Plot portfolios performances (IS)
+sns.set(context='paper', style='ticks', font_scale=1.0)
+fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
+ax.set_title('Portfolios Performances (IS, Init=100)', size=28)
+ax.axhline(y=100, color='black', ls='--', lw=1)
+ax.plot(min_var_is_port_perf, label='Min-Var', color='red', lw=3)
+ax.plot(value_w_is_port_perf, label='Val-Weight', color='green', lw=3)
+ax.plot(equal_w_is_port_perf, label='Eq-Weight', color='blue', lw=3)
+ax.tick_params(axis='both', labelsize=18)
+ax.legend(loc='upper left', fontsize=16)
+fig.tight_layout()
+plt.show()
+fig.savefig(Path.joinpath(paths.get('output'), 'Project1', 'P1_Q1.4_is_ports_perfs.png'))
+plt.close()
+'''
+
+'''
+# Plot min-var performances (OS, plugin vs. long-only)
+sns.set(context='paper', style='ticks', font_scale=1.0)
+fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
+ax.set_title('Min-Var Performances (OS, Init=100)', size=28)
+ax.axhline(y=100, color='black', ls='--', lw=1)
+ax.plot(s_min_var_os_port_perf, label='Min-Var Plugin', color='red', lw=3)
+ax.plot(s_min_var_os_lo_port_perf, label='Min-Var Long-Only', color='orange', lw=3)
+ax.tick_params(axis='both', labelsize=18)
+ax.legend(loc='upper left', fontsize=16)
+fig.tight_layout()
+plt.show()
+fig.savefig(Path.joinpath(paths.get('output'), 'Project1', 'P1_Q1.6_min_var_os_ports_perfs.png'))
+plt.close()
+'''
+
