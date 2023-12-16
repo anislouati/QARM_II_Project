@@ -1159,3 +1159,15 @@ plt.show()
 fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_long_vs_short' + port.port_name + '.png'))
 plt.close()
 '''
+
+'''
+annotations = []
+for permno in ls_permnos:
+    annotation = dict(x=df_zscores.loc[df_zscores['PERMNO'] == permno, ls_zscores[0]].values[0],
+                      y=df_zscores.loc[df_zscores['PERMNO'] == permno, ls_zscores[1]].values[0],
+                      xref='x', yref='y',
+                      text=df_zscores.loc[df_zscores['PERMNO'] == permno, 'CONM'].values[0].decode('utf-8'),
+                      showarrow=True, arrowhead=7, ax=0, ay=-40)
+    annotations.append(annotation)
+'''
+

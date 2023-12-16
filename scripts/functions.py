@@ -5,6 +5,8 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import pickle
+import plotly.graph_objs as go
+import plotly.offline as pyo
 import statsmodels.api as sm
 import warnings
 
@@ -956,6 +958,10 @@ def get_df_port_chars(combo):
     df_port_chars = port.tab_port_chars(output_perf=False)
     return df_port_chars
 
+    if len(ls_zscores) == 2:
+        ls_asts_0 = sorted(dic_s_zscores[0].index.tolist())  # ZS_0
+        ls_asts_1 = sorted(dic_s_zscores[1].index.tolist())  # ZS_1
+        ls_asts_2 = sorted(dic_s_zscores[2].index.tolist())  # ZS_INT
 
 # %%
 # **************************************************
@@ -963,6 +969,173 @@ def get_df_port_chars(combo):
 # **************************************************
 
 
+def plot_zscores(date, ls_zscores, leg):
+    with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
+        dic_data = pickle.load(file)
+    dic_asts_data = dic_data['dic_asts_data']
+    df_zscores = dic_asts_data[date]
+    df_zscores = df_zscores[['PERMNO', 'CONM', 'TIC'] + ls_zscores]
+    ls_permnos = df_zscores['PERMNO'].unique().tolist()
+    df_zscores['ZS_INT'] = df_zscores[ls_zscores].mean(axis=1, skipna=False)
 
+    n_asts = 50
+    dic_s_zscores = {}
+    if leg == 'L':
+        for i in range(len(ls_zscores)):
+            dic_s_zscores[i] = pd.Series(list(df_zscores[ls_zscores[i]]), index=ls_permnos, dtype='float64').nlargest(n_asts).sort_values(ascending=False)
+        dic_s_zscores[len(ls_zscores)] = pd.Series(list(df_zscores['ZS_INT']), index=ls_permnos, dtype='float64').nlargest(n_asts).sort_values(ascending=False)
+    elif leg == 'S':
+        for i in range(len(ls_zscores)):
+            dic_s_zscores[i] = pd.Series(list(df_zscores[ls_zscores[i]]), index=ls_permnos, dtype='float64').nsmallest(n_asts).sort_values(ascending=True)
+        dic_s_zscores[len(ls_zscores)] = pd.Series(list(df_zscores['ZS_INT']), index=ls_permnos, dtype='float64').nsmallest(n_asts).sort_values(ascending=True)
+
+        ls_asts_3 = [ast for ast in ls_asts_0 if (ast not in ls_asts_2)]  # Only ZS_0
+        ls_asts_4 = [ast for ast in ls_asts_1 if (ast not in ls_asts_2)]  # Only ZS_1
+        ls_asts_5 = [ast for ast in ls_permnos if (ast not in ls_asts_0) and (ast not in ls_asts_1) and (ast not in ls_asts_2)]  # All other
+
+        trace_0 = go.Scatter(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_2), ls_zscores[0]],
+                             y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_2), ls_zscores[1]],
+                             mode='markers', marker=dict(size=10, color='rgba(50,161,109,1.0)'),
+                             name='Stocks in Integrated', hoverinfo='text',
+                             hovertext=[b.decode('utf-8') for b in df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_2), 'CONM'].tolist()])
+        trace_1 = go.Scatter(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_3), ls_zscores[0]],
+                             y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_3), ls_zscores[1]],
+                             mode='markers', marker=dict(size=10, color='rgba(52,147,250,1.0)'),
+                             name='Stocks Only in {}'.format(ls_zscores[0][3:]), hoverinfo='text',
+                             hovertext=[b.decode('utf-8') for b in df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_3), 'CONM'].tolist()])
+        trace_2 = go.Scatter(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_4), ls_zscores[0]],
+                             y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_4), ls_zscores[1]],
+                             mode='markers', marker=dict(size=10, color='rgba(247,189,53,1.0)'),
+                             name='Stocks Only in {}'.format(ls_zscores[1][3:]), hoverinfo='text',
+                             hovertext=[b.decode('utf-8') for b in df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_4), 'CONM'].tolist()])
+        trace_3 = go.Scatter(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_5), ls_zscores[0]],
+                             y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_5), ls_zscores[1]],
+                             mode='markers', marker=dict(size=10, color='rgba(220,220,220,0.8)'),
+                             name='All Other Stocks', hoverinfo='text',
+                             hovertext=[b.decode('utf-8') for b in df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_5), 'CONM'].tolist()])
+
+        layout = go.Layout(
+            title=dict(text='Stock Picking ({})'.format(date.strftime('%Y-%m-%d')), font=dict(size=28), x=0.5, y=0.95),
+            xaxis=dict(
+                title='ZScore {}'.format(ls_zscores[0][3:]),
+                titlefont=dict(size=24),
+                showline=False,
+                linecolor='black',
+                linewidth=2,
+                zeroline=True,
+                zerolinecolor='rgba(0,0,0,0.6)',
+                zerolinewidth=2,
+                gridcolor='rgba(183,203,254,0.3)',
+                range=[-2.5, 2.5]
+            ),
+            yaxis=dict(
+                title='ZScore {}'.format(ls_zscores[1][3:]),
+                titlefont=dict(size=24),
+                showline=False,
+                linecolor='black',
+                linewidth=2,
+                zeroline=True,
+                zerolinecolor='rgba(0,0,0,0.6)',
+                zerolinewidth=2,
+                gridcolor='rgba(183,203,254,0.3)',
+                range=[-2.5, 2.5]
+            ),
+            legend=dict(font=dict(size=18)),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(173,216,230,0.1)'
+        )
+
+        fig = go.Figure(data=[trace_0, trace_1, trace_2, trace_3], layout=layout)
+        pyo.plot(fig, filename='output/figures/plot_zscores_2D.html')
+
+    elif len(ls_zscores) == 3:
+        ls_asts_0 = sorted(dic_s_zscores[0].index.tolist())  # ZS_0
+        ls_asts_1 = sorted(dic_s_zscores[1].index.tolist())  # ZS_1
+        ls_asts_2 = sorted(dic_s_zscores[2].index.tolist())  # ZS_2
+        ls_asts_3 = sorted(dic_s_zscores[3].index.tolist())  # ZS_INT
+
+        ls_asts_4 = [ast for ast in ls_asts_0 if (ast not in ls_asts_3)]  # Only ZS_0
+        ls_asts_5 = [ast for ast in ls_asts_1 if (ast not in ls_asts_3)]  # Only ZS_1
+        ls_asts_6 = [ast for ast in ls_asts_2 if (ast not in ls_asts_3)]  # Only ZS_2
+        ls_asts_7 = [ast for ast in ls_permnos if (ast not in ls_asts_0) and (ast not in ls_asts_1) and (ast not in ls_asts_2) and (ast not in ls_asts_3)]  # All other
+
+        trace_0 = go.Scatter3d(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_3), ls_zscores[0]],
+                               y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_3), ls_zscores[1]],
+                               z=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_3), ls_zscores[2]],
+                               mode='markers', marker=dict(size=10, color='rgba(50,161,109,1.0)'),
+                               name='Stocks in Integrated', hoverinfo='text',
+                               hovertext=[b.decode('utf-8') for b in df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_3), 'CONM'].tolist()])
+        trace_1 = go.Scatter3d(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_4), ls_zscores[0]],
+                               y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_4), ls_zscores[1]],
+                               z=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_4), ls_zscores[2]],
+                               mode='markers', marker=dict(size=10, color='rgba(52,147,250,1.0)'),
+                               name='Stocks Only in {}'.format(ls_zscores[0][3:]), hoverinfo='text',
+                               hovertext=[b.decode('utf-8') for b in df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_4), 'CONM'].tolist()])
+        trace_2 = go.Scatter3d(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_5), ls_zscores[0]],
+                               y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_5), ls_zscores[1]],
+                               z=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_5), ls_zscores[2]],
+                               mode='markers', marker=dict(size=10, color='rgba(247,189,53,1.0)'),
+                               name='Stocks Only in {}'.format(ls_zscores[1][3:]), hoverinfo='text',
+                               hovertext=[b.decode('utf-8') for b in df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_5), 'CONM'].tolist()])
+        trace_3 = go.Scatter3d(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_6), ls_zscores[0]],
+                               y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_6), ls_zscores[1]],
+                               z=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_6), ls_zscores[2]],
+                               mode='markers', marker=dict(size=10, color='rgba(155,32,176,1.0)'),
+                               name='Stocks Only in {}'.format(ls_zscores[2][3:]), hoverinfo='text',
+                               hovertext=[b.decode('utf-8') for b in df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_6), 'CONM'].tolist()])
+        trace_4 = go.Scatter3d(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_7), ls_zscores[0]],
+                               y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_7), ls_zscores[1]],
+                               z=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_7), ls_zscores[2]],
+                               mode='markers', marker=dict(size=10, color='rgba(220,220,220,0.8)'),
+                               name='All Other Stocks', hoverinfo='text',
+                               hovertext=[b.decode('utf-8') for b in df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_7), 'CONM'].tolist()])
+
+        layout = go.Layout(
+            title=dict(text='Stock Picking ({})'.format(date.strftime('%Y-%m-%d')), font=dict(size=28), x=0.5, y=0.95),
+            scene=dict(
+                xaxis=dict(
+                    title='ZScore {}'.format(ls_zscores[0][3:]),
+                    titlefont=dict(size=24),
+                    showline=False,
+                    linecolor='black',
+                    linewidth=2,
+                    zeroline=True,
+                    zerolinecolor='rgba(0,0,0,0.6)',
+                    zerolinewidth=2,
+                    gridcolor='rgba(183,203,254,0.3)',
+                    range=[-2.5, 2.5]
+                ),
+                yaxis=dict(
+                    title='ZScore {}'.format(ls_zscores[1][3:]),
+                    titlefont=dict(size=24),
+                    showline=False,
+                    linecolor='black',
+                    linewidth=2,
+                    zeroline=True,
+                    zerolinecolor='rgba(0,0,0,0.6)',
+                    zerolinewidth=2,
+                    gridcolor='rgba(183,203,254,0.3)',
+                    range=[-2.5, 2.5]
+                ),
+                zaxis=dict(
+                    title='ZScore {}'.format(ls_zscores[2][3:]),
+                    titlefont=dict(size=24),
+                    showline=False,
+                    linecolor='black',
+                    linewidth=2,
+                    zeroline=True,
+                    zerolinecolor='rgba(0,0,0,0.6)',
+                    zerolinewidth=2,
+                    gridcolor='rgba(183,203,254,0.3)',
+                    range=[-2.5, 2.5]
+                )
+            ),
+            legend=dict(font=dict(size=18)),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(173,216,230,0.1)'
+        )
+
+        fig = go.Figure(data=[trace_0, trace_1, trace_2, trace_3, trace_4], layout=layout)
+        pyo.plot(fig, filename='output/figures/plot_zscores_3D.html')
 
 

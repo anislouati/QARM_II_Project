@@ -12,6 +12,7 @@ import pickle
 import scripts.functions as fn
 import seaborn as sns
 import warnings
+import matplotlib.dates as mdates
 import openpyxl
 
 # Project settings
@@ -193,6 +194,7 @@ for date in tqdm(ls_dates, desc='Assets data dictionary'):
                         'PRCCM', 'TRT1M', 'SPRDPCT', 'DVOL', 'SPRTRN', 'ME',
                         'VOL_TRT1M', 'VOL_SPRTRN', 'BETA',
                         'CTRT1M_1', 'LS_PTRT1M', 'LS_NTRT1M',
+                        'ZS_PROF', 'ZS_GWTH', 'ZS_SAF',
                         'ZS_VAL', 'ZS_QLT', 'ZS_MOM', 'ZS_RMOM', 'ZS_AMOM',
                         'ZS_VAL_QLT', 'ZS_VAL_QLT_MOM', 'ZS_VAL_QLT_AMOM']
     df_tmp = df_tmp[ls_selected_cols]
@@ -223,7 +225,7 @@ df_port_chars = port.tab_port_chars(output_perf=False)
 df_sec_avg_counts = port.get_df_sec_avg_counts()
 
 # TODO: check results
-with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_2.pkl'), 'rb') as file:
+with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
     df_ports_chars = pickle.load(file)
 df_ports_chars.to_excel(Path.joinpath(paths.get('output'), 'excels', 'df_ports_chars_2.xlsx'), index=True)
 
@@ -389,4 +391,55 @@ port_1 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_m
 def tab_port_stats():
     return
 
+
+# %%
+
+
+fn.plot_zscores(date=datetime(2022, 12, 31), ls_zscores=['ZS_VAL', 'ZS_QLT', 'ZS_AMOM'], leg='L')
+
+# %%
+
+
+def plot_line_chart(df, title='', xlabel='', ylabel='', figsize=(16, 9), legend_title='', file_path=''):
+    # Initiate figure
+    sns.set(context='paper', style='ticks', font_scale=1.0)
+    fig, ax = plt.subplots(figsize=figsize, dpi=600)
+    ax.set_title(title, fontsize=28)
+
+    # Define the color palette
+    palette = sns.color_palette('colorblind', n_colors=len(df.columns))
+
+    # Compute the maximum value of each column and sort the values in descending order
+    legend_order = df.max().sort_values(ascending=False).index.tolist()
+
+    # Plot the line chart
+    ax.axhline(y=1, color='black', ls='--', lw=1)
+    sns.lineplot(data=df, ax=ax, linewidth=2, hue_order=legend_order, dashes=False, linestyle='solid', palette=palette)
+
+    # X-axis settings
+    ax.tick_params(axis='x', labelsize=18)
+    ax.set_xlim()
+    date_locator = mdates.YearLocator(2)
+    date_formatter = mdates.DateFormatter('%Y')
+    ax.xaxis.set_major_locator(date_locator)
+    ax.xaxis.set_major_formatter(date_formatter)
+    ax.set_xlabel(xlabel, fontsize=20)
+
+    # Y-axis settings
+    ax.tick_params(axis='y', labelsize=18)
+    ax.set_ylim(0, ax.get_ylim()[1])
+    ax.set_yticks(np.concatenate((np.delete(ax.get_yticks(), 0), [1])))
+    ax.set_ylabel(ylabel, fontsize=20)
+
+    # Customize the legend
+    ax.legend(title=legend_title, fontsize=14, title_fontsize=16)
+
+    # Remove the top and right spines
+    sns.despine(top=True, right=True)
+
+    # Show the plot
+    fig.tight_layout()
+    plt.show()
+    fig.savefig(file_path)
+    plt.close()
 
