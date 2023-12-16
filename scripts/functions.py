@@ -635,6 +635,8 @@ class Portfolio:
             n_dates = 1
         elif self.reb_freq == 'Q':
             n_dates = 3
+        elif self.reb_freq == 'S':
+            n_dates = 6
         elif self.reb_freq == 'Y':
             n_dates = 12
 
