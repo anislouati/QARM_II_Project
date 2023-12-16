@@ -283,23 +283,67 @@ df_tpm_1 = df_port_perf_1.set_index('DATE')
 df_tpm_2 = df_port_perf_2.set_index('DATE')
 df_tpm_3 = df_port_perf_3.set_index('DATE')
 
+# Plot long vs short performances
+sns.set(context='paper', style='ticks', font_scale=1.0)
+fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
+#ax.set_title('Portfolios Performances', size=28)
+ax.axhline(y=100, color='black', ls='--', lw=1)
+ax.plot(df_tpm_1['L_NAV'], label='L_NAV' + ' (' + str(port_1.sig_long) + ', ' + str(port_1.n_asts_long) + ', ' + str(port_1.w_meth_long) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
+ax.plot(df_tpm_1['S_NAV'], label='S_NAV' + ' (' + str(port_1.sig_short) + ', ' + str(port_1.n_asts_short) + ', ' + str(port_1.w_meth_short) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
+ax.plot(df_tpm_2['L_NAV'], label='L_NAV_TC' + ' (' + str(port_2.sig_long) + ', ' + str(port_2.n_asts_long) + ', ' + str(port_2.w_meth_long) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
+ax.plot(df_tpm_2['S_NAV'], label='S_NAV_TC' + ' (' + str(port_2.sig_short) + ', ' + str(port_2.n_asts_short) + ', ' + str(port_2.w_meth_short) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
+ax.tick_params(axis='both', labelsize=18)
+ax.legend(loc='upper left', fontsize=16)
+fig.tight_layout()
+plt.show()
+fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_L_vs_S' + port_1.port_name + '.png'))
+plt.close()
+
 # Plot portfolio performances
 sns.set(context='paper', style='ticks', font_scale=1.0)
 fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
 #ax.set_title('Portfolios Performances', size=28)
 ax.axhline(y=100, color='black', ls='--', lw=1)
-ax.plot(df_tpm_1['L_NAV'], label='L_NAV' + ' (' + str(port_1.sig_long) + ', ' + str(port_1.n_asts_long) + ', ' + str(port_1.w_meth_long) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', color='green', lw=3)
-ax.plot(df_tpm_1['S_NAV'], label='S_NAV' + ' (' + str(port_1.sig_short) + ', ' + str(port_1.n_asts_short) + ', ' + str(port.w_meth_short) + ', ' + str(port.ind_const) + ', ' + str(port.reb_freq) + ')', color='blue', lw=3)
-ax.plot(df_tpm_2['L_NAV'], label='L_NAV_TC' + ' (' + str(port.sig_long) + ', ' + str(port.n_asts_long) + ', ' + str(port.w_meth_long) + ', ' + str(port.ind_const) + ', ' + str(port.reb_freq) + ')', color='green', lw=3)
-ax.plot(df_tpm_2['S_NAV'], label='S_NAV_TC' + ' (' + str(port.sig_short) + ', ' + str(port.n_asts_short) + ', ' + str(port.w_meth_short) + ', ' + str(port.ind_const) + ', ' + str(port.reb_freq) + ')', color='blue', lw=3)
+ax.plot(df_tpm_1['PORT_NAV'], label='PORT_NAV' + ' (L = ' + str(port_1.pct_long) + ', S = ' + str(port_1.pct_short) + ', C = ' + str(100 - (port_1.pct_long - port_1.pct_short)) + ')', lw=3)
+ax.plot(df_tpm_2['PORT_NAV'], label='PORT_NAV_TC' + ' (L = ' + str(port_2.pct_long) + ', S = ' + str(port_2.pct_short) + ', C = ' + str(100 - (port_2.pct_long - port_2.pct_short)) + ')', lw=3)
+ax.plot(df_tpm_3['PORT_NAV'], label='PORT_NAV_TC_BC' + ' (L = ' + str(port_3.pct_long) + ', S = ' + str(port_3.pct_short) + ', C = ' + str(100 - (port_3.pct_long - port.pct_short)) + ')', lw=3)
+ax.plot(df_tpm_1['LA_NAV'], label='LA_NAV' + ' (' + str(port_1.sig_long) + ', ' + str(port_1.n_asts_long) + ', ' + str(port_1.w_meth_long) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
+ax.plot(df_tpm_2['LA_NAV'], label='LA_NAV_TC' + ' (' + str(port_2.sig_long) + ', ' + str(port_2.n_asts_long) + ', ' + str(port_2.w_meth_long) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
 ax.tick_params(axis='both', labelsize=18)
 ax.legend(loc='upper left', fontsize=16)
 fig.tight_layout()
 plt.show()
-fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_long_vs_short' + port.port_name + '.png'))
+fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_LS_vs_LA' + port_1.port_name + '.png'))
 plt.close()
 
+# Plot portfolio performances
+sns.set(context='paper', style='ticks', font_scale=1.0)
+fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
+#ax.set_title('Portfolios Performances', size=28)
+ax.axhline(y=0, color='black', ls='--', lw=1)
+ax.plot(df_tpm_1['PORT_NAV'], label='PORT_NAV' + ' (L = ' + str(port_1.pct_long) + ', S = ' + str(port_1.pct_short) + ', C = ' + str(100 - (port_1.pct_long - port_1.pct_short)) + ')', lw=3)
+ax.plot(df_tpm_1['PORT_L'], label='PORT_L', lw=3)
+ax.plot((-1) * df_tpm_1['PORT_S'], label='PORT_S', lw=3)
+ax.plot(df_tpm_1['PORT_C'], label='PORT_C', lw=3)
+ax.tick_params(axis='both', labelsize=18)
+ax.legend(loc='upper left', fontsize=16)
+fig.tight_layout()
+plt.show()
+fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_NAV' + port_1.port_name + '.png'))
+plt.close()
+
+df_port_chars_1 = port_1.tab_port_chars(output_perf=False)
+df_port_chars_1_L = df_port_chars_1[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO', 'L_NORM_HI']]
+df_port_chars_1_S = df_port_chars_1[['S_ANN_MEAN', 'S_ANN_VOL', 'S_SHARPE', 'S_MAX_DD', 'S_CALMAR', 'S_AVG_TO', 'S_NORM_HI']]
 
 
+df_port_chars_2 = port_1.tab_port_chars(output_perf=False)
+df_port_chars_2_L = df_port_chars_2[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO', 'L_NORM_HI']]
+df_port_chars_2_S = df_port_chars_2[['S_ANN_MEAN', 'S_ANN_VOL', 'S_SHARPE', 'S_MAX_DD', 'S_CALMAR', 'S_AVG_TO', 'S_NORM_HI']]
+
+dic_df_port_chars_1_L ={'L': df_port_chars_1_L, 'L_TC': df_port_chars_1_L}
+dic_df_port_chars_1_S ={'L': df_port_chars_1_S, 'S_TC': df_port_chars_2_S}
+
+dic_df_port_chars_1 = {'L':dic_df_port_chars_1_L, 'S':dic_df_port_chars_1_S}
 
 
