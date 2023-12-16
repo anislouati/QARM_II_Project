@@ -17,8 +17,9 @@ paths.update({'figures': Path.joinpath(paths.get('output'), 'figures')})
 paths.update({'tables': Path.joinpath(paths.get('output'), 'tables')})
 
 # Warnings management
-warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 warnings.filterwarnings(action='ignore', category=RuntimeWarning)
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning)
 
 
 # %%
@@ -443,7 +444,7 @@ def get_ZS(df_data):
 class Portfolio:
     def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
                  sig_short, n_asts_short, w_meth_short, pct_short,
-                 ind_const, reb_freq, min_short_me, max_short_cl, tc_bps=0):
+                 ind_const, reb_freq, min_short_me=1000, max_short_cl=0.5, tc_bps=20):
         self.dic_data = dic_data
         self.sig_long = sig_long
         self.n_asts_long = n_asts_long
@@ -469,7 +470,6 @@ class Portfolio:
     def get_ls_asts(self, df_data, leg):
         # Min market cap to avoid short small caps
         # Max cumulative loss to avoid short if already big loss
-
         ls_asts = []
         n_asts = 0
         ls_secs = df_data['GSECTOR'].unique().tolist()
@@ -684,7 +684,6 @@ class Portfolio:
 
             # Long/Short rebalancing
             if ls_reb_dates[i] != ls_dates[0]:  # Initial allocation already done
-
                 # Long leg
                 s_long_w = self.get_s_port_w(df_tmp, leg='L', w_meth=self.w_meth_long)
                 ls_long_asts = s_long_w.index.tolist()
@@ -699,13 +698,12 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'L_TO'] = get_turnover(df_port_perf, pos_tmp, leg='L')
                 df_port_perf.loc[pos_tmp, 'S_TO'] = get_turnover(df_port_perf, pos_tmp, leg='S')
 
-                # Transaction Costs
+                # Transaction costs
                 df_port_perf.loc[pos_tmp, 'L_TC'] = ((self.tc_bps / 10000) * df_port_perf.loc[pos_tmp, 'L_TO']) * df_port_perf.loc[pos_tmp, 'PORT_L']
                 df_port_perf.loc[pos_tmp, 'S_TC'] = ((self.tc_bps / 10000) * df_port_perf.loc[pos_tmp, 'S_TO']) * df_port_perf.loc[pos_tmp, 'PORT_S']
 
-                # Return on the long (after transactions costs)
+                # Returns on legs after transactions costs
                 df_port_perf.loc[pos_tmp, 'L_RTNS'] = (df_port_perf.loc[pos_tmp, 'PORT_L'] - df_port_perf.loc[pos_tmp, 'L_TC']) / df_port_perf.loc[pos_tmp - 1, 'PORT_L'] - 1
-                # Return on the short (after transaction cost)
                 df_port_perf.loc[pos_tmp, 'S_RTNS'] = (df_port_perf.loc[pos_tmp, 'PORT_S'] - df_port_perf.loc[pos_tmp, 'S_TC']) / df_port_perf.loc[pos_tmp - 1, 'PORT_S'] - 1
 
                 # Liquidate positions
@@ -715,7 +713,7 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'PORT_S'] = 0
                 df_port_perf.loc[pos_tmp, 'PORT_NAV'] = df_port_perf.loc[pos_tmp, 'PORT_C']
 
-                # Return on the portfolio
+                # Return on portfolio (L/S)
                 df_port_perf.loc[pos_tmp, 'PORT_RTNS'] = (df_port_perf.loc[pos_tmp, 'PORT_NAV'] / df_port_perf.loc[(pos_tmp - 1), 'PORT_NAV']) - 1
 
                 # Open new positions
@@ -726,20 +724,15 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'PORT_LEV'] = df_port_perf.loc[pos_tmp, 'PORT_S'] / df_port_perf.loc[pos_tmp, 'PORT_NAV']
                 df_port_perf.loc[pos_tmp, 'NET_EXP_PCT'] = (df_port_perf.loc[pos_tmp, 'PORT_L'] - df_port_perf.loc[pos_tmp, 'PORT_S']) / df_port_perf.loc[pos_tmp, 'PORT_NAV']
 
-                # Long leg (after rebalancing)
+                # Legs after rebalancing
                 df_port_perf.at[pos_tmp, 'L_POS'] = dict(zip(ls_long_asts, (s_long_w * df_port_perf.loc[pos_tmp, 'PORT_L']).tolist()))
-
-                # Short leg (after rebalancing)
                 df_port_perf.at[pos_tmp, 'S_POS'] = dict(zip(ls_short_asts, (s_short_w * df_port_perf.loc[pos_tmp, 'PORT_S']).tolist()))
 
-                # Long leg (Next returns) (Needed for Carry forward)
+                # Legs next returns (needed for carry forward)
                 df_long_asts_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_long_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
                 df_long_asts_rtns.columns = ls_long_asts
-
-                # Short leg (Next returns) (Needed for Carry forward)
                 df_short_asts_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_short_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
                 df_short_asts_rtns.columns = ls_short_asts
-
 
             # Carry forward position in rebalancing period
             for j in range(1, (n_dates + 1)):
@@ -762,10 +755,6 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'PORT_S'] = np.array(list(df_port_perf.loc[pos_tmp, 'S_POS'].values())).sum()
                 df_port_perf.at[pos_tmp, 'S_WT'] = dict(zip(ls_short_asts, (np.array(list(df_port_perf.at[pos_tmp, 'S_POS'].values())) / df_port_perf.loc[pos_tmp, 'PORT_S']).tolist()))
 
-                # Turnover
-                #df_port_perf.loc[pos_tmp, 'L_TO'] = get_turnover(df_port_perf, pos_tmp, leg='L')
-                #df_port_perf.loc[pos_tmp, 'S_TO'] = get_turnover(df_port_perf, pos_tmp, leg='S')
-
                 # Portfolio (L/S)
                 df_port_perf.loc[pos_tmp, 'PORT_C'] = df_port_perf.loc[(pos_tmp - 1), 'PORT_C']  # Assumption: no interest on cash (possible to use risk-free rate)
                 df_port_perf.loc[pos_tmp, 'PORT_NAV'] = df_port_perf.loc[pos_tmp, 'PORT_C'] + df_port_perf.loc[pos_tmp, 'PORT_L'] - df_port_perf.loc[pos_tmp, 'PORT_S']
@@ -775,10 +764,13 @@ class Portfolio:
 
         # Turnover zero on intermediary dates
         df_port_perf[['L_TO', 'L_TC', 'S_TO', 'S_TC']] = df_port_perf[['L_TO', 'L_TC', 'S_TO', 'S_TC']].fillna(0)
+
         # Merge risk-free rate data
         df_port_perf = pd.merge(df_port_perf, self.df_facs_data.drop(columns=['MKTRF', 'SMB', 'HML', 'UMD']), on='DATE', how='inner')
         df_port_perf = df_port_perf.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
-        df_port_perf['LA_RTNS'] = df_port_perf['NET_EXP_PCT']*df_port_perf['L_RTNS'] + (1-df_port_perf['NET_EXP_PCT'])*df_port_perf['RF']
+
+        # Long leg adjusted for net exposure
+        df_port_perf['LA_RTNS'] = (df_port_perf['NET_EXP_PCT'] * df_port_perf['L_RTNS']) + ((1 - df_port_perf['NET_EXP_PCT']) * df_port_perf['RF'])
         return df_port_perf
 
     def tab_port_chars(self, output_perf=False):
@@ -834,8 +826,20 @@ class Portfolio:
         s_long_rtns = pd.Series(df_port_perf.loc[1:, 'L_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
         s_short_rtns = pd.Series(df_port_perf.loc[1:, 'S_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
 
-        # Portfolio (L/S)
+        # Parameters combo
         df_port_chars.loc[0, 'NAME'] = self.port_name
+        df_port_chars.loc[0, 'L_SIG'] = self.sig_long
+        df_port_chars.loc[0, 'L_N_ASTS'] = self.n_asts_long
+        df_port_chars.loc[0, 'L_W_METH'] = self.w_meth_long
+        df_port_chars.loc[0, 'L_PCT'] = self.pct_long
+        df_port_chars.loc[0, 'S_SIG'] = self.sig_short
+        df_port_chars.loc[0, 'S_N_ASTS'] = self.n_asts_short
+        df_port_chars.loc[0, 'S_W_METH'] = self.w_meth_short
+        df_port_chars.loc[0, 'S_PCT'] = self.pct_short
+        df_port_chars.loc[0, 'IND_CONST'] = self.ind_const
+        df_port_chars.loc[0, 'REB_FREQ'] = self.reb_freq
+
+        # Portfolio (L/S)
         df_port_chars.loc[0, 'ANN_MEAN'] = s_port_rtns.mean() * 12
         df_port_chars.loc[0, 'ANN_VOL'] = np.sqrt(s_port_rtns.var() * 12)
         df_port_chars.loc[0, 'SHARPE'] = (df_port_chars.loc[0, 'ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'ANN_VOL']
