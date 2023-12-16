@@ -1060,3 +1060,28 @@ fig.savefig(Path.joinpath(paths.get('output'), 'Project1', 'P1_Q1.6_min_var_os_p
 plt.close()
 '''
 
+'''
+# Long leg
+s_long_w = self.get_s_port_w(df_tmp, leg='L', w_meth=self.w_meth_long)
+ls_long_asts = s_long_w.index.tolist()
+df_long_asts_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_long_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
+df_long_asts_rtns.columns = ls_long_asts
+df_port_perf.at[pos_tmp, 'L_POS'] = dict(zip(ls_long_asts, (s_long_w * df_port_perf.loc[pos_tmp, 'PORT_L']).tolist()))
+df_port_perf.at[pos_tmp, 'L_WT'] = dict(zip(ls_long_asts, s_long_w.tolist()))
+
+# Short leg
+s_short_w = self.get_s_port_w(df_tmp, leg='S', w_meth=self.w_meth_short)
+ls_short_asts = s_short_w.index.tolist()
+df_short_asts_rtns = pd.DataFrame(df_tmp.loc[df_tmp['PERMNO'].isin(ls_short_asts), 'LS_NTRT1M'].tolist()).T  # Next returns
+df_short_asts_rtns.columns = ls_short_asts
+df_port_perf.at[pos_tmp, 'S_POS'] = dict(zip(ls_short_asts, (s_short_w * df_port_perf.loc[pos_tmp, 'PORT_S']).tolist()))
+df_port_perf.at[pos_tmp, 'S_WT'] = dict(zip(ls_short_asts, s_short_w.tolist()))
+
+'''
+
+'''    
+# Turnover (after rebalancing)
+if ls_reb_dates[i] != ls_dates[0]:  # No turnover at initial allocation
+    df_port_perf.loc[pos_tmp, 'L_TO'] = get_turnover(df_port_perf, pos_tmp, leg='L')
+    df_port_perf.loc[pos_tmp, 'S_TO'] = get_turnover(df_port_perf, pos_tmp, leg='S')
+'''
