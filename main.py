@@ -217,9 +217,9 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 
 
 
-port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL', n_asts_long=25, w_meth_long='MN', pct_long=300,
-                 sig_short='ZS_VAL', n_asts_short=25, w_meth_short='MN', pct_short=200,
-                 ind_const='NI', reb_freq='Q', min_short_me=1000, max_short_cl=0.4)
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_long=25, w_meth_long='MN', pct_long=300,
+                 sig_short='ZS_VAL_QLT_AMOM', n_asts_short=25, w_meth_short='MN', pct_short=200,
+                 ind_const='NI', reb_freq='Y', min_short_me=1000, max_short_cl=0.4, tc_bps=20)
 df_port_perf = port.tab_port_perf()
 df_port_chars = port.tab_port_chars(output_perf=False)
 

@@ -464,7 +464,7 @@ class Portfolio:
                          'ZS_VAL_QLT': 'VQ', 'ZS_VAL_QLT_MOM': 'VQM', 'ZS_VAL_QLT_AMOM': 'VQAM'}
         self.port_name = '_'.join([self.dic_sigs[sig_long], str(int(n_asts_long)), w_meth_long, str(int(pct_long)),
                                    self.dic_sigs[sig_short], str(int(n_asts_short)), w_meth_short, str(int(pct_short)),
-                                   ind_const, str(int(min_short_me)), str(int(max_short_cl * 100)), reb_freq])
+                                   ind_const, str(int(min_short_me)), str(int(max_short_cl * 100)), str(int(tc_bps)), reb_freq])
 
     def get_ls_asts(self, df_data, leg):
         # Min market cap to avoid short small caps
@@ -624,8 +624,8 @@ class Portfolio:
         # Initialization
         dic_cols = {'DATE': 'datetime64[ns]', 'PORT_C': 'float64', 'PORT_L': 'float64',
                     'PORT_S': 'float64', 'PORT_NAV': 'float64', 'PORT_LEV': 'float64', 'PORT_RTNS': 'float64',
-                    'L_RTNS': 'float64', 'L_POS': 'object', 'L_WT': 'object', 'L_TO': 'float64', 'L_ASTS_RTNS': 'object',
-                    'S_RTNS': 'float64', 'S_POS': 'object', 'S_WT': 'object', 'S_TO': 'float64', 'S_ASTS_RTNS': 'object'}
+                    'L_RTNS': 'float64', 'L_POS': 'object', 'L_WT': 'object', 'L_TO': 'float64', 'L_TC': 'float64', 'L_ASTS_RTNS': 'object',
+                    'S_RTNS': 'float64', 'S_POS': 'object', 'S_WT': 'object', 'S_TO': 'float64', 'S_TC': 'float64', 'S_ASTS_RTNS': 'object'}
         df_port_perf = pd.DataFrame(columns=list(dic_cols.keys())).astype(dtype=dic_cols)
         ls_dates = list(self.dic_asts_data.keys())
 
@@ -761,8 +761,8 @@ class Portfolio:
                 df_port_perf.at[pos_tmp, 'S_WT'] = dict(zip(ls_short_asts, (np.array(list(df_port_perf.at[pos_tmp, 'S_POS'].values())) / df_port_perf.loc[pos_tmp, 'PORT_S']).tolist()))
 
                 # Turnover
-                df_port_perf.loc[pos_tmp, 'L_TO'] = get_turnover(df_port_perf, pos_tmp, leg='L')
-                df_port_perf.loc[pos_tmp, 'S_TO'] = get_turnover(df_port_perf, pos_tmp, leg='S')
+                #df_port_perf.loc[pos_tmp, 'L_TO'] = get_turnover(df_port_perf, pos_tmp, leg='L')
+                #df_port_perf.loc[pos_tmp, 'S_TO'] = get_turnover(df_port_perf, pos_tmp, leg='S')
 
                 # Portfolio (L/S)
                 df_port_perf.loc[pos_tmp, 'PORT_C'] = df_port_perf.loc[(pos_tmp - 1), 'PORT_C']  # Assumption: no interest on cash (possible to use risk-free rate)
@@ -771,14 +771,12 @@ class Portfolio:
                 df_port_perf.loc[pos_tmp, 'PORT_RTNS'] = (df_port_perf.loc[pos_tmp, 'PORT_NAV'] / df_port_perf.loc[(pos_tmp - 1), 'PORT_NAV']) - 1
                 df_port_perf.loc[pos_tmp, 'NET_EXP_PCT'] = (df_port_perf.loc[pos_tmp, 'PORT_L'] - df_port_perf.loc[pos_tmp, 'PORT_S']) / df_port_perf.loc[pos_tmp, 'PORT_NAV']
 
-
-        # Merge factors data
-        df_port_perf = pd.merge(df_port_perf, self.df_facs_data.drop(columns=['MKTRF','SMB','HML','UMD']), on='DATE', how='inner')
+        # Turnover zero on intermediary dates
+        df_port_perf[['L_TO', 'L_TC', 'S_TO', 'S_TC']] = df_port_perf[['L_TO', 'L_TC', 'S_TO', 'S_TC']].fillna(0)
+        # Merge risk-free rate data
+        df_port_perf = pd.merge(df_port_perf, self.df_facs_data.drop(columns=['MKTRF', 'SMB', 'HML', 'UMD']), on='DATE', how='inner')
         df_port_perf = df_port_perf.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
-
         df_port_perf['LA_RTNS'] = df_port_perf['NET_EXP_PCT']*df_port_perf['L_RTNS'] + (1-df_port_perf['NET_EXP_PCT'])*df_port_perf['RF']
-
-
         return df_port_perf
 
     def tab_port_chars(self, output_perf=False):
@@ -820,7 +818,7 @@ class Portfolio:
             df_port_perf.to_pickle(Path.joinpath(paths.get('output'), 'ports', (self.port_name + '.pkl')))
 
         # Merge factors data
-        df_port_perf = pd.merge(df_port_perf, self.df_facs_data, on='DATE', how='inner')
+        df_port_perf = pd.merge(df_port_perf, self.df_facs_data.drop(columns=['RF']), on='DATE', how='inner')
         df_port_perf = df_port_perf.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
 
         # Initialization
