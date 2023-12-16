@@ -218,6 +218,8 @@ port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_met
 df_port_perf = port.tab_port_perf()
 df_port_chars = port.tab_port_chars(output_perf=False)
 
+# Sector average counts
+df_sec_avg_counts = port.get_df_sec_avg_counts()
 
 # TODO: check results
 with open(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'), 'rb') as file:
@@ -257,6 +259,5 @@ plt.close()
 
 
 
-# Illustrations
-df_sec_avg_counts = fn.get_df_sec_avg_counts(dic_data)
+
 

@@ -853,11 +853,11 @@ class Portfolio:
 
         # Parameters combo
         df_port_chars.loc[0, 'NAME'] = self.port_name
-        df_port_chars.loc[0, 'L_SIG'] = self.sig_long
+        df_port_chars.loc[0, 'L_SIG'] = self.dic_sigs[self.sig_long]
         df_port_chars.loc[0, 'L_N_ASTS'] = self.n_asts_long
         df_port_chars.loc[0, 'L_W_METH'] = self.w_meth_long
         df_port_chars.loc[0, 'L_PCT'] = self.pct_long
-        df_port_chars.loc[0, 'S_SIG'] = self.sig_short
+        df_port_chars.loc[0, 'S_SIG'] = self.dic_sigs[self.sig_short]
         df_port_chars.loc[0, 'S_N_ASTS'] = self.n_asts_short
         df_port_chars.loc[0, 'S_W_METH'] = self.w_meth_short
         df_port_chars.loc[0, 'S_PCT'] = self.pct_short
@@ -865,6 +865,7 @@ class Portfolio:
         df_port_chars.loc[0, 'REB_FREQ'] = self.reb_freq
 
         # Portfolio (L/S)
+        df_port_chars.loc[0, 'PORT_NAV_T'] = df_port_perf.iloc[-1]['PORT_NAV']
         df_port_chars.loc[0, 'ANN_MEAN'] = s_port_rtns.mean() * 12
         df_port_chars.loc[0, 'ANN_VOL'] = np.sqrt(s_port_rtns.var() * 12)
         df_port_chars.loc[0, 'SHARPE'] = (df_port_chars.loc[0, 'ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'ANN_VOL']
@@ -891,6 +892,7 @@ class Portfolio:
         # Long leg
         df_drawdown = get_drawdown(s_long_rtns)
         s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
+        df_port_chars.loc[0, 'PORT_L_T'] = df_port_perf.iloc[-1]['PORT_L']
         df_port_chars.loc[0, 'L_ANN_MEAN'] = s_long_rtns.mean() * 12
         df_port_chars.loc[0, 'L_ANN_VOL'] = np.sqrt(s_long_rtns.var() * 12)
         df_port_chars.loc[0, 'L_SHARPE'] = (df_port_chars.loc[0, 'L_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'L_ANN_VOL']
@@ -902,6 +904,7 @@ class Portfolio:
         # Short leg
         df_drawdown = get_drawdown(s_short_rtns)
         s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
+        df_port_chars.loc[0, 'PORT_S_T'] = df_port_perf.iloc[-1]['PORT_S']
         df_port_chars.loc[0, 'S_ANN_MEAN'] = s_short_rtns.mean() * 12
         df_port_chars.loc[0, 'S_ANN_VOL'] = np.sqrt(s_short_rtns.var() * 12)
         df_port_chars.loc[0, 'S_SHARPE'] = (df_port_chars.loc[0, 'S_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'S_ANN_VOL']
@@ -917,7 +920,7 @@ def get_df_port_chars(combo):
         dic_data = pickle.load(file)
     port = Portfolio(dic_data, sig_long=combo[0], n_asts_long=combo[1], w_meth_long=combo[4], pct_long=combo[5][0],
                      sig_short=combo[2], n_asts_short=combo[3], w_meth_short=combo[4], pct_short=combo[5][1],
-                     ind_const=combo[6], reb_freq=combo[7], min_short_me=1000, max_short_cl=0.5)
+                     ind_const=combo[6], reb_freq=combo[7])
     df_port_chars = port.tab_port_chars(output_perf=False)
     return df_port_chars
 
