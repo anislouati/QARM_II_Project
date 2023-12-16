@@ -227,34 +227,76 @@ with open(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'), 'rb') as fil
 
 
 # %%
+
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
+                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=0, spr_bps=50, b_cost=True)
+df_port_perf = port.tab_port_perf()
+df_port_chars = port.tab_port_chars(output_perf=False)
+
+test = dic_data['df_facs_data']
+
 def perf_output():
     return
 
+
+port_1 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
+                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=0, spr_bps=0, b_cost=False)
+
+df_port_perf_1 = port_1.tab_port_perf()
+
+port_2 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
+                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=20, spr_bps=0, b_cost=False)
+
+df_port_perf_2 = port_2.tab_port_perf()
+
+port_3 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
+                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=0, spr_bps=50, b_cost=True)
+
+df_port_perf_3 = port_3.tab_port_perf()
+
 for i in range(len(df_port_perf)):
     if i == 0:
-        df_port_perf.loc[i, ['L_NAV']] = 100
-        df_port_perf.loc[i, ['S_NAV']] = 100
-    else:
-        df_port_perf.loc[i, ['L_NAV']] = np.array(df_port_perf.loc[i - 1, ['L_NAV']])[0] * (1 + np.array(df_port_perf.loc[i, ['L_RTNS']])[0])
-        df_port_perf.loc[i, ['S_NAV']] = np.array(df_port_perf.loc[i - 1, ['S_NAV']])[0] * (1 + np.array(df_port_perf.loc[i, ['S_RTNS']])[0])
+        df_port_perf_1.loc[i, ['L_NAV']] = 100
+        df_port_perf_1.loc[i, ['S_NAV']] = 100
+        df_port_perf_2.loc[i, ['L_NAV']] = 100
+        df_port_perf_2.loc[i, ['S_NAV']] = 100
 
-df_tpm = df_port_perf.set_index('DATE')
+        df_port_perf_1.loc[i, ['LA_NAV']] = 100
+        df_port_perf_2.loc[i, ['LA_NAV']] = 100
+        df_port_perf_3.loc[i, ['LA_NAV']] = 100
+
+    else:
+        df_port_perf_1.loc[i, ['L_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['L_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['L_RTNS']])[0])
+        df_port_perf_1.loc[i, ['S_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['S_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['S_RTNS']])[0])
+        df_port_perf_2.loc[i, ['L_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['L_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['L_RTNS']])[0])
+        df_port_perf_2.loc[i, ['S_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['S_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['S_RTNS']])[0])
+
+        df_port_perf_1.loc[i, ['LA_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['LA_RTNS']])[0])
+        df_port_perf_2.loc[i, ['LA_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['LA_RTNS']])[0])
+        df_port_perf_3.loc[i, ['LA_NAV']] = np.array(df_port_perf_3.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_3.loc[i, ['LA_RTNS']])[0])
+
+df_tpm_1 = df_port_perf_1.set_index('DATE')
+df_tpm_2 = df_port_perf_2.set_index('DATE')
+df_tpm_3 = df_port_perf_3.set_index('DATE')
 
 # Plot portfolio performances
 sns.set(context='paper', style='ticks', font_scale=1.0)
 fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
 #ax.set_title('Portfolios Performances', size=28)
 ax.axhline(y=100, color='black', ls='--', lw=1)
-ax.plot(df_tpm['PORT_NAV'],
-        label='PORT_NAV' + ' (L = ' + str(port.pct_long) + ', S = ' + str(port.pct_short) + ', C = ' + str(100 - (port.pct_long - port.pct_short)) + ')',
-        color='red', lw=3)
-ax.plot(df_tpm['L_NAV'], label='L_NAV' + ' (' + str(port.sig_long) + ', ' + str(port.n_asts_long) + ', ' + str(port.w_meth_long) + ', ' + str(port.ind_const) + ', ' + str(port.reb_freq) + ')', color='green', lw=3)
-ax.plot(df_tpm['S_NAV'], label='S_NAV' + ' (' + str(port.sig_short) + ', ' + str(port.n_asts_short) + ', ' + str(port.w_meth_short) + ', ' + str(port.ind_const) + ', ' + str(port.reb_freq) + ')', color='blue', lw=3)
+ax.plot(df_tpm_1['L_NAV'], label='L_NAV' + ' (' + str(port_1.sig_long) + ', ' + str(port_1.n_asts_long) + ', ' + str(port_1.w_meth_long) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', color='green', lw=3)
+ax.plot(df_tpm_1['S_NAV'], label='S_NAV' + ' (' + str(port_1.sig_short) + ', ' + str(port_1.n_asts_short) + ', ' + str(port.w_meth_short) + ', ' + str(port.ind_const) + ', ' + str(port.reb_freq) + ')', color='blue', lw=3)
+ax.plot(df_tpm_2['L_NAV'], label='L_NAV_TC' + ' (' + str(port.sig_long) + ', ' + str(port.n_asts_long) + ', ' + str(port.w_meth_long) + ', ' + str(port.ind_const) + ', ' + str(port.reb_freq) + ')', color='green', lw=3)
+ax.plot(df_tpm_2['S_NAV'], label='S_NAV_TC' + ' (' + str(port.sig_short) + ', ' + str(port.n_asts_short) + ', ' + str(port.w_meth_short) + ', ' + str(port.ind_const) + ', ' + str(port.reb_freq) + ')', color='blue', lw=3)
 ax.tick_params(axis='both', labelsize=18)
 ax.legend(loc='upper left', fontsize=16)
 fig.tight_layout()
 plt.show()
-fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_' + port.port_name + '.png'))
+fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_long_vs_short' + port.port_name + '.png'))
 plt.close()
 
 

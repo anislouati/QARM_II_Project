@@ -444,7 +444,7 @@ def get_ZS(df_data):
 class Portfolio:
     def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
                  sig_short, n_asts_short, w_meth_short, pct_short,
-                 ind_const, reb_freq, min_short_me=1000, max_short_cl=0.5, tc_bps=20):
+                 ind_const, reb_freq, min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=0, b_cost=False):
         self.dic_data = dic_data
         self.sig_long = sig_long
         self.n_asts_long = n_asts_long
@@ -459,6 +459,8 @@ class Portfolio:
         self.min_short_me = min_short_me
         self.max_short_cl = max_short_cl
         self.tc_bps = tc_bps
+        self.spr_bps = spr_bps
+        self.b_cost = b_cost
         self.dic_asts_data = dic_data['dic_asts_data']
         self.ls_dates = list(self.dic_asts_data.keys())
         self.df_facs_data = dic_data['df_facs_data']
@@ -684,11 +686,16 @@ class Portfolio:
         df_port_perf.loc[0, 'PORT_S'] += (self.pct_short / 100) * df_port_perf.loc[0, 'PORT_NAV']  # Open short
         df_port_perf.loc[0, 'PORT_LEV'] = df_port_perf.loc[0, 'PORT_S'] / df_port_perf.loc[0, 'PORT_NAV']  # Leverage (D/E)
         df_port_perf.loc[0, 'NET_EXP_PCT'] = (df_port_perf.loc[0, 'PORT_L'] - df_port_perf.loc[0, 'PORT_S']) / df_port_perf.loc[0, 'PORT_NAV']
+        df_port_perf.loc[0, 'S_BC'] = 0
 
         # Iteration over rebalancing dates
         for i in tqdm(range(len(ls_reb_dates)), desc=self.port_name, disable=True):
             df_tmp = self.dic_asts_data[ls_reb_dates[i]]
             pos_tmp = (n_dates * i)
+
+            if self.b_cost == True:
+                df_tmp_2 = self.df_facs_data.set_index('DATE').loc[ls_reb_dates[i],'RF']
+                df_port_perf.loc[pos_tmp, 'RF'] = df_tmp_2
 
             if ls_reb_dates[i] == ls_dates[0]:
                 # Long leg
@@ -734,9 +741,10 @@ class Portfolio:
                 # Liquidate positions
                 df_port_perf.loc[pos_tmp, 'PORT_C'] += (df_port_perf.loc[pos_tmp, 'PORT_L'] - df_port_perf.loc[pos_tmp, 'L_TC'])
                 df_port_perf.loc[pos_tmp, 'PORT_L'] = 0
-                df_port_perf.loc[pos_tmp, 'PORT_C'] -= (df_port_perf.loc[pos_tmp, 'PORT_S'] + df_port_perf.loc[pos_tmp, 'S_TC'])
+                df_port_perf.loc[pos_tmp, 'PORT_C'] -= (df_port_perf.loc[pos_tmp, 'PORT_S'] + df_port_perf.loc[pos_tmp, 'S_TC'] + df_port_perf.loc[pos_tmp, 'S_BC'])
                 df_port_perf.loc[pos_tmp, 'PORT_S'] = 0
                 df_port_perf.loc[pos_tmp, 'PORT_NAV'] = df_port_perf.loc[pos_tmp, 'PORT_C']
+                df_port_perf.loc[pos_tmp, 'S_BC'] = 0
 
                 # Return on portfolio (L/S)
                 df_port_perf.loc[pos_tmp, 'PORT_RTNS'] = (df_port_perf.loc[pos_tmp, 'PORT_NAV'] / df_port_perf.loc[(pos_tmp - 1), 'PORT_NAV']) - 1
@@ -763,6 +771,14 @@ class Portfolio:
             for j in range(1, (n_dates + 1)):
                 pos_tmp = (n_dates * i) + j
                 df_port_perf.loc[pos_tmp, 'DATE'] = ls_dates[pos_tmp]
+
+                # Short Borrowing cost
+                if self.b_cost == True:
+                    df_tmp_2 = self.df_facs_data.set_index('DATE').loc[ls_dates[pos_tmp], 'RF']
+                    df_port_perf.loc[pos_tmp, 'RF'] = df_tmp_2
+                    df_port_perf.loc[pos_tmp, 'S_BC'] = df_port_perf.loc[pos_tmp - 1, 'S_BC'] + df_port_perf.loc[(pos_tmp - 1), 'PORT_S'] * (df_port_perf.loc[(pos_tmp - 1), 'RF'] + (self.spr_bps / 12 / 10000))
+                if self.b_cost == False:
+                    df_port_perf.loc[pos_tmp, 'S_BC'] = 0
 
                 # Long leg
                 a_long_asts_rtns = np.array(df_long_asts_rtns.loc[j - 1])
@@ -791,8 +807,9 @@ class Portfolio:
         df_port_perf[['L_TO', 'L_TC', 'S_TO', 'S_TC']] = df_port_perf[['L_TO', 'L_TC', 'S_TO', 'S_TC']].fillna(0)
 
         # Merge risk-free rate data
-        df_port_perf = pd.merge(df_port_perf, self.df_facs_data.drop(columns=['MKTRF', 'SMB', 'HML', 'UMD']), on='DATE', how='inner')
-        df_port_perf = df_port_perf.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
+        if self.b_cost == False:
+            df_port_perf = pd.merge(df_port_perf, self.df_facs_data.drop(columns=['MKTRF', 'SMB', 'HML', 'UMD']), on='DATE', how='inner')
+            df_port_perf = df_port_perf.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
 
         # Long leg adjusted for net exposure
         df_port_perf['LA_RTNS'] = (df_port_perf['NET_EXP_PCT'] * df_port_perf['L_RTNS']) + ((1 - df_port_perf['NET_EXP_PCT']) * df_port_perf['RF'])
