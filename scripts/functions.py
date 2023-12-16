@@ -830,7 +830,7 @@ class Portfolio:
         df_drawdown = get_drawdown(s_port_rtns)
         s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
         X = sm.add_constant(df_port_perf.loc[1:, ['MKTRF', 'SMB', 'HML', 'UMD']])
-        model = sm.OLS((df_port_perf.loc[1:, 'PORT_RTNS'] - df_port_perf.loc[1:, 'RF']), X).fit()
+        model = sm.OLS((df_port_perf.loc[1:, 'PORT_RTNS'] - df_port_perf.loc[1:, 'RF']), X).fit(cov_type='HC3')  # Heteroskedasticity-consistent estimator
         s_long_rtns = pd.Series(df_port_perf.loc[1:, 'L_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
         s_short_rtns = pd.Series(df_port_perf.loc[1:, 'S_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
 

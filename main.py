@@ -17,15 +17,14 @@ import warnings
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
 # Project settings
 pd.set_option('display.width', 400)
 pd.set_option('display.max_columns', 10)
 
 # Warnings management
-warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 warnings.filterwarnings(action='ignore', category=RuntimeWarning)
-
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning)
 
 # %%
 # **************************************************
@@ -233,12 +232,12 @@ with open(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'), 'rb') as fil
 
 
 
-with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
-    dic_data = pickle.load(file)
+
 
 
 # %%
-df_sec_avg_counts = get_df_sec_avg_counts(dic_data)
+# Illustrations
+df_sec_avg_counts = fn.get_df_sec_avg_counts(dic_data)
 
 
 
@@ -294,3 +293,160 @@ fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_' + port.port_name +
 plt.close()
 
 
+# %%
+
+
+
+
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=300,
+                 sig_short='ZS_VAL_QLT', n_asts_short=20, w_meth_short='EW', pct_short=200,
+                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5)
+
+df_port_perf = port.tab_port_perf()
+
+dic_asts_data = dic_data['dic_asts_data']
+ls_dates = list(dic_asts_data.keys())
+df_tmp = dic_asts_data[ls_dates[-1]]
+
+
+def get_df_sec_avg_counts(dic_data):
+    dic_asts_data = dic_data['dic_asts_data']
+    ls_dates = list(dic_asts_data.keys())
+    dic_GICS = {bytes('10', 'utf-8'): 'Energy', bytes('15', 'utf-8'): 'Materials', bytes('20', 'utf-8'): 'Industrials',
+                bytes('25', 'utf-8'): 'Consumer Discretionary', bytes('30', 'utf-8'): 'Consumer Stables', bytes('35', 'utf-8'): 'Health Care',
+                bytes('40', 'utf-8'): 'Financials', bytes('45', 'utf-8'): 'Information Technology', bytes('50', 'utf-8'): 'Communication Services',
+                bytes('55', 'utf-8'): 'Utilities', bytes('60', 'utf-8'): 'Real Estate'}
+
+    ls_dfs = []
+    for i in range(len(ls_dates)):
+        s_tmp_1 = pd.Series([np.nan for i in range(len(list(dic_GICS.keys())))], index=sorted(list(dic_GICS.keys())))
+        s_tmp_2 = dic_asts_data[ls_dates[i]]['GSECTOR'].value_counts().rename(None)
+        for sec in s_tmp_2.index.tolist():
+            s_tmp_1[sec] = s_tmp_2[sec]
+            s_tmp_1 = s_tmp_1.rename(ls_dates[i])
+        ls_dfs += [pd.DataFrame(s_tmp_1).transpose()]
+
+    df_sec_counts = pd.concat(ls_dfs, axis=0).fillna(0)
+    df_sec_counts = df_sec_counts.reset_index(drop=False, names=['DATE'])
+    df_sec_counts['YEAR'] = df_sec_counts['DATE'].dt.year.astype(float)
+    df_sec_avg_counts = df_sec_counts.groupby('YEAR')[list(dic_GICS.keys())].mean()
+    df_sec_avg_counts = df_sec_avg_counts.rename(columns=dic_GICS)
+    return df_sec_avg_counts
+
+# %%%
+
+import plotly.graph_objs as go
+import plotly.offline as pyo
+import pandas as pd
+import numpy as np
+
+with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
+    dic_data = pickle.load(file)
+
+def plot_zscores(dic_data, date, ls_zscores, leg):
+    dic_asts_data = dic_data['dic_asts_data']
+    df_zscores = dic_asts_data[date]
+    df_zscores = df_zscores[['PERMNO', 'CONM', 'TIC'] + ls_zscores]
+    ls_permnos = df_zscores['PERMNO'].unique().tolist()
+    df_zscores['ZS_INT'] = df_zscores[ls_zscores].mean(axis=1, skipna=False)
+
+    ascending = False
+    if leg == 'L':
+        ascending = False
+    elif leg == 'S':
+        ascending = True
+
+    n_asts = 50
+    dic_s_zscores = {}
+    for i in range(len(ls_zscores)):
+        dic_s_zscores[i] = pd.Series(list(df_zscores[ls_zscores[i]]), index=ls_permnos, dtype='float64').nlargest(n_asts).sort_values(ascending=ascending)
+    dic_s_zscores[len(ls_zscores)] = pd.Series(list(df_zscores['ZS_INT']), index=ls_permnos, dtype='float64').nlargest(n_asts).sort_values(ascending=ascending)
+
+    if len(ls_zscores) == 2:
+        ls_asts_0 = sorted(dic_s_zscores[0].index.tolist())  # ZS_0
+        ls_asts_1 = sorted(dic_s_zscores[1].index.tolist())  # ZS_1
+        ls_asts_2 = sorted(dic_s_zscores[2].index.tolist())  # ZS_INT
+
+        ls_asts_3 = [ast for ast in ls_asts_0 if ast not in ls_asts_2]  # Only ZS_0
+        ls_asts_4 = [ast for ast in ls_asts_1 if ast not in ls_asts_2]  # Only ZS_1
+        ls_asts_5 = [ast for ast in ls_permnos if (ast not in ls_asts_0) and (ast not in ls_asts_1) and (ast not in ls_asts_2)]  # All other
+
+        # Create scatter plot traces
+        trace_0 = go.Scatter(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_2), ls_zscores[0]],
+                             y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_2), ls_zscores[1]],
+                             mode='markers', marker=dict(size=8, color='green'), name='All Points')
+        trace_1 = go.Scatter(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_3), ls_zscores[0]],
+                             y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_3), ls_zscores[1]],
+                             mode='markers', marker=dict(size=8, color='red'), name='All Points')
+        trace_2 = go.Scatter(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_4), ls_zscores[0]],
+                             y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_4), ls_zscores[1]],
+                             mode='markers', marker=dict(size=8, color='blue'), name='All Points')
+        trace_3 = go.Scatter(x=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_5), ls_zscores[0]],
+                             y=df_zscores.loc[df_zscores['PERMNO'].isin(ls_asts_5), ls_zscores[1]],
+                             mode='markers', marker=dict(size=8, color='black'), name='All Points')
+
+        # Create layout
+        layout = go.Layout(title='Interactive Scatter Plot with Highlighted Points',
+                           xaxis=dict(title='X-axis'), yaxis=dict(title='Y-axis'))
+
+        # Create figure with both traces
+        fig = go.Figure(data=[trace_0, trace_1, trace_2, trace_3], layout=layout)
+
+        # Save plot as an HTML file
+        pyo.plot(fig, filename='scatter_plot_highlighted.html')
+
+plot_zscores(dic_data, date=datetime(2000, 12, 31), ls_zscores=['ZS_VAL', 'ZS_QLT'], leg='L')
+
+# %%
+
+
+
+
+
+
+
+np.random.seed(0)
+x = np.random.randn(100)
+y = 2 * x + np.random.randn(100)
+
+data = {'x': x, 'y': y}
+df = pd.DataFrame(data)
+
+# Create scatter plot trace
+trace = go.Scatter(x=df['x'], y=df['y'], mode='markers', marker=dict(size=8, color='blue'), name='Scatter Plot')
+
+# Create layout
+layout = go.Layout(title='Interactive Scatter Plot', xaxis=dict(title='X-axis'), yaxis=dict(title='Y-axis'))
+
+# Create figure
+fig = go.Figure(data=[trace], layout=layout)
+
+# Save plot as an HTML file
+pyo.plot(fig, filename='scatter_plot.html')
+
+
+
+
+# Sample data for a 3D scatter plot
+np.random.seed(0)
+x = np.random.randn(100)
+y = 2 * x + np.random.randn(100)
+z = 3 * x - y + np.random.randn(100)  # Adding a third dimension 'z'
+
+data = {'x': x, 'y': y, 'z': z}  # Including 'z' in the data
+df = pd.DataFrame(data)
+
+# Create 3D scatter plot trace
+trace = go.Scatter3d(x=df['x'], y=df['y'], z=df['z'], mode='markers',
+                      marker=dict(size=8, color='blue'), name='Scatter Plot')
+
+# Create layout for 3D plot
+layout = go.Layout(title='Interactive 3D Scatter Plot', scene=dict(xaxis=dict(title='X-axis'),
+                                                                  yaxis=dict(title='Y-axis'),
+                                                                  zaxis=dict(title='Z-axis')))
+
+# Create figure
+fig = go.Figure(data=[trace], layout=layout)
+
+# Save 3D plot as an HTML file
+pyo.plot(fig, filename='scatter_3d_plot.html')
