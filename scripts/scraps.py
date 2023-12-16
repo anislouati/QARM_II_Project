@@ -1105,3 +1105,29 @@ df_port_perf = port.tab_port_perf()
 df_port_chars = port.tab_port_chars(output_perf=False)
 '''
 
+'''
+def get_df_sec_avg_counts(dic_data):
+    dic_asts_data = dic_data['dic_asts_data']
+    ls_dates = list(dic_asts_data.keys())
+    dic_GICS = {bytes('10', 'utf-8'): 'Energy', bytes('15', 'utf-8'): 'Materials', bytes('20', 'utf-8'): 'Industrials',
+                bytes('25', 'utf-8'): 'Consumer Discretionary', bytes('30', 'utf-8'): 'Consumer Stables', bytes('35', 'utf-8'): 'Health Care',
+                bytes('40', 'utf-8'): 'Financials', bytes('45', 'utf-8'): 'Information Technology', bytes('50', 'utf-8'): 'Communication Services',
+                bytes('55', 'utf-8'): 'Utilities', bytes('60', 'utf-8'): 'Real Estate'}
+
+    ls_dfs = []
+    for i in range(len(ls_dates)):
+        s_tmp_1 = pd.Series([np.nan for i in range(len(list(dic_GICS.keys())))], index=sorted(list(dic_GICS.keys())))
+        s_tmp_2 = dic_asts_data[ls_dates[i]]['GSECTOR'].value_counts().rename(None)
+        for sec in s_tmp_2.index.tolist():
+            s_tmp_1[sec] = s_tmp_2[sec]
+            s_tmp_1 = s_tmp_1.rename(ls_dates[i])
+        ls_dfs += [pd.DataFrame(s_tmp_1).transpose()]
+
+    df_sec_counts = pd.concat(ls_dfs, axis=0).fillna(0)
+    df_sec_counts = df_sec_counts.reset_index(drop=False, names=['DATE'])
+    df_sec_counts['YEAR'] = df_sec_counts['DATE'].dt.year.astype(float)
+    df_sec_avg_counts = df_sec_counts.groupby('YEAR')[list(dic_GICS.keys())].mean()
+    df_sec_avg_counts = df_sec_avg_counts.rename(columns=dic_GICS)
+    return df_sec_avg_counts
+'''
+

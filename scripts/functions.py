@@ -460,12 +460,33 @@ class Portfolio:
         self.max_short_cl = max_short_cl
         self.tc_bps = tc_bps
         self.dic_asts_data = dic_data['dic_asts_data']
+        self.ls_dates = list(self.dic_asts_data.keys())
         self.df_facs_data = dic_data['df_facs_data']
         self.dic_sigs = {'ZS_VAL': 'VAL', 'ZS_QLT': 'QLT', 'ZS_MOM': 'MOM', 'ZS_RMOM': 'RMOM', 'ZS_AMOM': 'AMOM',
                          'ZS_VAL_QLT': 'VQ', 'ZS_VAL_QLT_MOM': 'VQM', 'ZS_VAL_QLT_AMOM': 'VQAM'}
-        self.port_name = '_'.join([self.dic_sigs[sig_long], str(int(n_asts_long)), w_meth_long, str(int(pct_long)),
-                                   self.dic_sigs[sig_short], str(int(n_asts_short)), w_meth_short, str(int(pct_short)),
-                                   ind_const, str(int(min_short_me)), str(int(max_short_cl * 100)), str(int(tc_bps)), reb_freq])
+        self.dic_GICS = {bytes('10', 'utf-8'): 'Energy', bytes('15', 'utf-8'): 'Materials', bytes('20', 'utf-8'): 'Industrials',
+                         bytes('25', 'utf-8'): 'Consumer Discretionary', bytes('30', 'utf-8'): 'Consumer Stables', bytes('35', 'utf-8'): 'Health Care',
+                         bytes('40', 'utf-8'): 'Financials', bytes('45', 'utf-8'): 'Information Technology', bytes('50', 'utf-8'): 'Communication Services',
+                         bytes('55', 'utf-8'): 'Utilities', bytes('60', 'utf-8'): 'Real Estate'}
+        self.port_name = '_'.join([self.dic_sigs[sig_long], str(n_asts_long), w_meth_long, str(pct_long),
+                                   self.dic_sigs[sig_short], str(n_asts_short), w_meth_short, str(pct_short), ind_const, reb_freq])
+
+    def get_df_sec_avg_counts(self):
+        ls_dfs = []
+        for i in range(len(self.ls_dates)):
+            s_tmp_1 = pd.Series([np.nan for i in range(len(list(self.dic_GICS.keys())))], index=sorted(list(self.dic_GICS.keys())))
+            s_tmp_2 = self.dic_asts_data[self.ls_dates[i]]['GSECTOR'].value_counts().rename(None)
+            for sec in s_tmp_2.index.tolist():
+                s_tmp_1[sec] = s_tmp_2[sec]
+                s_tmp_1 = s_tmp_1.rename(self.ls_dates[i])
+            ls_dfs += [pd.DataFrame(s_tmp_1).transpose()]
+
+        df_sec_counts = pd.concat(ls_dfs, axis=0).fillna(0)
+        df_sec_counts = df_sec_counts.reset_index(drop=False, names=['DATE'])
+        df_sec_counts['YEAR'] = df_sec_counts['DATE'].dt.year.astype(float)
+        df_sec_avg_counts = df_sec_counts.groupby('YEAR')[list(self.dic_GICS.keys())].mean()
+        df_sec_avg_counts = df_sec_avg_counts.rename(columns=self.dic_GICS)
+        return df_sec_avg_counts
 
     def get_ls_asts(self, df_data, leg):
         # Min market cap to avoid short small caps
@@ -628,6 +649,10 @@ class Portfolio:
                     'S_RTNS': 'float64', 'S_POS': 'object', 'S_WT': 'object', 'S_TO': 'float64', 'S_TC': 'float64', 'S_ASTS_RTNS': 'object'}
         df_port_perf = pd.DataFrame(columns=list(dic_cols.keys())).astype(dtype=dic_cols)
         ls_dates = list(self.dic_asts_data.keys())
+        df_long_asts_rtns = pd.DataFrame()
+        ls_long_asts = []
+        df_short_asts_rtns = pd.DataFrame()
+        ls_short_asts = []
 
         # Number of (EOM) dates in rebalancing period
         n_dates = 0
@@ -902,29 +927,7 @@ def get_df_port_chars(combo):
 # *** Branch: PORTFOLIO ANALYSIS                 ***
 # **************************************************
 
-def get_df_sec_avg_counts(dic_data):
-    dic_asts_data = dic_data['dic_asts_data']
-    ls_dates = list(dic_asts_data.keys())
-    dic_GICS = {bytes('10', 'utf-8'): 'Energy', bytes('15', 'utf-8'): 'Materials', bytes('20', 'utf-8'): 'Industrials',
-                bytes('25', 'utf-8'): 'Consumer Discretionary', bytes('30', 'utf-8'): 'Consumer Stables', bytes('35', 'utf-8'): 'Health Care',
-                bytes('40', 'utf-8'): 'Financials', bytes('45', 'utf-8'): 'Information Technology', bytes('50', 'utf-8'): 'Communication Services',
-                bytes('55', 'utf-8'): 'Utilities', bytes('60', 'utf-8'): 'Real Estate'}
 
-    ls_dfs = []
-    for i in range(len(ls_dates)):
-        s_tmp_1 = pd.Series([np.nan for i in range(len(list(dic_GICS.keys())))], index=sorted(list(dic_GICS.keys())))
-        s_tmp_2 = dic_asts_data[ls_dates[i]]['GSECTOR'].value_counts().rename(None)
-        for sec in s_tmp_2.index.tolist():
-            s_tmp_1[sec] = s_tmp_2[sec]
-            s_tmp_1 = s_tmp_1.rename(ls_dates[i])
-        ls_dfs += [pd.DataFrame(s_tmp_1).transpose()]
-
-    df_sec_counts = pd.concat(ls_dfs, axis=0).fillna(0)
-    df_sec_counts = df_sec_counts.reset_index(drop=False, names=['DATE'])
-    df_sec_counts['YEAR'] = df_sec_counts['DATE'].dt.year.astype(float)
-    df_sec_avg_counts = df_sec_counts.groupby('YEAR')[list(dic_GICS.keys())].mean()
-    df_sec_avg_counts = df_sec_avg_counts.rename(columns=dic_GICS)
-    return df_sec_avg_counts
 
 
 
