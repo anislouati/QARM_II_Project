@@ -222,9 +222,9 @@ df_port_chars = port.tab_port_chars(output_perf=False)
 df_sec_avg_counts = port.get_df_sec_avg_counts()
 
 # TODO: check results
-with open(Path.joinpath(paths.get('output'), 'df_ports_chars.pkl'), 'rb') as file:
+with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_2.pkl'), 'rb') as file:
     df_ports_chars = pickle.load(file)
-
+df_ports_chars.to_excel(Path.joinpath(paths.get('output'), 'excels', 'df_ports_chars_2.xlsx'), index=True)
 
 # %%
 
