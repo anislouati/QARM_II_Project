@@ -867,6 +867,8 @@ class Portfolio:
         model = sm.OLS((df_port_perf.loc[1:, 'PORT_RTNS'] - df_port_perf.loc[1:, 'RF']), X).fit(cov_type='HC3')  # Heteroskedasticity-consistent estimator
         s_long_rtns = pd.Series(df_port_perf.loc[1:, 'L_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
         s_short_rtns = pd.Series(df_port_perf.loc[1:, 'S_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
+        s_long_a_rtns = pd.Series(df_port_perf.loc[1:, 'LA_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
+
 
         # Parameters combo
         df_port_chars.loc[0, 'NAME'] = self.port_name
@@ -905,6 +907,7 @@ class Portfolio:
         df_port_chars.loc[0, 't_UMD'] = model.tvalues.iloc[4]
         df_port_chars.loc[0, 'R_SQUARED'] = model.rsquared
         df_port_chars.loc[0, 'AVG_LEV'] = df_port_perf.loc[1:, 'PORT_LEV'].mean()
+        df_port_chars.loc[0, 'AVG_TO'] = df_port_perf.loc[1:, 'L_TO'].mean() * self.pct_long / 100  + df_port_perf.loc[1:, 'S_TO'].mean() * self.pct_short / 100
 
         # Long leg
         df_drawdown = get_drawdown(s_long_rtns)
@@ -929,6 +932,18 @@ class Portfolio:
         df_port_chars.loc[0, 'S_CALMAR'] = (df_port_chars.loc[0, 'S_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'S_MAX_DD']
         df_port_chars.loc[0, 'S_AVG_TO'] = df_port_perf.loc[1:, 'S_TO'].mean()
         df_port_chars.loc[0, 'S_NORM_HI'] = get_norm_herfindahl_idx(np.array(list(df_port_perf.iloc[-1]['S_WT'].values())))
+
+        # Long Adjusted
+        df_drawdown = get_drawdown(s_long_a_rtns)
+        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
+        df_port_chars.loc[0, 'LA_ANN_MEAN'] = s_long_a_rtns.mean() * 12
+        df_port_chars.loc[0, 'LA_ANN_VOL'] = np.sqrt(s_long_a_rtns.var() * 12)
+        df_port_chars.loc[0, 'LA_SHARPE'] = (df_port_chars.loc[0, 'LA_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'LA_ANN_VOL']
+        df_port_chars.loc[0, 'LA_MAX_DD'] = (-1) * s_max_drawdown['DD']
+        df_port_chars.loc[0, 'LA_CALMAR'] = (df_port_chars.loc[0, 'LA_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'LA_MAX_DD']
+        df_port_chars.loc[0, 'LA_AVG_TO'] = df_port_perf.loc[1:, 'L_TO'].mean() * (self.pct_long - self.pct_short)
+        df_port_chars.loc[0, 'LA_NORM_HI'] = get_norm_herfindahl_idx(np.array(list(df_port_perf.iloc[-1]['L_WT'].values())))
+
         return df_port_chars
 
 
