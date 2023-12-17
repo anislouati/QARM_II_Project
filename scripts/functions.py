@@ -693,7 +693,7 @@ class Portfolio:
         df_port_perf.loc[0, 'S_BC'] = 0
 
         # Iteration over rebalancing dates
-        for i in tqdm(range(len(ls_reb_dates)), desc=self.port_name, disable=False):
+        for i in tqdm(range(len(ls_reb_dates)), desc=self.port_name, disable=True):
             df_tmp = self.dic_asts_data[ls_reb_dates[i]]
             pos_tmp = (n_dates * i)
 
