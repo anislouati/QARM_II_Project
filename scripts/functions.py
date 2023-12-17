@@ -445,7 +445,7 @@ def get_ZS(df_data):
 # *** Branch: PORTFOLIO CONSTRUCTION             ***
 # **************************************************
 
-# COPY HERE
+
 class Portfolio:
     def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
                  sig_short, n_asts_short, w_meth_short, pct_short,
@@ -888,6 +888,7 @@ class Portfolio:
 
         # Portfolio (L/S)
         df_port_chars.loc[0, 'PORT_NAV_T'] = df_port_perf.iloc[-1]['PORT_NAV']
+        df_port_chars.loc[0, 'MIN_PORT_NAV'] = df_port_perf['PORT_NAV'].min()
         df_port_chars.loc[0, 'ANN_MEAN'] = s_port_rtns.mean() * 12
         df_port_chars.loc[0, 'ANN_VOL'] = np.sqrt(s_port_rtns.var() * 12)
         df_port_chars.loc[0, 'SHARPE'] = (df_port_chars.loc[0, 'ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'ANN_VOL']
@@ -946,7 +947,6 @@ class Portfolio:
         df_port_chars.loc[0, 'LA_CALMAR'] = (df_port_chars.loc[0, 'LA_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'LA_MAX_DD']
         df_port_chars.loc[0, 'LA_AVG_TO'] = df_port_perf.loc[1:, 'L_TO'].mean() * (self.pct_long - self.pct_short)
         df_port_chars.loc[0, 'LA_NORM_HI'] = get_norm_herfindahl_idx(np.array(list(df_port_perf.iloc[-1]['L_WT'].values())))
-
         return df_port_chars
 
 
