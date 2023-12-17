@@ -482,7 +482,7 @@ def tab_port_stats(list_port,file_name):
     dic_ports_stats = {}
     for i in list_port:
         df_port_chars = i.tab_port_chars(output_perf=False)
-        df_port_stats = df_port_chars[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'MAX_DD_PRD', 'AVG_TO', 'ANN_ALPHA', 't_ALPHA', 'B_MKTRF', 't_MKTRF', 'B_SMB', 't_SMB', 'B_HML', 'B_UMD', 't_UMD', 'R_SQUARED']]
+        df_port_stats = df_port_chars[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'MAX_DD_PRD', 'AVG_TO', 'ANN_ALPHA', 't_ALPHA', 'B_MKTRF', 't_MKTRF', 'B_SMB', 't_SMB', 'B_HML', 't_HML', 'B_UMD', 't_UMD', 'R_SQUARED']]
         dic_ports_stats[i.port_name] = df_port_stats
 
     df_ports_stats = pd.concat(dic_ports_stats, axis=0).droplevel(1, axis=0).T
