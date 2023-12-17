@@ -1207,7 +1207,15 @@ for i in range(len(ls_keys_1)):
     print(port.port_name)
 
 df_ports_stats = tab_port_stats(list_port,'port_stats_1_300_200')
+'''
 
+'''
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
+                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=0, spr_bps=50, b_cost=True)
+df_port_perf = port.tab_port_perf()
+df_port_chars = port.tab_port_chars(output_perf=False)
 
+test = dic_data['df_facs_data']
 '''
 

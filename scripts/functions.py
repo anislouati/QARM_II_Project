@@ -446,7 +446,7 @@ def get_ZS(df_data):
 class Portfolio:
     def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
                  sig_short, n_asts_short, w_meth_short, pct_short,
-                 ind_const, reb_freq, min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=0):
+                 ind_const, reb_freq, min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0):
         self.dic_data = dic_data
         self.sig_long = sig_long
         self.n_asts_long = n_asts_long
@@ -956,10 +956,6 @@ def get_df_port_chars(combo):
     df_port_chars = port.tab_port_chars(output_perf=False)
     return df_port_chars
 
-    if len(ls_zscores) == 2:
-        ls_asts_0 = sorted(dic_s_zscores[0].index.tolist())  # ZS_0
-        ls_asts_1 = sorted(dic_s_zscores[1].index.tolist())  # ZS_1
-        ls_asts_2 = sorted(dic_s_zscores[2].index.tolist())  # ZS_INT
 
 # %%
 # **************************************************
@@ -986,6 +982,11 @@ def plot_zscores(date, ls_zscores, leg):
         for i in range(len(ls_zscores)):
             dic_s_zscores[i] = pd.Series(list(df_zscores[ls_zscores[i]]), index=ls_permnos, dtype='float64').nsmallest(n_asts).sort_values(ascending=True)
         dic_s_zscores[len(ls_zscores)] = pd.Series(list(df_zscores['ZS_INT']), index=ls_permnos, dtype='float64').nsmallest(n_asts).sort_values(ascending=True)
+
+    if len(ls_zscores) == 2:
+        ls_asts_0 = sorted(dic_s_zscores[0].index.tolist())  # ZS_0
+        ls_asts_1 = sorted(dic_s_zscores[1].index.tolist())  # ZS_1
+        ls_asts_2 = sorted(dic_s_zscores[2].index.tolist())  # ZS_INT
 
         ls_asts_3 = [ast for ast in ls_asts_0 if (ast not in ls_asts_2)]  # Only ZS_0
         ls_asts_4 = [ast for ast in ls_asts_1 if (ast not in ls_asts_2)]  # Only ZS_1
