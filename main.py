@@ -485,7 +485,7 @@ def tab_port_stats(list_port,file_name):
         df_port_stats = df_port_chars[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'MAX_DD_PRD', 'AVG_TO', 'ANN_ALPHA', 't_ALPHA', 'B_MKTRF', 't_MKTRF', 'B_SMB', 't_SMB', 'B_HML', 't_HML', 'B_UMD', 't_UMD', 'R_SQUARED']]
         dic_ports_stats[i.port_name] = df_port_stats
 
-    df_ports_stats = pd.concat(dic_ports_stats, axis=0).droplevel(1, axis=0).T
+    df_ports_stats = pd.concat(dic_ports_stats, axis=0).droplevel(1, axis=0)
     df_ports_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
 
     return df_ports_stats
@@ -516,5 +516,5 @@ for i in range(len(ls_keys_1)):
     list_port.append(port)
     print(port.port_name)
 
-df_ports_stats = tab_port_stats(list_port,'port_stats')
+df_ports_stats = tab_port_stats(list_port,'df_port_stats')
 
