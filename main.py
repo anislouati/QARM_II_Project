@@ -238,8 +238,7 @@ dic_selected_ports = dict(zip(ls_keys, ls_values))
 dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
 
 
-
-def tab_port_stats(list_port,file_name):
+def tab_port_stats(list_port, file_name):
     dic_ports_stats = {}
     j = 1
     for i in list_port:
@@ -254,7 +253,7 @@ def tab_port_stats(list_port,file_name):
     return df_ports_stats
 
 
-def tab_perf_export(list_port,file_name):
+def tab_perf_export(list_port, file_name):
     dic_ports_stats = {}
     j = 1
     for i in list_port:
@@ -281,10 +280,9 @@ for i in range(len(ls_keys_1)):
     print(port.port_name)
 
 # Export ports stats
-df_ports_stats = tab_port_stats(list_port,'df_ports_stats')
+df_ports_stats = tab_port_stats(list_port, 'df_ports_stats')
 # Export ports navs
-df_ports_perfs = tab_perf_export(list_port,'df_ports_perfs')
-
+df_ports_perfs = tab_perf_export(list_port, 'df_ports_perfs')
 
 # Transaction cost analysis
 ls_keys_1 = ['BEST_G1', 'BEST_G2', 'BEST_G3']
@@ -308,42 +306,39 @@ for i in range(len(ls_keys_1)):
     list_port.append(port)
     print(port.port_name)
 
-df_ports_stats = tab_port_stats(list_port,'df_ports_BEST_G_TC_stats')
-df_ports_perf = tab_perf_export(list_port,'df_ports_BEST_G_TC_perfs')
-
+df_ports_stats = tab_port_stats(list_port, 'df_ports_BEST_G_TC_stats')
+df_ports_perf = tab_perf_export(list_port, 'df_ports_BEST_G_TC_perfs')
 
 # Turnover analysis
 # Best portfolio without transactions cost: VQAM_25_EW_300_QLT_15_EW_200_I_1000_50_M
 port_1 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_long=25, w_meth_long='EW', pct_long=300,
-                 sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=200,
-                 ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5,tc_bps=0, spr_bps=0)
+                   sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=200,
+                   ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=0)
 
 port_1_TC = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_long=25, w_meth_long='EW', pct_long=300,
-                 sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=200,
-                 ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5,tc_bps=20, spr_bps=0)
+                      sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=200,
+                      ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0)
 
 port_1_TC_BC = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_long=25, w_meth_long='EW', pct_long=300,
-                 sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=200,
-                 ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5,tc_bps=20, spr_bps=50)
+                         sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=200,
+                         ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=50)
 
 # Best portfolio with transaction costs: VQ_25_EW_300_QLT_20_EW_200_I_M
 port_2 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=300,
-                 sig_short='ZS_QLT', n_asts_short=20, w_meth_short='EW', pct_short=200,
-                 ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5,tc_bps=0, spr_bps=0)
+                   sig_short='ZS_QLT', n_asts_short=20, w_meth_short='EW', pct_short=200,
+                   ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=0)
 
 port_2_TC = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=300,
-                 sig_short='ZS_QLT', n_asts_short=20, w_meth_short='EW', pct_short=200,
-                 ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5,tc_bps=20, spr_bps=0)
+                      sig_short='ZS_QLT', n_asts_short=20, w_meth_short='EW', pct_short=200,
+                      ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0)
 
 port_2_TC_BC = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=300,
-                 sig_short='ZS_QLT', n_asts_short=20, w_meth_short='EW', pct_short=200,
-                 ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5,tc_bps=20, spr_bps=50)
+                         sig_short='ZS_QLT', n_asts_short=20, w_meth_short='EW', pct_short=200,
+                         ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=50)
 
 list_port = [port_1, port_1_TC, port_1_TC_BC, port_2, port_2_TC, port_2_TC_BC]
-df_ports_stats = tab_port_stats(list_port,'df_ports_TO_analysis_stats')
-df_ports_perf = tab_perf_export(list_port,'df_ports_TO_analysis_perfs')
-
-
+df_ports_stats = tab_port_stats(list_port, 'df_ports_TO_analysis_stats')
+df_ports_perf = tab_perf_export(list_port, 'df_ports_TO_analysis_perfs')
 
 
 # %%
@@ -364,9 +359,6 @@ def tab_sens_analysis(pct_long_short, file_name=None):
             df_sens_analysis.loc[i, 'TOP_COUNT'] = len(df_pc_top.loc[(df_pc_top['L_SIG'] == sig)])
             df_sens_analysis.loc[i, 'DEF_COUNT'] = len(df_pc.loc[(df_pc['L_SIG'] == sig) & (df_pc['PORT_NAV'].min() < 0)])
             i += 1
-
-
-
     '''
     for sig in ls_sigs:
         df_sens_analysis.loc['T_L_{}'.format(sig), 'COUNT'] = len(df_pc_top.loc[df_pc_top['L_SIG'] == sig])
@@ -555,6 +547,3 @@ def tab_port_stats(list_port,file_name):
 
     return df_ports_stats
 '''
-
-
-
