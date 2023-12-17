@@ -2,11 +2,14 @@
 from pathlib import Path
 from scipy.optimize import minimize, OptimizeResult
 from tqdm import tqdm
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pickle
 import plotly.graph_objs as go
 import plotly.offline as pyo
+import seaborn as sns
 import statsmodels.api as sm
 import warnings
 
@@ -1136,3 +1139,47 @@ def plot_zscores(date, ls_zscores, leg):
 
         fig = go.Figure(data=[trace_0, trace_1, trace_2, trace_3, trace_4], layout=layout)
         pyo.plot(fig, filename='output/figures/plot_zscores_3D.html')
+
+
+def plot_line_chart(df, title='', xlabel='', ylabel='', figsize=(16, 9), legend_title='', file_path=''):
+    # Initiate figure
+    sns.set(context='paper', style='ticks', font_scale=1.0)
+    fig, ax = plt.subplots(figsize=figsize, dpi=600)
+    ax.set_title(title, fontsize=28)
+
+    # Define the color palette
+    palette = sns.color_palette('colorblind', n_colors=len(df.columns))
+
+    # Compute the maximum value of each column and sort the values in descending order
+    legend_order = df.max().sort_values(ascending=False).index.tolist()
+
+    # Plot the line chart
+    ax.axhline(y=1, color='black', ls='--', lw=1)
+    sns.lineplot(data=df, ax=ax, linewidth=2, hue_order=legend_order, dashes=False, linestyle='solid', palette=palette)
+
+    # X-axis settings
+    ax.tick_params(axis='x', labelsize=18)
+    ax.set_xlim()
+    date_locator = mdates.YearLocator(2)
+    date_formatter = mdates.DateFormatter('%Y')
+    ax.xaxis.set_major_locator(date_locator)
+    ax.xaxis.set_major_formatter(date_formatter)
+    ax.set_xlabel(xlabel, fontsize=20)
+
+    # Y-axis settings
+    ax.tick_params(axis='y', labelsize=18)
+    ax.set_ylim(0, ax.get_ylim()[1])
+    ax.set_yticks(np.concatenate((np.delete(ax.get_yticks(), 0), [1])))
+    ax.set_ylabel(ylabel, fontsize=20)
+
+    # Customize the legend
+    ax.legend(title=legend_title, fontsize=14, title_fontsize=16)
+
+    # Remove the top and right spines
+    sns.despine(top=True, right=True)
+
+    # Show the plot
+    fig.tight_layout()
+    plt.show()
+    fig.savefig(file_path)
+    plt.close()

@@ -213,17 +213,22 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 # *** Branch: PORTFOLIO ANALYSIS                 ***
 # **************************************************
 
-
-# Instance of portfolio
-port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=300,
-                 sig_short='ZS_VAL_QLT', n_asts_short=20, w_meth_short='EW', pct_short=200, ind_const='I', reb_freq='M')
-df_port_perf = port.tab_port_perf()
-df_port_chars = port.tab_port_chars(output_perf=False)
-
 # Sector average counts
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=130,
+                 sig_short='ZS_VAL_QLT', n_asts_short=25, w_meth_short='EW', pct_short=30, ind_const='I', reb_freq='M')
 df_sec_avg_counts = port.get_df_sec_avg_counts()
+df_sec_avg_counts.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_sec_avg_counts')))
 
-# TODO: check results
+# Plot zscores (stock picking)
+fn.plot_zscores(date=datetime(2022, 12, 31), ls_zscores=['ZS_VAL', 'ZS_QLT', 'ZS_AMOM'], leg='L')
+
+
+
+
+
+
+
+
 with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
     df_ports_chars = pickle.load(file)
 df_ports_chars.to_excel(Path.joinpath(paths.get('output'), 'excels', 'df_ports_chars_2.xlsx'), index=True)
@@ -231,21 +236,31 @@ df_ports_chars.to_excel(Path.joinpath(paths.get('output'), 'excels', 'df_ports_c
 # %%
 
 
-port_1 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
-                   sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
-                   ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=0, b_cost=False)
-df_port_perf_1 = port_1.tab_port_perf()
 
-port_2 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
-                   sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
-                   ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0, b_cost=False)
-df_port_perf_2 = port_2.tab_port_perf()
 
-port_3 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
-                   sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
-                   ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=50, b_cost=True)
 
-df_port_perf_3 = port_3.tab_port_perf()
+
+
+# Port selections
+with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
+    df_ports_chars = pickle.load(file)
+
+ls_keys = ['VAL_1', 'QLT_1', 'VQ_1', 'VAL_2', 'QLT_2', 'VQ_2', 'VAL_3', 'QLT_3', 'VQ_3',
+           'BEST_11', 'VQAM_11', 'BEST_12', 'VQAM_12', 'BEST_13', 'VQAM_13',
+           'BEST_21', 'BEST_G1', 'BEST_22', 'BEST_G2', 'BEST_23', 'BEST_G3']
+ls_values = [812, 1620, 3240, 818, 1626, 3246, 830, 1638, 4070,
+             3240, 5580, 1626, 5676, 4070, 5688,
+             3240, 3780, 1626, 3786, 4070, 3888]
+dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
+
+
+
+
+
+
+
+
+
 
 for i in range(len(df_port_perf_1)):
     if i == 0:
@@ -364,77 +379,18 @@ df_port_chars = pd.concat(dic_port_chars, axis=1).T
 df_port_chars = df_port_chars.droplevel(2, axis=0).T
 df_port_chars.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('stats_LS_LA_' + port_1.port_name)))
 
-'''
-port_1 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
-                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
-                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=20, spr_bps=0, b_cost=False)
-
-port_2 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL', n_asts_long=25, w_meth_long='EW', pct_long=150,
-                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
-                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=20, spr_bps=0, b_cost=False)
-
-port_3 = Portfolio(dic_data=dic_data, sig_long='ZS_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
-                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
-                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=20, spr_bps=0, b_cost=False)
-
-
-zzz = port_1.tab_port_chars(output_perf=False).T
-
-
-list_port = [port_1, port_2, port_3]
-'''
-
-# %%
-
-
-fn.plot_zscores(date=datetime(2022, 12, 31), ls_zscores=['ZS_VAL', 'ZS_QLT', 'ZS_AMOM'], leg='L')
 
 
 # %%
 
 
-def plot_line_chart(df, title='', xlabel='', ylabel='', figsize=(16, 9), legend_title='', file_path=''):
-    # Initiate figure
-    sns.set(context='paper', style='ticks', font_scale=1.0)
-    fig, ax = plt.subplots(figsize=figsize, dpi=600)
-    ax.set_title(title, fontsize=28)
 
-    # Define the color palette
-    palette = sns.color_palette('colorblind', n_colors=len(df.columns))
 
-    # Compute the maximum value of each column and sort the values in descending order
-    legend_order = df.max().sort_values(ascending=False).index.tolist()
 
-    # Plot the line chart
-    ax.axhline(y=1, color='black', ls='--', lw=1)
-    sns.lineplot(data=df, ax=ax, linewidth=2, hue_order=legend_order, dashes=False, linestyle='solid', palette=palette)
+# %%
 
-    # X-axis settings
-    ax.tick_params(axis='x', labelsize=18)
-    ax.set_xlim()
-    date_locator = mdates.YearLocator(2)
-    date_formatter = mdates.DateFormatter('%Y')
-    ax.xaxis.set_major_locator(date_locator)
-    ax.xaxis.set_major_formatter(date_formatter)
-    ax.set_xlabel(xlabel, fontsize=20)
 
-    # Y-axis settings
-    ax.tick_params(axis='y', labelsize=18)
-    ax.set_ylim(0, ax.get_ylim()[1])
-    ax.set_yticks(np.concatenate((np.delete(ax.get_yticks(), 0), [1])))
-    ax.set_ylabel(ylabel, fontsize=20)
 
-    # Customize the legend
-    ax.legend(title=legend_title, fontsize=14, title_fontsize=16)
-
-    # Remove the top and right spines
-    sns.despine(top=True, right=True)
-
-    # Show the plot
-    fig.tight_layout()
-    plt.show()
-    fig.savefig(file_path)
-    plt.close()
 
 
 with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
@@ -473,17 +429,7 @@ def tab_port_stats(list_port, file_name):
     return df_ports_stats
 
 
-# Port selections
-with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
-    df_ports_chars = pickle.load(file)
 
-ls_keys = ['VAL_1', 'QLT_1', 'VQ_1', 'VAL_2', 'QLT_2', 'VQ_2', 'VAL_3', 'QLT_3', 'VQ_3',
-           'BEST_11', 'VQAM_11', 'BEST_12', 'VQAM_12', 'BEST_13', 'VQAM_13',
-           'BEST_21', 'BEST_G1', 'BEST_22', 'BEST_G2', 'BEST_23', 'BEST_G3']
-ls_values = [812, 1620, 3240, 818, 1626, 3246, 830, 1638, 4070,
-             3240, 5580, 1626, 5676, 4070, 5688,
-             3240, 3780, 1626, 3786, 4070, 3888]
-dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
 
 # Export port stats
 ls_keys_1 = ls_keys
