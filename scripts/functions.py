@@ -907,7 +907,7 @@ class Portfolio:
         df_port_chars.loc[0, 't_UMD'] = model.tvalues.iloc[4]
         df_port_chars.loc[0, 'R_SQUARED'] = model.rsquared
         df_port_chars.loc[0, 'AVG_LEV'] = df_port_perf.loc[1:, 'PORT_LEV'].mean()
-        df_port_chars.loc[0, 'AVG_TO'] = df_port_perf.loc[1:, 'L_TO'].mean() * self.pct_long / 100  + df_port_perf.loc[1:, 'S_TO'].mean() * self.pct_short / 100
+        df_port_chars.loc[0, 'AVG_TO'] = df_port_perf.loc[1:, 'L_TO'].mean() * self.pct_long / 100 + df_port_perf.loc[1:, 'S_TO'].mean() * self.pct_short / 100
 
         # Long leg
         df_drawdown = get_drawdown(s_long_rtns)
@@ -1136,5 +1136,3 @@ def plot_zscores(date, ls_zscores, leg):
 
         fig = go.Figure(data=[trace_0, trace_1, trace_2, trace_3, trace_4], layout=layout)
         pyo.plot(fig, filename='output/figures/plot_zscores_3D.html')
-
-
