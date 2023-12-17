@@ -1269,3 +1269,131 @@ zzz = port_1.tab_port_chars(output_perf=False).T
 list_port = [port_1, port_2, port_3]
 '''
 
+'''
+# Export ports navs
+fn.tab_ports_feats({key: dic_selected_ports[key] for key in ['VAL_1', 'QLT_1', 'VQ_1'] if key in dic_selected_ports},
+                   ls_feats=['PORT_NAV'], file_name='df_ports_navs_1')
+fn.tab_ports_feats({key: dic_selected_ports[key] for key in ['VAL_2', 'QLT_2', 'VQ_2'] if key in dic_selected_ports},
+                   ls_feats=['PORT_NAV'], file_name='df_ports_navs_2')
+fn.tab_ports_feats({key: dic_selected_ports[key] for key in ['VAL_3', 'QLT_3', 'VQ_3'] if key in dic_selected_ports},
+                   ls_feats=['PORT_NAV'], file_name='df_ports_navs_3')
+
+fn.tab_ports_feats({key: dic_selected_ports[key] for key in ['BEST_11', 'VQAM_1'] if key in dic_selected_ports},
+                   ls_feats=['PORT_NAV'], file_name='df_ports_navs_4')
+fn.tab_ports_feats({key: dic_selected_ports[key] for key in ['BEST_12', 'VQAM_2'] if key in dic_selected_ports},
+                   ls_feats=['PORT_NAV'], file_name='df_ports_navs_5')
+fn.tab_ports_feats({key: dic_selected_ports[key] for key in ['BEST_13', 'VQAM_3'] if key in dic_selected_ports},
+                   ls_feats=['PORT_NAV'], file_name='df_ports_navs_6')
+
+fn.tab_ports_feats({key: dic_selected_ports[key] for key in ['BEST_21', 'BEST_G1'] if key in dic_selected_ports},
+                   ls_feats=['PORT_NAV'], file_name='df_ports_navs_7')
+fn.tab_ports_feats({key: dic_selected_ports[key] for key in ['BEST_22', 'BEST_G2'] if key in dic_selected_ports},
+                   ls_feats=['PORT_NAV'], file_name='df_ports_navs_8')
+fn.tab_ports_feats({key: dic_selected_ports[key] for key in ['BEST_23', 'BEST_G3'] if key in dic_selected_ports},
+                   ls_feats=['PORT_NAV'], file_name='df_ports_navs_9')
+
+# Export ports stats
+ls_stats = ['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'MAX_DD_PRD', 'AVG_TO',
+            'ANN_ALPHA', 't_ALPHA', 'B_MKTRF', 't_MKTRF', 'B_SMB', 't_SMB', 'B_HML', 't_HML', 'R_SQUARED']
+fn.tab_ports_stats({key: dic_selected_ports[key] for key in ['VAL_1', 'QLT_1', 'VQ_1'] if key in dic_selected_ports},
+                   ls_stats=ls_stats, file_name='df_ports_stats_1')
+fn.tab_ports_stats({key: dic_selected_ports[key] for key in ['VAL_2', 'QLT_2', 'VQ_2'] if key in dic_selected_ports},
+                   ls_stats=ls_stats, file_name='df_ports_stats_2')
+fn.tab_ports_stats({key: dic_selected_ports[key] for key in ['VAL_3', 'QLT_3', 'VQ_3'] if key in dic_selected_ports},
+                   ls_stats=ls_stats, file_name='df_ports_stats_3')
+
+fn.tab_ports_stats({key: dic_selected_ports[key] for key in ['BEST_11', 'VQAM_1'] if key in dic_selected_ports},
+                   ls_stats=ls_stats, file_name='df_ports_stats_4')
+fn.tab_ports_stats({key: dic_selected_ports[key] for key in ['BEST_12', 'VQAM_2'] if key in dic_selected_ports},
+                   ls_stats=ls_stats, file_name='df_ports_stats_5')
+fn.tab_ports_stats({key: dic_selected_ports[key] for key in ['BEST_13', 'VQAM_3'] if key in dic_selected_ports},
+                   ls_stats=ls_stats, file_name='df_ports_stats_6')
+
+fn.tab_ports_stats({key: dic_selected_ports[key] for key in ['BEST_21', 'BEST_G1'] if key in dic_selected_ports},
+                   ls_stats=ls_stats, file_name='df_ports_stats_7')
+fn.tab_ports_stats({key: dic_selected_ports[key] for key in ['BEST_22', 'BEST_G2'] if key in dic_selected_ports},
+                   ls_stats=ls_stats, file_name='df_ports_stats_8')
+fn.tab_ports_stats({key: dic_selected_ports[key] for key in ['BEST_23', 'BEST_G3'] if key in dic_selected_ports},
+                   ls_stats=ls_stats, file_name='df_ports_stats_9')
+'''
+
+'''
+def tab_perf_export(list_port,file_name):
+    dic_ports_stats = {}
+    j = 1
+    for i in list_port:
+        df_port_perf = i.tab_port_perf().set_index('DATE')['PORT_NAV']
+        dic_ports_stats[str(j) + '_' + i.port_name] = df_port_perf
+        j += 1
+    df_ports_perf = pd.concat(dic_ports_stats, axis=1)
+    df_ports_perf.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
+    return df_ports_perf
+'''
+
+'''
+# Port selections
+with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
+    df_ports_chars = pickle.load(file)
+
+ls_keys = ['VAL_1', 'QLT_1', 'VQ_1', 'VAL_2', 'QLT_2', 'VQ_2', 'VAL_3', 'QLT_3', 'VQ_3',
+           'BEST_11', 'VQAM_11', 'BEST_12', 'VQAM_12', 'BEST_13', 'VQAM_13',
+           'BEST_21', 'BEST_G1', 'BEST_22', 'BEST_G2', 'BEST_23', 'BEST_G3']
+ls_values = [812, 1620, 3240, 818, 1626, 3246, 830, 1638, 4070,
+             3240, 5580, 1626, 5676, 4070, 5688,
+             3240, 3780, 1626, 3786, 4070, 3888]
+dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
+
+# Export port stats
+ls_keys_1 = ls_keys
+ls_values_1 = ls_values
+dic_selected_ports = dict(zip(ls_keys_1, ls_values_1))
+
+list_port = []
+for i in range(len(ls_keys_1)):
+    s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys_1[i]]]
+    port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
+                     sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
+                     ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=20)
+    list_port.append(port)
+    print(port.port_name)
+
+df_ports_stats = tab_port_stats(list_port,'df_ports_stats')
+
+
+# Transaction cost analysis
+ls_keys_1 = ['BEST_G1', 'BEST_G2', 'BEST_G3']
+ls_values_1 = [3780, 3786, 3888]
+dic_selected_ports = dict(zip(ls_keys_1, ls_values_1))
+
+list_port = []
+for i in range(len(ls_keys_1)):
+    s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys_1[i]]]
+    port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
+                     sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
+                     ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=0)
+    list_port.append(port)
+    port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
+                     sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
+                     ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=20)
+    list_port.append(port)
+    port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
+                     sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
+                     ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=20, spr_bps=50)
+    list_port.append(port)
+    print(port.port_name)
+
+df_ports_stats = tab_port_stats(list_port,'df_ports_BEST_G_TC_stats')
+
+def tab_perf_export(list_port,file_name):
+    dic_ports_stats = {}
+    j = 1
+    for i in list_port:
+        df_port_perf = i.tab_port_perf().set_index('DATE')['PORT_NAV']
+        dic_ports_stats[str(j) + '_' + i.port_name] = df_port_perf
+        j += 1
+    df_ports_perf = pd.concat(dic_ports_stats, axis=1)
+    df_ports_perf.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
+    return df_ports_perf
+
+df_ports_perf = tab_perf_export(list_port,'df_ports_BEST_G_TC_perfs')
+'''
