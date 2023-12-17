@@ -222,7 +222,8 @@ df_sec_avg_counts = port.get_df_sec_avg_counts()
 df_sec_avg_counts.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_sec_avg_counts')), index=False)
 
 # Plot zscores (stock picking)
-fn.plot_zscores(date=datetime(2022, 12, 31), ls_zscores=['ZS_VAL', 'ZS_QLT', 'ZS_AMOM'], leg='L')
+fn.plot_zscores(date=datetime(2022, 12, 31), ls_zscores=['ZS_VAL', 'ZS_QLT'], leg='L')
+fn.plot_zscores(date=datetime(2022, 12, 31), ls_zscores=['ZS_PROF', 'ZS_GWTH', 'ZS_SAF'], leg='L')
 
 # Portfolios selection
 ls_keys = ['VAL_1', 'QLT_1', 'VQ_1', 'VAL_2', 'QLT_2', 'VQ_2', 'VAL_3', 'QLT_3', 'VQ_3',
@@ -281,7 +282,61 @@ fn.tab_ports_stats({key: dic_selected_ports[key] for key in ['BEST_23', 'BEST_G3
                    ls_stats=ls_stats, file_name='df_ports_stats_9')
 
 
+# %%
 
+def tab_sens_analysis(pct_long_short, file_name=None):
+    with open(Path.joinpath(paths.get('tables'), 'df_ports_chars.pkl'), 'rb') as file:
+        df_pc = pickle.load(file)
+    df_pc = df_pc.loc[(df_pc['L_PCT'] == pct_long_short[0]) & (df_pc['S_PCT'] == pct_long_short[1])]
+
+    df_sens_analysis = pd.DataFrame()
+    ls_sigs = ['VAL', 'QLT', 'VQ', 'VQAM']
+    df_pc_top = df_pc.loc[(df_pc['PORT_NAV'].min() > 0)].sort_values(by=['SHARPE'], ascending=False).head(200)
+
+    i = 0
+    for leg in ['L', 'S']:
+        for sig in ls_sigs:
+            df_sens_analysis.loc[i, 'SIG'] = leg + '_' + sig
+            df_sens_analysis.loc[i, 'TOP_COUNT'] = len(df_pc_top.loc[(df_pc_top['L_SIG'] == sig)])
+            df_sens_analysis.loc[i, 'DEF_COUNT'] = len(df_pc.loc[(df_pc['L_SIG'] == sig) & (df_pc['PORT_NAV'].min() < 0)])
+            i += 1
+
+
+
+    '''
+    for sig in ls_sigs:
+        df_sens_analysis.loc['T_L_{}'.format(sig), 'COUNT'] = len(df_pc_top.loc[df_pc_top['L_SIG'] == sig])
+        df_sens_analysis.loc['T_L_{}'.format(sig), 'AVG_SHARPE'] = df_pc_top.loc[df_pc_top['L_SIG'] == sig, 'SHARPE'].mean()
+        df_sens_analysis.loc['T_L_{}'.format(sig), 'AVG_MAX_DD'] = df_pc_top.loc[df_pc_top['L_SIG'] == sig, 'MAX_DD'].mean()
+
+    for sig in ls_sigs:
+        df_sens_analysis.loc['T_S_{}'.format(sig), 'COUNT'] = len(df_pc_top.loc[df_pc_top['S_SIG'] == sig])
+        df_sens_analysis.loc['T_S_{}'.format(sig), 'AVG_SHARPE'] = df_pc_top.loc[df_pc_top['S_SIG'] == sig, 'SHARPE'].mean()
+        df_sens_analysis.loc['T_S_{}'.format(sig), 'AVG_MAX_DD'] = df_pc_top.loc[df_pc_top['S_SIG'] == sig, 'MAX_DD'].mean()
+
+    for sig in ls_sigs:
+        df_sens_analysis.loc['B_L_{}'.format(sig), 'COUNT'] = len(df_pc_btm.loc[df_pc_btm['L_SIG'] == sig])
+        df_sens_analysis.loc['B_L_{}'.format(sig), 'AVG_SHARPE'] = df_pc_btm.loc[df_pc_btm['L_SIG'] == sig, 'SHARPE'].mean()
+        df_sens_analysis.loc['B_L_{}'.format(sig), 'AVG_MAX_DD'] = df_pc_btm.loc[df_pc_btm['L_SIG'] == sig, 'MAX_DD'].mean()
+
+    for sig in ls_sigs:
+        df_sens_analysis.loc['B_S_{}'.format(sig), 'COUNT'] = len(df_pc_btm.loc[df_pc_btm['S_SIG'] == sig])
+        df_sens_analysis.loc['B_S_{}'.format(sig), 'AVG_SHARPE'] = df_pc_btm.loc[df_pc_btm['S_SIG'] == sig, 'SHARPE'].mean()
+        df_sens_analysis.loc['B_S_{}'.format(sig), 'AVG_MAX_DD'] = df_pc_btm.loc[df_pc_btm['S_SIG'] == sig, 'MAX_DD'].mean()
+
+    df_sens_analysis = df_sens_analysis.reset_index(drop=False)
+    df_sens_analysis = df_sens_analysis.rename(columns={'index': 'SIG'})
+
+    for sig in ['T_L', 'T_S', 'B_L', 'B_S']:
+        total_count = df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(sig), 'COUNT'].sum()
+        df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(sig), 'PCT'] = df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(sig), 'COUNT'] / total_count
+
+    df_sens_analysis = df_sens_analysis[['SIG', 'COUNT', 'PCT', 'AVG_SHARPE', 'AVG_MAX_DD']]
+    '''
+    print(df_sens_analysis)
+
+
+tab_sens_analysis(pct_long_short=(130, 30))
 
 # %%
 port_1 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,

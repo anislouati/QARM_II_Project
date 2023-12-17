@@ -1028,7 +1028,7 @@ def plot_zscores(date, ls_zscores, leg):
                 zerolinecolor='rgba(0,0,0,0.6)',
                 zerolinewidth=2,
                 gridcolor='rgba(183,203,254,0.3)',
-                range=[-2.5, 2.5]
+                range=[-2.0, 2.0]
             ),
             yaxis=dict(
                 title='ZScore {}'.format(ls_zscores[1][3:]),
@@ -1040,7 +1040,7 @@ def plot_zscores(date, ls_zscores, leg):
                 zerolinecolor='rgba(0,0,0,0.6)',
                 zerolinewidth=2,
                 gridcolor='rgba(183,203,254,0.3)',
-                range=[-2.5, 2.5]
+                range=[-2.0, 2.0]
             ),
             legend=dict(font=dict(size=18)),
             paper_bgcolor='rgba(0,0,0,0)',
