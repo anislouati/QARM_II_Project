@@ -1185,6 +1185,7 @@ def plot_line_chart(df, title='', xlabel='', ylabel='', figsize=(16, 9), legend_
     plt.close()
 
 
+'''
 def tab_ports_feats(dic_selected_ports, ls_feats, file_name):
     with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
         dic_data = pickle.load(file)
@@ -1227,3 +1228,32 @@ def tab_ports_stats(dic_selected_ports, ls_stats, file_name):
     df_ports_stats['NAME'] = ls_keys
     df_ports_stats = df_ports_stats[['NAME'] + ls_stats]
     df_ports_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)), index=True)
+'''
+
+
+def tab_ports_stats(list_port, file_name):
+    dic_ports_stats = {}
+    j = 1
+    for i in list_port:
+        df_port_chars = i.tab_port_chars(output_perf=False)
+        df_port_stats = df_port_chars[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'MAX_DD_PRD', 'AVG_TO',
+                                       'ANN_ALPHA', 't_ALPHA', 'B_MKTRF', 't_MKTRF', 'B_SMB', 't_SMB', 'B_HML', 't_HML', 'B_UMD', 't_UMD', 'R_SQUARED',
+                                       'L_SIG', 'L_N_ASTS', 'L_W_METH', 'L_PCT', 'S_SIG', 'S_N_ASTS', 'S_W_METH', 'S_PCT', 'IND_CONST', 'REB_FREQ', 'PORT_NAV_T']]
+        dic_ports_stats[str(j) + '_' + i.port_name] = df_port_stats
+        j += 1
+    df_ports_stats = pd.concat(dic_ports_stats, axis=0).droplevel(1, axis=0)
+    df_ports_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
+    return df_ports_stats
+
+
+def tab_perf_export(list_port, file_name):
+    dic_ports_stats = {}
+    j = 1
+    for i in list_port:
+        df_port_perf = i.tab_port_perf().set_index('DATE')['PORT_NAV']
+        dic_ports_stats[str(j) + '_' + i.port_name] = df_port_perf
+        j += 1
+    df_ports_perf = pd.concat(dic_ports_stats, axis=1)
+    df_ports_perf.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
+    return df_ports_perf
+
