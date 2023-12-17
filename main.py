@@ -12,8 +12,6 @@ import pickle
 import scripts.functions as fn
 import seaborn as sns
 import warnings
-import matplotlib.dates as mdates
-import openpyxl
 
 # Project settings
 pd.set_option('display.width', 400)
@@ -217,33 +215,15 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=130,
                  sig_short='ZS_VAL_QLT', n_asts_short=25, w_meth_short='EW', pct_short=30, ind_const='I', reb_freq='M')
 df_sec_avg_counts = port.get_df_sec_avg_counts()
-df_sec_avg_counts.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_sec_avg_counts')))
+df_sec_avg_counts.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_sec_avg_counts')), index=False)
 
 # Plot zscores (stock picking)
 fn.plot_zscores(date=datetime(2022, 12, 31), ls_zscores=['ZS_VAL', 'ZS_QLT', 'ZS_AMOM'], leg='L')
 
-
-
-
-
-
-
-
+# Portfolio selection
 with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
     df_ports_chars = pickle.load(file)
-df_ports_chars.to_excel(Path.joinpath(paths.get('output'), 'excels', 'df_ports_chars_2.xlsx'), index=True)
-
-# %%
-
-
-
-
-
-
-
-# Port selections
-with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
-    df_ports_chars = pickle.load(file)
+df_ports_chars.to_excel(Path.joinpath(paths.get('output'), 'excels', 'df_ports_chars.xlsx'), index=True)
 
 ls_keys = ['VAL_1', 'QLT_1', 'VQ_1', 'VAL_2', 'QLT_2', 'VQ_2', 'VAL_3', 'QLT_3', 'VQ_3',
            'BEST_11', 'VQAM_11', 'BEST_12', 'VQAM_12', 'BEST_13', 'VQAM_13',
@@ -251,6 +231,7 @@ ls_keys = ['VAL_1', 'QLT_1', 'VQ_1', 'VAL_2', 'QLT_2', 'VQ_2', 'VAL_3', 'QLT_3',
 ls_values = [812, 1620, 3240, 818, 1626, 3246, 830, 1638, 4070,
              3240, 5580, 1626, 5676, 4070, 5688,
              3240, 3780, 1626, 3786, 4070, 3888]
+dic_selected_ports = dict(zip(ls_keys, ls_values))
 dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
 
 
@@ -258,6 +239,17 @@ dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VA
 
 
 
+
+
+
+
+
+
+
+
+
+
+# %%
 
 
 
@@ -381,29 +373,12 @@ df_port_chars.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('stat
 
 
 
-# %%
-
-
-
-
-
-# %%
-
-
-
 
 
 with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
     df_ports_chars = pickle.load(file)
 
-ls_keys = ['VAL_1', 'QLT_1', 'VQ_1', 'VAL_2', 'QLT_2', 'VQ_2', 'VAL_3', 'QLT_3', 'VQ_3',
-           'BEST_11', 'VQAM_11', 'BEST_12', 'VQAM_12', 'BEST_13', 'VQAM_13',
-           'BEST_21', 'BEST_G1', 'BEST_22', 'BEST_G2', 'BEST_23', 'BEST_G3']
-ls_values = [812, 1620, 3240, 818, 1626, 3246, 830, 1638, 4070,
-             3240, 5580, 1626, 5676, 4070, 5688,
-             3240, 3780, 1626, 3786, 4070, 3888]
-dic_selected_ports = dict(zip(ls_keys, ls_values))
-dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
+
 
 for i in range(1):  # len(ls_keys)
     s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys[i]]]
