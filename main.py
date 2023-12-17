@@ -490,7 +490,7 @@ def tab_port_stats(list_port,file_name):
 
     return df_ports_stats
 
-
+# Port selections
 with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
     df_ports_chars = pickle.load(file)
 
@@ -502,11 +502,9 @@ ls_values = [812, 1620, 3240, 818, 1626, 3246, 830, 1638, 4070,
              3240, 3780, 1626, 3786, 4070, 3888]
 dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
 
-# 1) 130/30
-i = 0
-j = 3
-ls_keys_1 = ls_keys[i:j]
-ls_values_1 = ls_values[i:j]
+# Export port stats
+ls_keys_1 = ls_keys
+ls_values_1 = ls_values
 dic_selected_ports = dict(zip(ls_keys_1, ls_values_1))
 
 list_port = []
@@ -518,42 +516,5 @@ for i in range(len(ls_keys_1)):
     list_port.append(port)
     print(port.port_name)
 
-df_ports_stats = tab_port_stats(list_port,'port_stats_1_130_30')
-
-# 2) 120/50
-i = 3
-j = 6
-ls_keys_1 = ls_keys[i:j]
-ls_values_1 = ls_values[i:j]
-dic_selected_ports = dict(zip(ls_keys_1, ls_values_1))
-
-list_port = []
-for i in range(len(ls_keys_1)):
-    s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys_1[i]]]
-    port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
-                     sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
-                     ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=20)
-    list_port.append(port)
-    print(port.port_name)
-
-df_ports_stats = tab_port_stats(list_port,'port_stats_1_120_50')
-
-# 3) 300/200
-i = 6
-j = 9
-ls_keys_1 = ls_keys[i:j]
-ls_values_1 = ls_values[i:j]
-dic_selected_ports = dict(zip(ls_keys_1, ls_values_1))
-
-list_port = []
-for i in range(len(ls_keys_1)):
-    s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys_1[i]]]
-    port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
-                     sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
-                     ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=20)
-    list_port.append(port)
-    print(port.port_name)
-
-df_ports_stats = tab_port_stats(list_port,'port_stats_1_300_200')
-
+df_ports_stats = tab_port_stats(list_port,'port_stats')
 

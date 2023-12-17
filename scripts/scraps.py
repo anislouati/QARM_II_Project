@@ -1171,3 +1171,43 @@ for permno in ls_permnos:
     annotations.append(annotation)
 '''
 
+'''
+# 1) 120/50
+i = 3
+j = 6
+ls_keys_1 = ls_keys[i:j]
+ls_values_1 = ls_values[i:j]
+dic_selected_ports = dict(zip(ls_keys_1, ls_values_1))
+
+list_port = []
+for i in range(len(ls_keys_1)):
+    s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys_1[i]]]
+    port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
+                     sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
+                     ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=20)
+    list_port.append(port)
+    print(port.port_name)
+
+df_ports_stats = tab_port_stats(list_port,'port_stats_1_120_50')
+
+# 1) 300/200
+i = 6
+j = 9
+ls_keys_1 = ls_keys[i:j]
+ls_values_1 = ls_values[i:j]
+dic_selected_ports = dict(zip(ls_keys_1, ls_values_1))
+
+list_port = []
+for i in range(len(ls_keys_1)):
+    s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys_1[i]]]
+    port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
+                     sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
+                     ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=20)
+    list_port.append(port)
+    print(port.port_name)
+
+df_ports_stats = tab_port_stats(list_port,'port_stats_1_300_200')
+
+
+'''
+
