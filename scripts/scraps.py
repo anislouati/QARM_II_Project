@@ -1079,6 +1079,38 @@ df_port_perf.at[pos_tmp, 'S_WT'] = dict(zip(ls_short_asts, s_short_w.tolist()))
 
 '''
 
+
+'''
+port_1 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
+                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=20, spr_bps=0, b_cost=False)
+
+port_2 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL', n_asts_long=25, w_meth_long='EW', pct_long=150,
+                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=20, spr_bps=0, b_cost=False)
+
+port_3 = Portfolio(dic_data=dic_data, sig_long='ZS_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
+                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=20, spr_bps=0, b_cost=False)
+
+
+zzz = port_1.tab_port_chars(output_perf=False).T
+
+
+list_port = [port_1, port_2, port_3]
+'''
+
+'''
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
+                 sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                 ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5,tc_bps=0, spr_bps=50, b_cost=True)
+df_port_perf = port.tab_port_perf()
+df_port_chars = port.tab_port_chars(output_perf=False)
+
+test = dic_data['df_facs_data']
+'''
+
+
 '''    
 # Turnover (after rebalancing)
 if ls_reb_dates[i] != ls_dates[0]:  # No turnover at initial allocation
