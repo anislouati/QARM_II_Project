@@ -1183,3 +1183,47 @@ def plot_line_chart(df, title='', xlabel='', ylabel='', figsize=(16, 9), legend_
     plt.show()
     fig.savefig(file_path)
     plt.close()
+
+
+def tab_ports_feats(dic_selected_ports, ls_feats, file_name):
+    with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
+        dic_data = pickle.load(file)
+    with open(Path.joinpath(paths.get('tables'), 'df_ports_chars.pkl'), 'rb') as file:
+        df_ports_chars = pickle.load(file)
+    ls_keys = list(dic_selected_ports.keys())
+    dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
+
+    df_ports_feats = pd.DataFrame()
+    for i in tqdm(range(len(ls_keys)), desc='Export ports feats'):
+        s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys[i]]]
+        port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
+                         sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
+                         ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'])
+        df_port_perf = port.tab_port_perf()
+        if i == 0:
+            df_ports_feats = pd.concat([df_ports_feats, df_port_perf['DATE']], axis=1)
+        df_ports_feats = pd.concat([df_ports_feats, df_port_perf[ls_feats]], axis=1)
+        df_ports_feats.rename(columns=dict(zip(ls_feats, [(ls_keys[i] + '_' + feat) for feat in ls_feats])), inplace=True)
+    df_ports_feats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)), index=True)
+
+
+def tab_ports_stats(dic_selected_ports, ls_stats, file_name):
+    with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
+        dic_data = pickle.load(file)
+    with open(Path.joinpath(paths.get('tables'), 'df_ports_chars.pkl'), 'rb') as file:
+        df_ports_chars = pickle.load(file)
+    ls_keys = list(dic_selected_ports.keys())
+    dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
+
+    df_ports_stats = pd.DataFrame()
+    for i in tqdm(range(len(ls_keys)), desc='Export ports stats'):
+        s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys[i]]]
+        port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
+                         sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
+                         ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'])
+        df_port_stats = port.tab_port_chars(output_perf=False)
+        df_ports_stats = pd.concat([df_ports_stats, df_port_stats[ls_stats]], axis=0, ignore_index=True)
+
+    df_ports_stats['NAME'] = ls_keys
+    df_ports_stats = df_ports_stats[['NAME'] + ls_stats]
+    df_ports_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)), index=True)
