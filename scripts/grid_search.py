@@ -36,7 +36,7 @@ def main():
     print('Elapsed time: {}s'.format(round(end_time - start_time, 0)))
 
     df_ports_chars = pd.concat(results, axis=0, ignore_index=True)
-    df_ports_chars.to_pickle(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'))
+    df_ports_chars.to_pickle(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars.pkl'))
 
 if __name__ == "__main__":
     main()

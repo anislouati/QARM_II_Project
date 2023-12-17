@@ -221,7 +221,7 @@ df_sec_avg_counts.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('
 fn.plot_zscores(date=datetime(2022, 12, 31), ls_zscores=['ZS_VAL', 'ZS_QLT', 'ZS_AMOM'], leg='L')
 
 # Portfolios selection
-with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
+with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars.pkl'), 'rb') as file:
     df_ports_chars = pickle.load(file)
 df_ports_chars.to_excel(Path.joinpath(paths.get('output'), 'excels', 'df_ports_chars.xlsx'), index=True)
 
@@ -234,27 +234,64 @@ ls_values = [812, 1620, 3240, 818, 1626, 3246, 830, 1638, 4070,
 dic_selected_ports = dict(zip(ls_keys, ls_values))
 dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
 
-# Export ports performances
+# Export ports perfs (uncomment)
+'''
 for i in tqdm(range(len(ls_keys)), desc='Export ports perfs'):
     s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys[i]]]
     port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
                      sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
                      ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=20)
     df_port_perf = port.tab_port_perf()
-    # df_port_perf.to_excel(Path.joinpath(paths.get('output'), 'excels', 'df_port_perf_{}.xlsx'.format(ls_keys[i])), index=True)
+    df_port_perf.to_excel(Path.joinpath(paths.get('output'), 'excels', 'df_port_perf_{}.xlsx'.format(ls_keys[i])), index=True)
+'''
+
+def tab_ports_perfs(ls_ports, file_name):
+    with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
+        dic_data = pickle.load(file)
 
 
 
 
 
+# Export ports stats
+def tab_port_stats(list_port, file_name):
+    dic_ports_stats = {}
+    for i in list_port:
+        df_port_chars = i.tab_port_chars(output_perf=False)
+        df_port_stats = df_port_chars[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'MAX_DD_PRD', 'AVG_TO', 'ANN_ALPHA', 't_ALPHA', 'B_MKTRF', 't_MKTRF', 'B_SMB', 't_SMB', 'B_HML', 't_HML', 'B_UMD', 't_UMD', 'R_SQUARED']]
+        dic_ports_stats[i.port_name] = df_port_stats
 
+    df_ports_stats = pd.concat(dic_ports_stats, axis=0).droplevel(1, axis=0)
+    df_ports_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
+
+    return df_ports_stats
+
+
+
+ls_keys_1 = ls_keys
+ls_values_1 = ls_values
+dic_selected_ports = dict(zip(ls_keys_1, ls_values_1))
+
+list_port = []
+for i in range(len(ls_keys_1)):
+    s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys_1[i]]]
+    port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
+                     sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
+                     ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=20)
+    list_port.append(port)
+    print(port.port_name)
+
+df_ports_stats = tab_port_stats(list_port, 'df_port_stats')
+
+
+with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars.pkl'), 'rb') as file:
+    df_ports_chars = pickle.load(file)
 
 
 
 
 
 # %%
-
 
 
 
@@ -379,42 +416,10 @@ df_port_chars.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('stat
 
 
 
-with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars_3.pkl'), 'rb') as file:
-    df_ports_chars = pickle.load(file)
 
 
 
 
 
 
-# Portfolios stats
-def tab_port_stats(list_port, file_name):
-    dic_ports_stats = {}
-    for i in list_port:
-        df_port_chars = i.tab_port_chars(output_perf=False)
-        df_port_stats = df_port_chars[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'MAX_DD_PRD', 'AVG_TO', 'ANN_ALPHA', 't_ALPHA', 'B_MKTRF', 't_MKTRF', 'B_SMB', 't_SMB', 'B_HML', 't_HML', 'B_UMD', 't_UMD', 'R_SQUARED']]
-        dic_ports_stats[i.port_name] = df_port_stats
 
-    df_ports_stats = pd.concat(dic_ports_stats, axis=0).droplevel(1, axis=0)
-    df_ports_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
-
-    return df_ports_stats
-
-
-
-
-# Export port stats
-ls_keys_1 = ls_keys
-ls_values_1 = ls_values
-dic_selected_ports = dict(zip(ls_keys_1, ls_values_1))
-
-list_port = []
-for i in range(len(ls_keys_1)):
-    s_tmp = df_ports_chars.iloc[dic_selected_ports[ls_keys_1[i]]]
-    port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
-                     sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
-                     ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=20)
-    list_port.append(port)
-    print(port.port_name)
-
-df_ports_stats = tab_port_stats(list_port, 'df_port_stats')
