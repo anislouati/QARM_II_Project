@@ -1284,6 +1284,7 @@ def tab_sens_analysis(pct_long_short, file_name):
         for sig in ls_sigs:
             df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(leg + '_' + sig), 'DEF_PCT'] = df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(leg + '_' + sig), 'DEF_COUNT'] / total_count
 
+    df_sens_analysis = df_sens_analysis[['SIG', 'TOP_COUNT', 'TOP_PCT', 'DEF_COUNT', 'DEF_PCT']]
     df_sens_analysis.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
     return df_sens_analysis
 
