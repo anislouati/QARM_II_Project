@@ -307,13 +307,11 @@ list_port = [port_1, port_1_TC, port_1_TC_BC, port_2, port_2_TC, port_2_TC_BC]
 df_ports_stats = fn.tab_ports_stats(list_port, 'df_ports_TO_analysis_stats')
 df_ports_perf = fn.tab_perf_export(list_port, 'df_ports_TO_analysis_perfs')
 
+# Sensitivity analysis
+df_sens_analysis_130_30 = fn.tab_sens_analysis(pct_long_short=(130, 30), file_name='df_sens_analysis_130_30')
+df_sens_analysis_120_50 = fn.tab_sens_analysis(pct_long_short=(120, 50), file_name='df_sens_analysis_120_50')
+df_sens_analysis_300_200 = fn.tab_sens_analysis(pct_long_short=(300, 200), file_name='df_sens_analysis_300_200')
 
-# %%
-
-
-
-
-tab_sens_analysis(pct_long_short=(300, 200))
 
 # %%
 # TODO : Put in function
