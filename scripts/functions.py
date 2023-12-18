@@ -866,7 +866,7 @@ class Portfolio:
         s_port_rtns = pd.Series(df_port_perf.loc[1:, 'PORT_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
         s_port_losses = (-1) * s_port_rtns
         df_drawdown = get_drawdown(s_port_rtns)
-        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
+        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()] if not df_drawdown.empty else pd.Series([np.nan], index=['DD'])
         X = sm.add_constant(df_port_perf.loc[1:, ['MKTRF', 'SMB', 'HML', 'UMD']])
         model = sm.OLS((df_port_perf.loc[1:, 'PORT_RTNS'] - df_port_perf.loc[1:, 'RF']), X).fit(cov_type='HC3')  # Heteroskedasticity-consistent estimator
         s_long_rtns = pd.Series(df_port_perf.loc[1:, 'L_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
@@ -915,7 +915,7 @@ class Portfolio:
 
         # Long leg
         df_drawdown = get_drawdown(s_long_rtns)
-        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
+        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()] if not df_drawdown.empty else pd.Series([np.nan], index=['DD'])
         df_port_chars.loc[0, 'PORT_L_T'] = df_port_perf.iloc[-1]['PORT_L']
         df_port_chars.loc[0, 'L_ANN_MEAN'] = s_long_rtns.mean() * 12
         df_port_chars.loc[0, 'L_ANN_VOL'] = np.sqrt(s_long_rtns.var() * 12)
@@ -927,7 +927,7 @@ class Portfolio:
 
         # Short leg
         df_drawdown = get_drawdown(s_short_rtns)
-        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
+        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()] if not df_drawdown.empty else pd.Series([np.nan], index=['DD'])
         df_port_chars.loc[0, 'PORT_S_T'] = df_port_perf.iloc[-1]['PORT_S']
         df_port_chars.loc[0, 'S_ANN_MEAN'] = s_short_rtns.mean() * 12
         df_port_chars.loc[0, 'S_ANN_VOL'] = np.sqrt(s_short_rtns.var() * 12)
@@ -939,7 +939,7 @@ class Portfolio:
 
         # Long Adjusted
         df_drawdown = get_drawdown(s_long_a_rtns)
-        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()]
+        s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()] if not df_drawdown.empty else pd.Series([np.nan], index=['DD'])
         df_port_chars.loc[0, 'LA_ANN_MEAN'] = s_long_a_rtns.mean() * 12
         df_port_chars.loc[0, 'LA_ANN_VOL'] = np.sqrt(s_long_a_rtns.var() * 12)
         df_port_chars.loc[0, 'LA_SHARPE'] = (df_port_chars.loc[0, 'LA_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'LA_ANN_VOL']

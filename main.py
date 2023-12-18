@@ -220,9 +220,8 @@ with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars.pkl'), 'r
     df_ports_chars = pickle.load(file)
 
 # Sector average counts
-port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL', n_asts_long=20, w_meth_long='MN', pct_long=120,
-                 sig_short='ZS_QLT', n_asts_short=15, w_meth_short='MN', pct_short=50, ind_const='I', reb_freq='M')
-df_port_perf = port.tab_port_perf()
+port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=130,
+                 sig_short='ZS_VAL_QLT', n_asts_short=25, w_meth_short='EW', pct_short=30, ind_const='I', reb_freq='M')
 df_sec_avg_counts = port.get_df_sec_avg_counts()
 df_sec_avg_counts.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_sec_avg_counts')), index=False)
 

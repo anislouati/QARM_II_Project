@@ -30,7 +30,7 @@ def main():
                              ls_w_meth, ls_pct_long_short, ls_ind_const, ls_reb_freq))
 
     start_time = time.time()
-    with Pool(processes=14) as pool:  # Multiprocessing
+    with Pool(processes=1) as pool:  # Multiprocessing
         results = list(tqdm(pool.imap(get_df_port_chars, ls_combos), total=len(ls_combos)))
     end_time = time.time()
     print('Elapsed time: {}s'.format(round(end_time - start_time, 0)))
