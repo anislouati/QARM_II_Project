@@ -1257,3 +1257,33 @@ def tab_perf_export(list_port, file_name):
     df_ports_perf.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
     return df_ports_perf
 
+
+def tab_sens_analysis(pct_long_short, file_name):
+    with open(Path.joinpath(paths.get('tables'), 'df_ports_chars.pkl'), 'rb') as file:
+        df_pc = pickle.load(file)
+    df_pc = df_pc.loc[(df_pc['L_PCT'] == pct_long_short[0]) & (df_pc['S_PCT'] == pct_long_short[1])]
+
+    df_sens_analysis = pd.DataFrame()
+    ls_sigs = ['VAL', 'QLT', 'VQ', 'VQAM']
+    df_pc_top = df_pc.loc[(df_pc['MIN_PORT_NAV'] > 0)].sort_values(by=['SHARPE'], ascending=False).head(200)
+
+    i = 0
+    for leg in ['L', 'S']:
+        for sig in ls_sigs:
+            df_sens_analysis.loc[i, 'SIG'] = leg + '_' + sig
+            df_sens_analysis.loc[i, 'TOP_COUNT'] = len(df_pc_top.loc[(df_pc_top[(leg + '_SIG')] == sig)])
+            df_sens_analysis.loc[i, 'AVG_SHARPE'] = df_pc_top.loc[(df_pc_top[(leg + '_SIG')] == sig), 'SHARPE'].mean()
+            df_sens_analysis.loc[i, 'DEF_COUNT'] = len(df_pc.loc[(df_pc[(leg + '_SIG')] == sig) & (df_pc['MIN_PORT_NAV'] < 0)])
+            i += 1
+
+        total_count = df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(leg + '_'), 'TOP_COUNT'].sum()
+        for sig in ls_sigs:
+            df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(leg + '_' + sig), 'TOP_PCT'] = df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(leg + '_' + sig), 'TOP_COUNT'] / total_count
+
+        total_count = df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(leg + '_'), 'DEF_COUNT'].sum()
+        for sig in ls_sigs:
+            df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(leg + '_' + sig), 'DEF_PCT'] = df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(leg + '_' + sig), 'DEF_COUNT'] / total_count
+
+    df_sens_analysis.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
+    return df_sens_analysis
+
