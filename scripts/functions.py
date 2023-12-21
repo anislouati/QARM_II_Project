@@ -693,7 +693,7 @@ class Portfolio:
         df_port_perf.loc[0, 'S_BC'] = 0
 
         # Iteration over rebalancing dates
-        for i in tqdm(range(len(ls_reb_dates)), desc=self.port_name, disable=True):
+        for i in tqdm(range(len(ls_reb_dates)), desc=self.port_name, disable=False):
             df_tmp = self.dic_asts_data[ls_reb_dates[i]]
             pos_tmp = (n_dates * i)
 
@@ -844,6 +844,14 @@ class Portfolio:
                         s_min = pd.Series(dtype='float64')
                 if s_port_cum_rtns[i] < max:
                     s_min[i] = s_port_cum_rtns[i]
+
+                if i == s_port_cum_rtns.index[-1]:
+                    if not s_min.empty:
+                        drawdown = s_min.min() / max - 1
+                        df_drawdown_tmp = pd.DataFrame({'DD': [drawdown], 'START': [dt_max], 'END': [s_min.idxmin()]})
+                        df_drawdown = pd.concat([df_drawdown, df_drawdown_tmp], ignore_index=True)
+                        s_min = pd.Series(dtype='float64')
+
             return df_drawdown
 
         def get_norm_herfindahl_idx(a_port_w):

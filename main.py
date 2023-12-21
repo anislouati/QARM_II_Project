@@ -9,6 +9,9 @@ import pandas as pd
 import pickle
 import scripts.functions as fn
 import warnings
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Project settings
 pd.set_option('display.width', 400)
@@ -317,140 +320,153 @@ df_sens_analysis_300_200 = fn.tab_sens_analysis(pct_long_short=(300, 200), file_
 
 # %%
 # TODO : Put in function
-'''
-port_1 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
-                   sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
-                   ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=0, b_cost=False)
-df_port_perf_1 = port_1.tab_port_perf()
 
-port_2 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
-                   sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
-                   ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0, b_cost=False)
-df_port_perf_2 = port_2.tab_port_perf()
+def get_port_stats_graph(dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
+                   sig_short, n_asts_short, w_meth_short, pct_short,
+                   ind_const, reb_freq, min_short_me, max_short_cl, tc_bps, spr_bps):
 
-port_3 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=150,
-                   sig_short='ZS_VAL_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
-                   ind_const='I', reb_freq='Y', min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=50, b_cost=True)
-df_port_perf_3 = port_3.tab_port_perf()
+    port_1 = Portfolio(dic_data=dic_data, sig_long=sig_long, n_asts_long=n_asts_long, w_meth_long=w_meth_long, pct_long=pct_long,
+                       sig_short=sig_short, n_asts_short=n_asts_short, w_meth_short=w_meth_short, pct_short=pct_short,
+                       ind_const=ind_const, reb_freq=reb_freq, min_short_me=min_short_me, max_short_cl=max_short_cl, tc_bps=0, spr_bps=0)
+    df_port_perf_1 = port_1.tab_port_perf()
+
+    port_2 = Portfolio(dic_data=dic_data, sig_long=sig_long, n_asts_long=n_asts_long, w_meth_long=w_meth_long, pct_long=pct_long,
+                       sig_short=sig_short, n_asts_short=n_asts_short, w_meth_short=w_meth_short, pct_short=pct_short,
+                       ind_const=ind_const, reb_freq=reb_freq, min_short_me=min_short_me, max_short_cl=max_short_cl, tc_bps=tc_bps, spr_bps=0)
+    df_port_perf_2 = port_2.tab_port_perf()
+
+    port_3 = Portfolio(dic_data=dic_data, sig_long=sig_long, n_asts_long=n_asts_long, w_meth_long=w_meth_long, pct_long=pct_long,
+                       sig_short=sig_short, n_asts_short=n_asts_short, w_meth_short=w_meth_short, pct_short=pct_short,
+                       ind_const=ind_const, reb_freq=reb_freq, min_short_me=min_short_me, max_short_cl=max_short_cl, tc_bps=tc_bps, spr_bps=spr_bps)
+    df_port_perf_3 = port_3.tab_port_perf()
 
 
-for i in range(len(df_port_perf_1)):
-    if i == 0:
-        df_port_perf_1.loc[i, ['L_NAV']] = 100
-        df_port_perf_1.loc[i, ['S_NAV']] = 100
-        df_port_perf_2.loc[i, ['L_NAV']] = 100
-        df_port_perf_2.loc[i, ['S_NAV']] = 100
+    for i in range(len(df_port_perf_1)):
+        if i == 0:
+            df_port_perf_1.loc[i, ['L_NAV']] = 100
+            df_port_perf_1.loc[i, ['S_NAV']] = 100
+            df_port_perf_2.loc[i, ['L_NAV']] = 100
+            df_port_perf_2.loc[i, ['S_NAV']] = 100
 
-        df_port_perf_1.loc[i, ['LA_NAV']] = 100
-        df_port_perf_2.loc[i, ['LA_NAV']] = 100
-        df_port_perf_3.loc[i, ['LA_NAV']] = 100
+            df_port_perf_1.loc[i, ['LA_NAV']] = 100
+            df_port_perf_2.loc[i, ['LA_NAV']] = 100
+            df_port_perf_3.loc[i, ['LA_NAV']] = 100
 
-    else:
-        df_port_perf_1.loc[i, ['L_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['L_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['L_RTNS']])[0])
-        df_port_perf_1.loc[i, ['S_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['S_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['S_RTNS']])[0])
-        df_port_perf_2.loc[i, ['L_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['L_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['L_RTNS']])[0])
-        df_port_perf_2.loc[i, ['S_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['S_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['S_RTNS']])[0])
+        else:
+            df_port_perf_1.loc[i, ['L_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['L_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['L_RTNS']])[0])
+            df_port_perf_1.loc[i, ['S_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['S_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['S_RTNS']])[0])
+            df_port_perf_2.loc[i, ['L_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['L_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['L_RTNS']])[0])
+            df_port_perf_2.loc[i, ['S_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['S_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['S_RTNS']])[0])
 
-        df_port_perf_1.loc[i, ['LA_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['LA_RTNS']])[0])
-        df_port_perf_2.loc[i, ['LA_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['LA_RTNS']])[0])
-        df_port_perf_3.loc[i, ['LA_NAV']] = np.array(df_port_perf_3.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_3.loc[i, ['LA_RTNS']])[0])
+            df_port_perf_1.loc[i, ['LA_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['LA_RTNS']])[0])
+            df_port_perf_2.loc[i, ['LA_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['LA_RTNS']])[0])
+            df_port_perf_3.loc[i, ['LA_NAV']] = np.array(df_port_perf_3.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_3.loc[i, ['LA_RTNS']])[0])
 
-df_tpm_1 = df_port_perf_1.set_index('DATE')
-df_tpm_2 = df_port_perf_2.set_index('DATE')
-df_tpm_3 = df_port_perf_3.set_index('DATE')
+    df_tpm_1 = df_port_perf_1.set_index('DATE')
+    df_tpm_2 = df_port_perf_2.set_index('DATE')
+    df_tpm_3 = df_port_perf_3.set_index('DATE')
 
-# Plot long vs short performances
-sns.set(context='paper', style='ticks', font_scale=1.0)
-fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
-# ax.set_title('Portfolios Performances', size=28)
-ax.axhline(y=100, color='black', ls='--', lw=1)
-ax.plot(df_tpm_1['L_NAV'], label='L_NAV' + ' (' + str(port_1.sig_long) + ', ' + str(port_1.n_asts_long) + ', ' + str(port_1.w_meth_long) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
-ax.plot(df_tpm_1['S_NAV'], label='S_NAV' + ' (' + str(port_1.sig_short) + ', ' + str(port_1.n_asts_short) + ', ' + str(port_1.w_meth_short) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
-ax.plot(df_tpm_2['L_NAV'], label='L_NAV_TC' + ' (' + str(port_2.sig_long) + ', ' + str(port_2.n_asts_long) + ', ' + str(port_2.w_meth_long) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
-ax.plot(df_tpm_2['S_NAV'], label='S_NAV_TC' + ' (' + str(port_2.sig_short) + ', ' + str(port_2.n_asts_short) + ', ' + str(port_2.w_meth_short) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
-ax.tick_params(axis='both', labelsize=18)
-ax.legend(loc='upper left', fontsize=16)
-fig.tight_layout()
-plt.show()
-fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_L_vs_S' + port_1.port_name + '.png'))
-plt.close()
 
-# Plot portfolio performances
-sns.set(context='paper', style='ticks', font_scale=1.0)
-fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
-# ax.set_title('Portfolios Performances', size=28)
-ax.axhline(y=100, color='black', ls='--', lw=1)
-ax.plot(df_tpm_1['PORT_NAV'], label='PORT_NAV' + ' (L = ' + str(port_1.pct_long) + ', S = ' + str(port_1.pct_short) + ', C = ' + str(100 - (port_1.pct_long - port_1.pct_short)) + ')', lw=3)
-ax.plot(df_tpm_2['PORT_NAV'], label='PORT_NAV_TC' + ' (L = ' + str(port_2.pct_long) + ', S = ' + str(port_2.pct_short) + ', C = ' + str(100 - (port_2.pct_long - port_2.pct_short)) + ')', lw=3)
-ax.plot(df_tpm_3['PORT_NAV'], label='PORT_NAV_TC_BC' + ' (L = ' + str(port_3.pct_long) + ', S = ' + str(port_3.pct_short) + ', C = ' + str(100 - (port_3.pct_long - port_3.pct_short)) + ')', lw=3)
-ax.plot(df_tpm_1['LA_NAV'], label='LA_NAV' + ' (' + str(port_1.sig_long) + ', ' + str(port_1.n_asts_long) + ', ' + str(port_1.w_meth_long) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
-ax.plot(df_tpm_2['LA_NAV'], label='LA_NAV_TC' + ' (' + str(port_2.sig_long) + ', ' + str(port_2.n_asts_long) + ', ' + str(port_2.w_meth_long) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
-ax.tick_params(axis='both', labelsize=18)
-ax.legend(loc='upper left', fontsize=16)
-fig.tight_layout()
-plt.show()
-fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_LS_vs_LA' + port_1.port_name + '.png'))
-plt.close()
+    sns.set(context='paper', style='ticks', font_scale=2.0)
+    fig, ax = plt.subplots(3, sharex= True, figsize=(12, 15), dpi=300)
 
-# Plot portfolio performances
-sns.set(context='paper', style='ticks', font_scale=1.0)
-fig, ax = plt.subplots(figsize=(12, 8), dpi=300)
-# ax.set_title('Portfolios Performances', size=28)
-ax.axhline(y=0, color='black', ls='--', lw=1)
-ax.plot(df_tpm_1['PORT_NAV'], label='PORT_NAV' + ' (L = ' + str(port_1.pct_long) + ', S = ' + str(port_1.pct_short) + ', C = ' + str(100 - (port_1.pct_long - port_1.pct_short)) + ')', lw=3)
-ax.plot(df_tpm_1['PORT_L'], label='PORT_L', lw=3)
-ax.plot((-1) * df_tpm_1['PORT_S'], label='PORT_S', lw=3)
-ax.plot(df_tpm_1['PORT_C'], label='PORT_C', lw=3)
-ax.tick_params(axis='both', labelsize=18)
-ax.legend(loc='upper left', fontsize=16)
-fig.tight_layout()
-plt.show()
-fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_NAV' + port_1.port_name + '.png'))
-plt.close()
+    # Plot long vs short performances
+    ax[0].set_title('Long vs Short Leg', size=20)
+    ax[0].axhline(y=100, color='black', ls='--', lw=1)
+    ax[0].plot(df_tpm_1['L_NAV'], label='L_NAV' + ' (' + str(port_1.sig_long) + ', ' + str(port_1.n_asts_long) + ', ' + str(port_1.w_meth_long) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
+    ax[0].plot(df_tpm_1['S_NAV'], label='S_NAV' + ' (' + str(port_1.sig_short) + ', ' + str(port_1.n_asts_short) + ', ' + str(port_1.w_meth_short) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
+    ax[0].plot(df_tpm_2['L_NAV'], label='L_NAV_TC' + ' (' + str(port_2.sig_long) + ', ' + str(port_2.n_asts_long) + ', ' + str(port_2.w_meth_long) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
+    ax[0].plot(df_tpm_2['S_NAV'], label='S_NAV_TC' + ' (' + str(port_2.sig_short) + ', ' + str(port_2.n_asts_short) + ', ' + str(port_2.w_meth_short) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
+    ax[0].tick_params(axis='both', labelsize=18)
+    ax[0].legend(loc='upper left', fontsize=16)
 
-# Table stats long vs short
-df_port_chars_1 = port_1.tab_port_chars(output_perf=False)
-df_port_chars_1_L = df_port_chars_1[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO', 'L_NORM_HI']]
-df_port_chars_1_L = df_port_chars_1_L.rename(columns={'L_ANN_MEAN': 'ANN_MEAN', 'L_ANN_VOL': 'ANN_VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX_DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG_TO', 'L_NORM_HI': 'NORM_HI'})
-df_port_chars_1_S = df_port_chars_1[['S_ANN_MEAN', 'S_ANN_VOL', 'S_SHARPE', 'S_MAX_DD', 'S_CALMAR', 'S_AVG_TO', 'S_NORM_HI']]
-df_port_chars_1_S = df_port_chars_1_S.rename(columns={'S_ANN_MEAN': 'ANN_MEAN', 'S_ANN_VOL': 'ANN_VOL', 'S_SHARPE': 'SHARPE', 'S_MAX_DD': 'MAX_DD', 'S_CALMAR': 'CALMAR', 'S_AVG_TO': 'AVG_TO', 'S_NORM_HI': 'NORM_HI'})
+    # Plot portfolio performances
+    ax[1].set_title('Long/Short vs Net Market Exposure Adjusted Long Leg', size=20)
+    ax[1].axhline(y=100, color='black', ls='--', lw=1)
+    ax[1].plot(df_tpm_1['PORT_NAV'], label='PORT_NAV' + ' (L = ' + str(port_1.pct_long) + ', S = ' + str(port_1.pct_short) + ', C = ' + str(100 - (port_1.pct_long - port_1.pct_short)) + ')', lw=3)
+    ax[1].plot(df_tpm_2['PORT_NAV'], label='PORT_NAV_TC' + ' (L = ' + str(port_2.pct_long) + ', S = ' + str(port_2.pct_short) + ', C = ' + str(100 - (port_2.pct_long - port_2.pct_short)) + ')', lw=3)
+    ax[1].plot(df_tpm_3['PORT_NAV'], label='PORT_NAV_TC_BC' + ' (L = ' + str(port_3.pct_long) + ', S = ' + str(port_3.pct_short) + ', C = ' + str(100 - (port_3.pct_long - port_3.pct_short)) + ')', lw=3)
+    ax[1].plot(df_tpm_1['LA_NAV'], label='LA_NAV' + ' (' + str(port_1.sig_long) + ', ' + str(port_1.n_asts_long) + ', ' + str(port_1.w_meth_long) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
+    ax[1].plot(df_tpm_2['LA_NAV'], label='LA_NAV_TC' + ' (' + str(port_2.sig_long) + ', ' + str(port_2.n_asts_long) + ', ' + str(port_2.w_meth_long) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
+    ax[1].tick_params(axis='both', labelsize=18)
+    ax[1].legend(loc='upper left', fontsize=16)
 
-df_port_chars_2 = port_2.tab_port_chars(output_perf=False)
-df_port_chars_2_L = df_port_chars_2[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO', 'L_NORM_HI']]
-df_port_chars_2_L = df_port_chars_2_L.rename(columns={'L_ANN_MEAN': 'ANN_MEAN', 'L_ANN_VOL': 'ANN_VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX_DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG_TO', 'L_NORM_HI': 'NORM_HI'})
-df_port_chars_2_S = df_port_chars_2[['S_ANN_MEAN', 'S_ANN_VOL', 'S_SHARPE', 'S_MAX_DD', 'S_CALMAR', 'S_AVG_TO', 'S_NORM_HI']]
-df_port_chars_2_S = df_port_chars_2_S.rename(columns={'S_ANN_MEAN': 'ANN_MEAN', 'S_ANN_VOL': 'ANN_VOL', 'S_SHARPE': 'SHARPE', 'S_MAX_DD': 'MAX_DD', 'S_CALMAR': 'CALMAR', 'S_AVG_TO': 'AVG_TO', 'S_NORM_HI': 'NORM_HI'})
+    # Plot portfolio performances
+    ax[2].set_title('Portfolios NAV', size=20)
+    ax[2].axhline(y=0, color='black', ls='--', lw=1)
+    ax[2].plot(df_tpm_1['PORT_NAV'], label='PORT_NAV' + ' (L = ' + str(port_1.pct_long) + ', S = ' + str(port_1.pct_short) + ', C = ' + str(100 - (port_1.pct_long - port_1.pct_short)) + ')', lw=3)
+    ax[2].plot(df_tpm_1['PORT_L'], label='PORT_L', lw=3)
+    ax[2].plot((-1) * df_tpm_1['PORT_S'], label='PORT_S', lw=3)
+    ax[2].plot(df_tpm_1['PORT_C'], label='PORT_C', lw=3)
+    ax[2].tick_params(axis='both', labelsize=18)
+    ax[2].legend(loc='upper left', fontsize=16)
 
-dic_port_chars_L = {'L': df_port_chars_1_L, 'L_TC': df_port_chars_2_L}
-df_port_chars_L = pd.concat(dic_port_chars_L, axis=0).T
-dic_port_chars_S = {'S': df_port_chars_1_S, 'S_TC': df_port_chars_2_S}
-df_port_chars_S = pd.concat(dic_port_chars_S, axis=0).T
-dic_port_chars = {'L': df_port_chars_L, 'S': df_port_chars_S}
-df_port_chars = pd.concat(dic_port_chars, axis=1).T
-df_port_chars = df_port_chars.droplevel(2, axis=0)
-df_port_chars.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('stats_L_S_' + port_1.port_name)))
+    fig.tight_layout()
+    plt.show()
+    fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_' + port_1.port_name + '.png'))
+    plt.close()
 
-# Table  stats LS vs LA
-df_port_chars_1 = port_1.tab_port_chars(output_perf=False)
-df_port_chars_1_LS = df_port_chars_1[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
-df_port_chars_1_L = df_port_chars_1[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO']]
-df_port_chars_1_L = df_port_chars_1_L.rename(columns={'L_ANN_MEAN': 'ANN_MEAN', 'L_ANN_VOL': 'ANN_VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX_DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG_TO'})
-df_port_chars_2 = port_2.tab_port_chars(output_perf=False)
-df_port_chars_2_LS = df_port_chars_1[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
-df_port_chars_2_L = df_port_chars_2[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO']]
-df_port_chars_2_L = df_port_chars_2_L.rename(columns={'L_ANN_MEAN': 'ANN_MEAN', 'L_ANN_VOL': 'ANN_VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX_DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG_TO'})
-df_port_chars_3 = port_3.tab_port_chars(output_perf=False)
-df_port_chars_3_LS = df_port_chars_1[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
 
-dic_port_chars_LS = {'LS': df_port_chars_1_LS, 'LS_TC': df_port_chars_2_LS, 'LS_TC_BC': df_port_chars_3_LS}
-df_port_chars_LS = pd.concat(dic_port_chars_LS, axis=0).T
-dic_port_chars_L = {'L': df_port_chars_1_L, 'L_TC': df_port_chars_2_L}
-df_port_chars_L = pd.concat(dic_port_chars_L, axis=0).T
-dic_port_chars = {'LS': df_port_chars_LS, 'L': df_port_chars_L}
-df_port_chars = pd.concat(dic_port_chars, axis=1).T
-df_port_chars = df_port_chars.droplevel(2, axis=0).T
-df_port_chars.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('stats_LS_LA_' + port_1.port_name)))
-'''
+    # Table stats long vs short
+    df_port_chars_1 = port_1.tab_port_chars(output_perf=False)
+    df_port_chars_2 = port_2.tab_port_chars(output_perf=False)
+    df_port_chars_3 = port_3.tab_port_chars(output_perf=False)
+    # Port 1
+    df_port_chars_1_L = df_port_chars_1[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO', 'L_NORM_HI']]
+    df_port_chars_1_L = df_port_chars_1_L.rename(columns={'L_ANN_MEAN': 'ANN MEAN', 'L_ANN_VOL': 'ANN VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG TO', 'L_NORM_HI': 'NORM HI'})
+    df_port_chars_1_S = df_port_chars_1[['S_ANN_MEAN', 'S_ANN_VOL', 'S_SHARPE', 'S_MAX_DD', 'S_CALMAR', 'S_AVG_TO', 'S_NORM_HI']]
+    df_port_chars_1_S = df_port_chars_1_S.rename(columns={'S_ANN_MEAN': 'ANN MEAN', 'S_ANN_VOL': 'ANN VOL', 'S_SHARPE': 'SHARPE', 'S_MAX_DD': 'MAX DD', 'S_CALMAR': 'CALMAR', 'S_AVG_TO': 'AVG TO', 'S_NORM_HI': 'NORM HI'})
+    # Port 2
+    df_port_chars_2_L = df_port_chars_2[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO', 'L_NORM_HI']]
+    df_port_chars_2_L = df_port_chars_2_L.rename(columns={'L_ANN_MEAN': 'ANN MEAN', 'L_ANN_VOL': 'ANN VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG TO', 'L_NORM_HI': 'NORM HI'})
+    df_port_chars_2_S = df_port_chars_2[['S_ANN_MEAN', 'S_ANN_VOL', 'S_SHARPE', 'S_MAX_DD', 'S_CALMAR', 'S_AVG_TO', 'S_NORM_HI']]
+    df_port_chars_2_S = df_port_chars_2_S.rename(columns={'S_ANN_MEAN': 'ANN MEAN', 'S_ANN_VOL': 'ANN VOL', 'S_SHARPE': 'SHARPE', 'S_MAX_DD': 'MAX DD', 'S_CALMAR': 'CALMAR', 'S_AVG_TO': 'AVG TO', 'S_NORM_HI': 'NORM HI'})
+
+    dic_port_chars_L = {'L': df_port_chars_1_L, 'L-TC': df_port_chars_2_L}
+    df_port_chars_L = pd.concat(dic_port_chars_L, axis=0).T
+    dic_port_chars_S = {'S': df_port_chars_1_S, 'S-TC': df_port_chars_2_S}
+    df_port_chars_S = pd.concat(dic_port_chars_S, axis=0).T
+    dic_port_chars = {'L': df_port_chars_L, 'S': df_port_chars_S}
+    df_port_table_L_S = pd.concat(dic_port_chars, axis=1).T
+    df_port_table_L_S = df_port_table_L_S.droplevel(2, axis=0).T
+    #df_port_table_L_S.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('stats_L_S_' + port_1.port_name)))
+
+    # Table  stats LS vs LA
+    # Port 1
+    df_port_chars_1_LS = df_port_chars_1[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
+    df_port_chars_1_LS = df_port_chars_1_LS.rename(columns={'ANN_MEAN': 'ANN MEAN', 'ANN_VOL': 'ANN VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG TO'})
+    df_port_chars_1_LA = df_port_chars_1[['LA_ANN_MEAN', 'LA_ANN_VOL', 'LA_SHARPE', 'LA_MAX_DD', 'LA_CALMAR', 'LA_AVG_TO']]
+    df_port_chars_1_LA = df_port_chars_1_L.rename(columns={'LA_ANN_MEAN': 'ANN MEAN', 'LA_ANN_VOL': 'ANN VOL', 'LA_SHARPE': 'SHARPE', 'LA_MAX_DD': 'MAX DD', 'LA_CALMAR': 'CALMAR', 'LA_AVG_TO': 'AVG TO'})
+    # Port 2
+    df_port_chars_2_LS = df_port_chars_2[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
+    df_port_chars_2_LS = df_port_chars_2_LS.rename(columns={'ANN_MEAN': 'ANN MEAN', 'ANN_VOL': 'ANN VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG TO'})
+
+    df_port_chars_2_LA = df_port_chars_2[['LA_ANN_MEAN', 'LA_ANN_VOL', 'LA_SHARPE', 'LA_MAX_DD', 'LA_CALMAR', 'LA_AVG_TO']]
+    df_port_chars_2_LA = df_port_chars_2_L.rename(columns={'LA_ANN_MEAN': 'ANN MEAN', 'LA_ANN_VOL': 'ANN VOL', 'LA_SHARPE': 'SHARPE', 'LA_MAX_DD': 'MAX DD', 'LA_CALMAR': 'CALMAR', 'LA_AVG_TO': 'AVG TO'})
+    # Port 3
+    df_port_chars_3_LS = df_port_chars_3[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
+    df_port_chars_3_LS = df_port_chars_3_LS.rename(columns={'ANN_MEAN': 'ANN MEAN', 'ANN_VOL': 'ANN VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG TO'})
+
+    dic_port_chars_LS = {'LS': df_port_chars_1_LS, 'LS-TC': df_port_chars_2_LS, 'LS-TC-BC': df_port_chars_3_LS}
+    df_port_chars_LS = pd.concat(dic_port_chars_LS, axis=0).T
+    dic_port_chars_LA = {'LA': df_port_chars_1_LA, 'LA-TC': df_port_chars_2_LA}
+    df_port_chars_LA = pd.concat(dic_port_chars_LA, axis=0).T
+    dic_port_chars = {'LS': df_port_chars_LS, 'LA': df_port_chars_LA}
+    df_port_table_LS_LA = pd.concat(dic_port_chars, axis=1).T
+    df_port_table_LS_LA = df_port_table_LS_LA.droplevel(2, axis=0).T
+    #df_port_table_LS_LA.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('stats_LS_LA_' + port_1.port_name)))
+
+    dic_port_table = {'LS vs Long NME Adjusted':df_port_table_LS_LA, 'Long vs Short':df_port_table_L_S}
+    df_port_table = pd.concat(dic_port_table, axis=1)
+    df_port_table = df_port_table.droplevel(1, axis=1)
+    df_port_table.to_latex(Path.joinpath(paths.get('tables'), '{}.tex'.format('stats_' + port_1.port_name)), float_format='%.4f')
+
+    return df_port_table
+
+test = get_port_stats_graph(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=120,
+                   sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                   ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=50)
+
 
 '''
 # Portfolios stats
@@ -469,3 +485,126 @@ def tab_port_stats(list_port,file_name):
 
     return df_ports_stats
 '''
+
+# Berkshire Hathaway comp
+'''
+# *** Transaction cost analysis ***
+#df_data.loc[df_data['TIC'] == bytes('BRK.B', 'utf-8')]
+#df_stock = df_data.loc[df_data['PERMNO'] == 17778]
+'''
+
+def get_stats_stock(PERMNO):
+
+
+    df_stock = df_data.loc[df_data['PERMNO'] == PERMNO]
+
+    def get_drawdown_1(s_port_rtns):
+        max = 0
+        dt_max = s_port_rtns.index[0]
+        old_max = 0
+        dt_old_max = s_port_rtns.index[0]
+        df_drawdown = pd.DataFrame()
+        s_min = pd.Series(dtype='float64')
+        s_port_cum_rtns = pd.Series(np.cumprod(1 + np.array(s_port_rtns)), index=s_port_rtns.index)
+
+        for i in s_port_cum_rtns.index:
+            if s_port_cum_rtns[i] > max:
+                old_max = max
+                dt_old_max = dt_max
+                max = s_port_cum_rtns[i]
+                dt_max = i
+            if max == s_port_cum_rtns[i]:
+                if not s_min.empty:
+                    drawdown = s_min.min() / old_max - 1
+                    df_drawdown_tmp = pd.DataFrame({'DD': [drawdown], 'START': [dt_old_max], 'END': [s_min.idxmin()]})
+                    df_drawdown = pd.concat([df_drawdown, df_drawdown_tmp], ignore_index=True)
+                    s_min = pd.Series(dtype='float64')
+            if s_port_cum_rtns[i] < max:
+                s_min[i] = s_port_cum_rtns[i]
+
+            if i == s_port_cum_rtns.index[-1]:
+                if not s_min.empty:
+                    drawdown = s_min.min() / max - 1
+                    df_drawdown_tmp = pd.DataFrame({'DD': [drawdown], 'START': [dt_max], 'END': [s_min.idxmin()]})
+                    df_drawdown = pd.concat([df_drawdown, df_drawdown_tmp], ignore_index=True)
+                    s_min = pd.Series(dtype='float64')
+
+        return df_drawdown
+
+
+
+    # Merge factors data
+    df_port_perf = pd.merge(df_stock, dic_data['df_facs_data'], on='DATE', how='inner')
+    df_port_perf = df_port_perf.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
+
+    # Initialization
+    df_port_chars = pd.DataFrame()
+    #pd.Series(df_port_perf.loc[1:, 'PORT_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
+    s_port_rtns = df_port_perf.set_index('DATE')['TRT1M']
+    s_port_losses = (-1) * s_port_rtns
+    df_drawdown = get_drawdown_1(s_port_rtns)
+    s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()] if not df_drawdown.empty else pd.Series([np.nan], index=['DD'])
+
+    # Portfolio (L/S)
+    df_port_chars.loc[0, 'ANN_MEAN'] = s_port_rtns.mean() * 12
+    df_port_chars.loc[0, 'ANN_VOL'] = np.sqrt(s_port_rtns.var() * 12)
+    df_port_chars.loc[0, 'SHARPE'] = (df_port_chars.loc[0, 'ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'ANN_VOL']
+    df_port_chars.loc[0, 'MIN_RTN'] = s_port_rtns.min()
+    df_port_chars.loc[0, 'MIN_DATE'] = (s_port_rtns.idxmin()).strftime('%Y-%m')
+    df_port_chars.loc[0, 'MAX_RTN'] = s_port_rtns.max()
+    df_port_chars.loc[0, 'MAX_DATE'] = (s_port_rtns.idxmax()).strftime('%Y-%m')
+    df_port_chars.loc[0, 'MAX_DD'] = (-1) * s_max_drawdown['DD']  # Expressed in terms of loss (negative return)
+    df_port_chars.loc[0, 'MAX_DD_PRD'] = s_max_drawdown['START'].strftime('%Y-%m') + '_' + s_max_drawdown['END'].strftime('%Y-%m')
+
+    df_port_chars.loc[0, 'PERMNO'] = df_stock.iloc[0]['PERMNO']
+    with warnings.catch_warnings():
+        warnings.simplefilter(action='ignore', category=FutureWarning)
+        df_port_chars.loc[0, 'TIC'] = df_stock.iloc[0]['TIC']
+    df_port_chars.loc[0, 'RF'] = df_port_perf.iloc[-1]['RF'] * 12
+
+    df_stock = df_stock[['PERMNO','DATE','TIC','TRT1M','PRCCM']]
+
+    return df_stock, df_port_chars
+
+df_stock_perfs, df_stock_stats = get_stats_stock(PERMNO=17778)
+df_stock_perfs.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_ports_BRK.B_perfs')))
+df_stock_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_ports_BRK.B_stats')))
+
+
+
+
+'''
+port = Portfolio(dic_data=dic_data, sig_long='ZS_QLT', n_asts_long=20, w_meth_long='EW', pct_long=120,
+                         sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                         ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0)
+
+#VQ_20.0_EW_120.0_VQ_15.0_EW_50.0_I_M
+
+yyy =  port.tab_port_perf()
+zzz = port.tab_port_chars()
+
+'''
+
+
+# 100/100 portfolio analysis
+ls_sigs = ['ZS_VAL', 'ZS_QLT']
+ls_w_meth = ['EW', 'MN']
+
+
+dic_tmp_0 = {}
+for x_1 in ls_w_meth:
+    dic_tmp_1 = {}
+    for x_2 in ls_sigs:
+        port = Portfolio(dic_data=dic_data, sig_long=x_2, n_asts_long=25, w_meth_long=x_1, pct_long=100,
+                             sig_short=x_2, n_asts_short=25, w_meth_short=x_1, pct_short=100,
+                             ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=0)
+        df_port_chars = port.tab_port_chars()
+        df_port_chars = df_port_chars[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'MAX_DD_PRD', 'AVG_TO']]
+        #df_port_chars = df_port_chars.rename(columns={'ANN_MEAN': 'ANN MEAN', 'ANN_VOL': 'ANN VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX DD', 'MAX_DD_PRD': 'MAX DD PRD', 'AVG_TO': 'AVG TO'})
+        dic_tmp_1[x_2] = df_port_chars
+    df_tmp_1 = pd.concat(dic_tmp_1, axis=0).T
+    dic_tmp_0[x_1] = df_tmp_1
+df_tmp_0 = pd.concat(dic_tmp_0, axis=1).T
+df_tmp_0 = df_tmp_0.droplevel(2, axis=0)
+df_tmp_0.to_latex(Path.joinpath(paths.get('tables'), '{}.tex'.format('stats_100')),float_format='%.4f',escape=False)
+
