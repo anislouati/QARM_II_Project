@@ -1269,7 +1269,7 @@ def tab_ports_perfs(ls_ports, file_name=None):
     return df_ports_perfs
 
 
-def exp_port_analysis(pct_long_short):
+def exp_port_analysis(pct_long_short, tc_bps=0, spr_bps=0):
     with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
         dic_data = pickle.load(file)
     dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
@@ -1282,7 +1282,7 @@ def exp_port_analysis(pct_long_short):
         for sig in ls_sigs:
             port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[sig], n_asts_long=25, w_meth_long=w_meth, pct_long=100,
                              sig_short=dic_sigs[sig], n_asts_short=25, w_meth_short=w_meth, pct_short=100,
-                             ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0)
+                             ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=tc_bps, spr_bps=spr_bps)
             df_port_chars = port.tab_port_chars(output_perf=False)
             s_tmp = pd.Series()
             if i == 0:
@@ -1290,13 +1290,17 @@ def exp_port_analysis(pct_long_short):
                                    'MEAN': df_port_chars['ANN_MEAN'].iloc[0], 'VOL': df_port_chars['ANN_VOL'].iloc[0],
                                    'SHARPE': df_port_chars['SHARPE'].iloc[0], 'MDD': df_port_chars['MAX_DD'].iloc[0],
                                    'MDD_PRD': df_port_chars['MAX_DD_PRD'].iloc[0], 'AVG_TO': df_port_chars['AVG_TO'].iloc[0],
-                                   'BETA': df_port_chars['B_MKTRF'].iloc[0], 't_BETA': df_port_chars['t_MKTRF'].iloc[0]})
+                                   'ALPHA': df_port_chars['ANN_ALPHA'].iloc[0], 't_ALPHA': df_port_chars['t_ALPHA'].iloc[0],
+                                   'BETA': df_port_chars['B_MKTRF'].iloc[0], 't_BETA': df_port_chars['t_MKTRF'].iloc[0],
+                                   'MIN_NAV': df_port_chars['MIN_PORT_NAV'].iloc[0]})
             else:
                 s_tmp = pd.Series({'W_METH': '', 'SIG': sig,
                                    'MEAN': df_port_chars['ANN_MEAN'].iloc[0], 'VOL': df_port_chars['ANN_VOL'].iloc[0],
                                    'SHARPE': df_port_chars['SHARPE'].iloc[0], 'MDD': df_port_chars['MAX_DD'].iloc[0],
                                    'MDD_PRD': df_port_chars['MAX_DD_PRD'].iloc[0], 'AVG_TO': df_port_chars['AVG_TO'].iloc[0],
-                                   'BETA': df_port_chars['B_MKTRF'].iloc[0], 't_BETA': df_port_chars['t_MKTRF'].iloc[0]})
+                                   'ALPHA': df_port_chars['ANN_ALPHA'].iloc[0], 't_ALPHA': df_port_chars['t_ALPHA'].iloc[0],
+                                   'BETA': df_port_chars['B_MKTRF'].iloc[0], 't_BETA': df_port_chars['t_MKTRF'].iloc[0],
+                                   'MIN_NAV': df_port_chars['MIN_PORT_NAV'].iloc[0]})
             df_port_analysis = pd.concat([df_port_analysis, pd.DataFrame(s_tmp).T], axis=0, ignore_index=True)
             i += 1
 
@@ -1310,8 +1314,12 @@ def exp_port_analysis(pct_long_short):
     for key in list(dic_replace.keys()):
         df_port_analysis.columns = df_port_analysis.columns.str.replace(key, dic_replace[key], regex=True)
         df_port_analysis = df_port_analysis.replace(key, dic_replace[key], regex=True)
-    df_port_analysis.to_latex(Path.joinpath(paths.get('tables'), 'df_port_analysis_{}_{}.tex'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))),
-                              float_format='%.3f', index=False)
+    file_name = 'df_port_analysis_{}_{}.tex'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))
+    if tc_bps > 0:
+        file_name += '_TC'
+    if spr_bps > 0:
+        file_name += '_BC'
+    df_port_analysis.to_latex(Path.joinpath(paths.get('tables'), file_name), float_format='%.3f', index=False)
 
 
 def exp_res_analysis(pct_long_short, perf_metric='SHARPE', ascending=False):
