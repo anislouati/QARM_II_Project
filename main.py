@@ -238,9 +238,9 @@ fn.plot_zscores(date=datetime(2022, 12, 31), ls_zscores=['ZS_PROF', 'ZS_GWTH', '
 ls_keys = ['VAL_1', 'QLT_1', 'VQ_1', 'VAL_2', 'QLT_2', 'VQ_2', 'VAL_3', 'QLT_3', 'VQ_3',
            'BEST_11', 'VQAM_1', 'BEST_12', 'VQAM_2', 'BEST_13', 'VQAM_3',
            'BEST_21', 'BEST_G1', 'BEST_22', 'BEST_G2', 'BEST_23', 'BEST_G3']
-ls_values = [812, 1620, 3240, 818, 1626, 3246, 830, 1638, 4070,
-             3240, 5580, 1626, 5676, 4070, 5688,
-             3240, 3780, 1626, 3786, 4070, 3888]
+ls_values = [812, 1620, 4050, 818, 1626, 3968, 830, 1638, 4070,
+             4050, 5580, 1626, 5676, 4070, 5688,
+             4050, 3780, 1626, 3786, 4070, 3888]
 dic_selected_ports = dict(zip(ls_keys, ls_values))
 dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
 
@@ -330,7 +330,103 @@ df_stock_perfs.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_
 df_stock_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_ports_BRK.B_stats')))
 
 
+def exp_port_analysis_2(pct_long_short):
+    with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
+        dic_data = pickle.load(file)
+    dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
+    df_port_analysis = pd.DataFrame()
 
+    ls_w_meth = ['EW', 'MN', 'RP']
+    ls_sigs = ['VAL', 'QLT', 'VQ', 'VQAM']
+
+    for w_meth in ls_w_meth:
+        i = 0
+        for sig in ls_sigs:
+            port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[sig], n_asts_long=25, w_meth_long=w_meth, pct_long=100,
+                             sig_short=dic_sigs[sig], n_asts_short=25, w_meth_short=w_meth, pct_short=100,
+                             ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0)
+            df_port_chars = port.tab_port_chars(output_perf=False)
+            s_tmp = pd.Series()
+            if i == 0:
+                s_tmp = pd.Series({'W_METH': '{} ({}/{})'.format(w_meth, str(int(pct_long_short[0])), str(int(pct_long_short[1]))), 'SIG': sig,
+                                   'MEAN': df_port_chars['ANN_MEAN'].iloc[0], 'VOL': df_port_chars['ANN_VOL'].iloc[0],
+                                   'SHARPE': df_port_chars['SHARPE'].iloc[0], 'MDD': df_port_chars['MAX_DD'].iloc[0],
+                                   'MDD_PRD': df_port_chars['MAX_DD_PRD'].iloc[0], 'AVG_TO': df_port_chars['AVG_TO'].iloc[0],
+                                   'BETA': df_port_chars['B_MKTRF'].iloc[0], 't_BETA': df_port_chars['t_MKTRF'].iloc[0],
+                                   'ALPHA': df_port_chars['ANN_ALPHA'].iloc[0], 't_ALPHA': df_port_chars['t_ALPHA'].iloc[0],
+                                   'MIN_NAV': df_port_chars['MIN_PORT_NAV'].iloc[0]})
+            else:
+                s_tmp = pd.Series({'W_METH': '', 'SIG': sig,
+                                   'MEAN': df_port_chars['ANN_MEAN'].iloc[0], 'VOL': df_port_chars['ANN_VOL'].iloc[0],
+                                   'SHARPE': df_port_chars['SHARPE'].iloc[0], 'MDD': df_port_chars['MAX_DD'].iloc[0],
+                                   'MDD_PRD': df_port_chars['MAX_DD_PRD'].iloc[0], 'AVG_TO': df_port_chars['AVG_TO'].iloc[0],
+                                   'BETA': df_port_chars['B_MKTRF'].iloc[0], 't_BETA': df_port_chars['t_MKTRF'].iloc[0],
+                                   'ALPHA': df_port_chars['ANN_ALPHA'].iloc[0], 't_ALPHA': df_port_chars['t_ALPHA'].iloc[0],
+                                   'MIN_NAV': df_port_chars['MIN_PORT_NAV'].iloc[0]})
+            df_port_analysis = pd.concat([df_port_analysis, pd.DataFrame(s_tmp).T], axis=0, ignore_index=True)
+            i += 1
+
+    # Reformatting
+    for i in range(len(df_port_analysis)):
+        ls_tmp = df_port_analysis.loc[i, 'MDD_PRD'].split('_')
+        df_port_analysis.loc[i, 'MDD_PRD'] = ls_tmp[0][2:] + '_' + ls_tmp[1][2:]
+
+    # Export port analysis
+    dic_replace = {'_': r'\_', '%': r'\%', '&': r'\&'}
+    for key in list(dic_replace.keys()):
+        df_port_analysis.columns = df_port_analysis.columns.str.replace(key, dic_replace[key], regex=True)
+        df_port_analysis = df_port_analysis.replace(key, dic_replace[key], regex=True)
+    df_port_analysis.to_latex(Path.joinpath(paths.get('tables'), 'df_port_analysis_{}_{}_TC.tex'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))),
+                              float_format='%.3f', index=False)
+
+    dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
+    df_port_analysis = pd.DataFrame()
+
+    ls_w_meth = ['EW', 'MN', 'RP']
+    ls_sigs = ['VAL', 'QLT', 'VQ', 'VQAM']
+
+    for w_meth in ls_w_meth:
+        i = 0
+        for sig in ls_sigs:
+            port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[sig], n_asts_long=25, w_meth_long=w_meth, pct_long=100,
+                             sig_short=dic_sigs[sig], n_asts_short=25, w_meth_short=w_meth, pct_short=100,
+                             ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=0)
+            df_port_chars = port.tab_port_chars(output_perf=False)
+            s_tmp = pd.Series()
+            if i == 0:
+                s_tmp = pd.Series({'W_METH': '{} ({}/{})'.format(w_meth, str(int(pct_long_short[0])), str(int(pct_long_short[1]))), 'SIG': sig,
+                                   'MEAN': df_port_chars['ANN_MEAN'].iloc[0], 'VOL': df_port_chars['ANN_VOL'].iloc[0],
+                                   'SHARPE': df_port_chars['SHARPE'].iloc[0], 'MDD': df_port_chars['MAX_DD'].iloc[0],
+                                   'MDD_PRD': df_port_chars['MAX_DD_PRD'].iloc[0], 'AVG_TO': df_port_chars['AVG_TO'].iloc[0],
+                                   'BETA': df_port_chars['B_MKTRF'].iloc[0], 't_BETA': df_port_chars['t_MKTRF'].iloc[0],
+                                   'ALPHA': df_port_chars['ANN_ALPHA'].iloc[0], 't_ALPHA': df_port_chars['t_ALPHA'].iloc[0],
+                                   'MIN_NAV': df_port_chars['MIN_PORT_NAV'].iloc[0]})
+            else:
+                s_tmp = pd.Series({'W_METH': '', 'SIG': sig,
+                                   'MEAN': df_port_chars['ANN_MEAN'].iloc[0], 'VOL': df_port_chars['ANN_VOL'].iloc[0],
+                                   'SHARPE': df_port_chars['SHARPE'].iloc[0], 'MDD': df_port_chars['MAX_DD'].iloc[0],
+                                   'MDD_PRD': df_port_chars['MAX_DD_PRD'].iloc[0], 'AVG_TO': df_port_chars['AVG_TO'].iloc[0],
+                                   'BETA': df_port_chars['B_MKTRF'].iloc[0], 't_BETA': df_port_chars['t_MKTRF'].iloc[0],
+                                   'ALPHA': df_port_chars['ANN_ALPHA'].iloc[0], 't_ALPHA': df_port_chars['t_ALPHA'].iloc[0],
+                                   'MIN_NAV': df_port_chars['MIN_PORT_NAV'].iloc[0]})
+            df_port_analysis = pd.concat([df_port_analysis, pd.DataFrame(s_tmp).T], axis=0, ignore_index=True)
+            i += 1
+
+    # Reformatting
+    for i in range(len(df_port_analysis)):
+        ls_tmp = df_port_analysis.loc[i, 'MDD_PRD'].split('_')
+        df_port_analysis.loc[i, 'MDD_PRD'] = ls_tmp[0][2:] + '_' + ls_tmp[1][2:]
+
+    # Export port analysis
+    dic_replace = {'_': r'\_', '%': r'\%', '&': r'\&'}
+    for key in list(dic_replace.keys()):
+        df_port_analysis.columns = df_port_analysis.columns.str.replace(key, dic_replace[key], regex=True)
+        df_port_analysis = df_port_analysis.replace(key, dic_replace[key], regex=True)
+    df_port_analysis.to_latex(Path.joinpath(paths.get('tables'), 'df_port_analysis_{}_{}_NTC.tex'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))),
+                              float_format='%.3f', index=False)
+
+
+exp_port_analysis_2(pct_long_short=(100, 100))
 
 
 
