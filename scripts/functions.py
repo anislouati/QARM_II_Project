@@ -1480,10 +1480,6 @@ def exp_sens_analysis(pct_long_short, perf_metric='SHARPE', ascending=False):
                               float_format='%.0f', index=False)
 
 
-# %%
-# DO NOT MODIFY ABOVE!!!
-
-
 def get_port_stats_graph(dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
                          sig_short, n_asts_short, w_meth_short, pct_short,
                          ind_const, reb_freq, min_short_me, max_short_cl, tc_bps, spr_bps):

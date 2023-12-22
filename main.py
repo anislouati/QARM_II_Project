@@ -25,6 +25,7 @@ warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning
 # *** Branch: DATA MANAGEMENT                    ***
 # **************************************************
 
+
 # Import raw data
 df_fundamentals_quarterly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compustat_merged_fundamentals_quarterly.sas7bdat'))
 df_security_monthly = pd.read_sas(Path.joinpath(paths.get('data'), 'crsp_compustat_merged_security_monthly.sas7bdat'))
@@ -211,16 +212,15 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 # **************************************************
 
 
+# %%
+# *** Branch: PRESENTATION ***
+
+
 # Load data
 with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
     dic_data = pickle.load(file)
 with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars.pkl'), 'rb') as file:
     df_ports_chars = pickle.load(file)
-
-
-# %%
-# *** Branch: Presentation ***
-
 
 # Sector average counts
 port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=20, w_meth_long='EW', pct_long=120,
@@ -258,7 +258,6 @@ df_ports_stats = fn.tab_ports_stats(ls_ports, 'df_ports_stats')
 df_ports_perfs = fn.tab_ports_perfs(ls_ports, 'df_ports_perfs')
 
 # Turnover analysis
-
 # Best portfolio without transactions cost: VQAM_25_EW_300_QLT_15_EW_200_I_1000_50_M
 port_1 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_long=25, w_meth_long='EW', pct_long=300,
                    sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=200,
@@ -288,7 +287,7 @@ df_ports_perfs = fn.tab_ports_perfs(ls_ports, 'df_ports_TO_analysis_perfs')
 
 
 # %%
-# *** Branch: Report ***
+# *** Branch: REPORT ***
 
 
 # 100/100 portfolio analysis (market-neutral)
@@ -313,10 +312,7 @@ fn.exp_sens_analysis(pct_long_short=(130, 30))
 fn.exp_sens_analysis(pct_long_short=(120, 50))
 fn.exp_sens_analysis(pct_long_short=(300, 200))
 
-
-# %%
-# DO NOT MODIFY ABOVE!
-
+# Performance decomposition (long and short legs)
 ls_pct_long_short = [(100, 100), (130, 30), (120, 50), (300, 200)]
 for pct_long_short in ls_pct_long_short:
     ls_idx = []
@@ -328,7 +324,6 @@ for pct_long_short in ls_pct_long_short:
     ls_idx += [df_pc.head(1).index[0]]
 
     for idx in ls_idx:
-        #print(df_pc.loc[idx])
         df_tmp = df_pc.loc[idx]
 
     dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
@@ -337,6 +332,8 @@ for pct_long_short in ls_pct_long_short:
     test = fn.get_port_stats_graph(dic_data=dic_data, sig_long=sig_long, n_asts_long=df_tmp['L_N_ASTS'], w_meth_long=df_tmp['L_W_METH'], pct_long=df_tmp['L_PCT'],
                                    sig_short=sig_short, n_asts_short=df_tmp['S_N_ASTS'], w_meth_short=df_tmp['S_W_METH'], pct_short=df_tmp['S_PCT'],
                                    ind_const=df_tmp['IND_CONST'], reb_freq=df_tmp['REB_FREQ'], min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=50)
+
+# Portfolio default illustration
 
 
 
