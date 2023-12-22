@@ -292,17 +292,7 @@ df_ports_perfs = fn.tab_ports_perfs(ls_ports, 'df_ports_TO_analysis_perfs')
 
 
 # 100/100 portfolio analysis (market-neutral)
-
-
-
-
-
-
-
-exp_port_analysis(pct_long_short=(100, 100))
-
-
-# %%
+fn.exp_port_analysis(pct_long_short=(100, 100))
 
 # Results analysis
 fn.exp_res_analysis(pct_long_short=(100, 100))

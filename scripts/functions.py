@@ -1289,12 +1289,14 @@ def exp_port_analysis(pct_long_short):
                 s_tmp = pd.Series({'W_METH': '{} ({}/{})'.format(w_meth, str(int(pct_long_short[0])), str(int(pct_long_short[1]))), 'SIG': sig,
                                    'MEAN': df_port_chars['ANN_MEAN'].iloc[0], 'VOL': df_port_chars['ANN_VOL'].iloc[0],
                                    'SHARPE': df_port_chars['SHARPE'].iloc[0], 'MDD': df_port_chars['MAX_DD'].iloc[0],
-                                   'MDD_PRD': df_port_chars['MAX_DD_PRD'].iloc[0], 'AVG_TO': df_port_chars['AVG_TO'].iloc[0]})
+                                   'MDD_PRD': df_port_chars['MAX_DD_PRD'].iloc[0], 'AVG_TO': df_port_chars['AVG_TO'].iloc[0],
+                                   'BETA': df_port_chars['B_MKTRF'].iloc[0], 't_BETA': df_port_chars['t_MKTRF'].iloc[0]})
             else:
                 s_tmp = pd.Series({'W_METH': '', 'SIG': sig,
                                    'MEAN': df_port_chars['ANN_MEAN'].iloc[0], 'VOL': df_port_chars['ANN_VOL'].iloc[0],
                                    'SHARPE': df_port_chars['SHARPE'].iloc[0], 'MDD': df_port_chars['MAX_DD'].iloc[0],
-                                   'MDD_PRD': df_port_chars['MAX_DD_PRD'].iloc[0], 'AVG_TO': df_port_chars['AVG_TO'].iloc[0]})
+                                   'MDD_PRD': df_port_chars['MAX_DD_PRD'].iloc[0], 'AVG_TO': df_port_chars['AVG_TO'].iloc[0],
+                                   'BETA': df_port_chars['B_MKTRF'].iloc[0], 't_BETA': df_port_chars['t_MKTRF'].iloc[0]})
             df_port_analysis = pd.concat([df_port_analysis, pd.DataFrame(s_tmp).T], axis=0, ignore_index=True)
             i += 1
 
@@ -1471,6 +1473,7 @@ def exp_sens_analysis(pct_long_short, perf_metric='SHARPE', ascending=False):
 
 # %%
 # DO NOT MODIFY ABOVE!!!
+
 
 def get_port_stats_graph(dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
                          sig_short, n_asts_short, w_meth_short, pct_short,
