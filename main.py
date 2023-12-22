@@ -306,8 +306,8 @@ df_stock_perfs.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_
 df_stock_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_ports_BRK.B_stats')))
 
 # 100/100 portfolio analysis
-ls_sigs = ['ZS_VAL', 'ZS_QLT']
-ls_w_meth = ['EW', 'MN']
+ls_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_AMOM']
+ls_w_meth = ['EW', 'MN', 'RP']
 
 df_port_analysis
 dic_tmp = {}
