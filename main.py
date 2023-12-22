@@ -430,6 +430,19 @@ exp_port_analysis_2(pct_long_short=(100, 100))
 
 
 
+# %%
+
+ls_idx = []
+perf_metric = 'SHARPE'
+ascending = False
+pct_long_short = (130, 30)
+with open(Path.joinpath(paths.get('tables'), 'df_ports_chars.pkl'), 'rb') as file:
+    df_pc = pickle.load(file)
+df_pc = df_pc.loc[(df_pc['L_PCT'] == pct_long_short[0]) & (df_pc['S_PCT'] == pct_long_short[1])].sort_values(by=[perf_metric], ascending=ascending)
+ls_idx += [df_pc.head(1).index[0]]
+
+for idx in ls_idx:
+    print(df_pc.loc[idx])
 
 
 
