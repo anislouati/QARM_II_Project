@@ -1314,11 +1314,12 @@ def exp_port_analysis(pct_long_short, tc_bps=0, spr_bps=0):
     for key in list(dic_replace.keys()):
         df_port_analysis.columns = df_port_analysis.columns.str.replace(key, dic_replace[key], regex=True)
         df_port_analysis = df_port_analysis.replace(key, dic_replace[key], regex=True)
-    file_name = 'df_port_analysis_{}_{}.tex'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))
+    file_name = 'df_port_analysis_{}_{}'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))
     if tc_bps > 0:
         file_name += '_TC'
     if spr_bps > 0:
         file_name += '_BC'
+    file_name += '.tex'
     df_port_analysis.to_latex(Path.joinpath(paths.get('tables'), file_name), float_format='%.3f', index=False)
 
 
