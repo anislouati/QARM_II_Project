@@ -1329,3 +1329,39 @@ def tab_perf_export(list_port,file_name):
     df_ports_perf.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
     return df_ports_perf
 '''
+
+'''
+# Portfolios stats
+def tab_port_stats(list_port,file_name):
+    dic_ports_stats = {}
+    j = 1
+    for i in list_port:
+        df_port_chars = i.tab_port_chars(output_perf=False)
+        df_port_stats = df_port_chars[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'MAX_DD_PRD', 'AVG_TO',
+                                       'ANN_ALPHA', 't_ALPHA', 'B_MKTRF', 't_MKTRF', 'B_SMB', 't_SMB', 'B_HML', 't_HML', 'B_UMD', 't_UMD', 'R_SQUARED',
+                                       'L_SIG', 'L_N_ASTS', 'L_W_METH', 'L_PCT', 'S_SIG', 'S_N_ASTS', 'S_W_METH', 'S_PCT', 'IND_CONST', 'REB_FREQ', 'PORT_NAV_T']]
+        dic_ports_stats[str(j) + '_' + i.port_name] = df_port_stats
+        j += 1
+    df_ports_stats = pd.concat(dic_ports_stats, axis=0).droplevel(1, axis=0)
+    df_ports_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
+
+    return df_ports_stats
+'''
+
+'''
+# *** Transaction cost analysis ***
+#df_data.loc[df_data['TIC'] == bytes('BRK.B', 'utf-8')]
+#df_stock = df_data.loc[df_data['PERMNO'] == 17778]
+'''
+
+'''
+port = Portfolio(dic_data=dic_data, sig_long='ZS_QLT', n_asts_long=20, w_meth_long='EW', pct_long=120,
+                         sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                         ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0)
+
+#VQ_20.0_EW_120.0_VQ_15.0_EW_50.0_I_M
+
+yyy =  port.tab_port_perf()
+zzz = port.tab_port_chars()
+'''
+

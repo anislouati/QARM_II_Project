@@ -446,6 +446,38 @@ def get_ZS(df_data):
 # **************************************************
 
 
+def get_drawdown(s_port_rtns):
+    max = 0
+    dt_max = s_port_rtns.index[0]
+    old_max = 0
+    dt_old_max = s_port_rtns.index[0]
+    df_drawdown = pd.DataFrame()
+    s_min = pd.Series(dtype='float64')
+    s_port_cum_rtns = pd.Series(np.cumprod(1 + np.array(s_port_rtns)), index=s_port_rtns.index)
+
+    for i in s_port_cum_rtns.index:
+        if s_port_cum_rtns[i] > max:
+            old_max = max
+            dt_old_max = dt_max
+            max = s_port_cum_rtns[i]
+            dt_max = i
+        if max == s_port_cum_rtns[i]:
+            if not s_min.empty:
+                drawdown = s_min.min() / old_max - 1
+                df_drawdown_tmp = pd.DataFrame({'DD': [drawdown], 'START': [dt_old_max], 'END': [s_min.idxmin()]})
+                df_drawdown = pd.concat([df_drawdown, df_drawdown_tmp], ignore_index=True)
+                s_min = pd.Series(dtype='float64')
+        if s_port_cum_rtns[i] < max:
+            s_min[i] = s_port_cum_rtns[i]
+        if i == s_port_cum_rtns.index[-1]:
+            if not s_min.empty:
+                drawdown = s_min.min() / max - 1
+                df_drawdown_tmp = pd.DataFrame({'DD': [drawdown], 'START': [dt_max], 'END': [s_min.idxmin()]})
+                df_drawdown = pd.concat([df_drawdown, df_drawdown_tmp], ignore_index=True)
+                s_min = pd.Series(dtype='float64')
+    return df_drawdown
+
+
 class Portfolio:
     def __init__(self, dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
                  sig_short, n_asts_short, w_meth_short, pct_short,
@@ -474,8 +506,8 @@ class Portfolio:
                          bytes('25', 'utf-8'): 'Consumer Discretionary', bytes('30', 'utf-8'): 'Consumer Stables', bytes('35', 'utf-8'): 'Health Care',
                          bytes('40', 'utf-8'): 'Financials', bytes('45', 'utf-8'): 'Information Technology', bytes('50', 'utf-8'): 'Communication Services',
                          bytes('55', 'utf-8'): 'Utilities', bytes('60', 'utf-8'): 'Real Estate'}
-        self.port_name = '_'.join([self.dic_sigs[sig_long], str(n_asts_long), w_meth_long, str(pct_long),
-                                   self.dic_sigs[sig_short], str(n_asts_short), w_meth_short, str(pct_short), ind_const, reb_freq])
+        self.port_name = '_'.join([self.dic_sigs[sig_long], str(int(n_asts_long)), w_meth_long, str(int(pct_long)),
+                                   self.dic_sigs[sig_short], str(int(n_asts_short)), w_meth_short, str(int(pct_short)), ind_const, reb_freq])
 
     def get_df_sec_avg_counts(self):
         ls_dfs = []
@@ -821,39 +853,6 @@ class Portfolio:
 
     def tab_port_chars(self, output_perf=False):
         # Useful functions
-        def get_drawdown(s_port_rtns):
-            max = 0
-            dt_max = s_port_rtns.index[0]
-            old_max = 0
-            dt_old_max = s_port_rtns.index[0]
-            df_drawdown = pd.DataFrame()
-            s_min = pd.Series(dtype='float64')
-            s_port_cum_rtns = pd.Series(np.cumprod(1 + np.array(s_port_rtns)), index=s_port_rtns.index)
-
-            for i in s_port_cum_rtns.index:
-                if s_port_cum_rtns[i] > max:
-                    old_max = max
-                    dt_old_max = dt_max
-                    max = s_port_cum_rtns[i]
-                    dt_max = i
-                if max == s_port_cum_rtns[i]:
-                    if not s_min.empty:
-                        drawdown = s_min.min() / old_max - 1
-                        df_drawdown_tmp = pd.DataFrame({'DD': [drawdown], 'START': [dt_old_max], 'END': [s_min.idxmin()]})
-                        df_drawdown = pd.concat([df_drawdown, df_drawdown_tmp], ignore_index=True)
-                        s_min = pd.Series(dtype='float64')
-                if s_port_cum_rtns[i] < max:
-                    s_min[i] = s_port_cum_rtns[i]
-
-                if i == s_port_cum_rtns.index[-1]:
-                    if not s_min.empty:
-                        drawdown = s_min.min() / max - 1
-                        df_drawdown_tmp = pd.DataFrame({'DD': [drawdown], 'START': [dt_max], 'END': [s_min.idxmin()]})
-                        df_drawdown = pd.concat([df_drawdown, df_drawdown_tmp], ignore_index=True)
-                        s_min = pd.Series(dtype='float64')
-
-            return df_drawdown
-
         def get_norm_herfindahl_idx(a_port_w):
             n_asts = len(a_port_w)
             H = (a_port_w ** 2).sum()
@@ -1239,48 +1238,169 @@ def tab_ports_stats(dic_selected_ports, ls_stats, file_name):
 '''
 
 
-def tab_ports_stats(list_port, file_name):
+def tab_ports_stats(ls_ports, file_name=None):
     dic_ports_stats = {}
     j = 1
-    for i in list_port:
-        df_port_chars = i.tab_port_chars(output_perf=False)
+    for port in ls_ports:
+        df_port_chars = port.tab_port_chars(output_perf=False)
         df_port_stats = df_port_chars[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'MAX_DD_PRD', 'AVG_TO',
                                        'ANN_ALPHA', 't_ALPHA', 'B_MKTRF', 't_MKTRF', 'B_SMB', 't_SMB', 'B_HML', 't_HML', 'B_UMD', 't_UMD', 'R_SQUARED',
                                        'L_SIG', 'L_N_ASTS', 'L_W_METH', 'L_PCT', 'S_SIG', 'S_N_ASTS', 'S_W_METH', 'S_PCT', 'IND_CONST', 'REB_FREQ', 'PORT_NAV_T']]
-        dic_ports_stats[str(j) + '_' + i.port_name] = df_port_stats
+        dic_ports_stats[str(j) + '_' + port.port_name] = df_port_stats
         j += 1
     df_ports_stats = pd.concat(dic_ports_stats, axis=0).droplevel(1, axis=0)
-    df_ports_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
+
+    if file_name is not None:
+        df_ports_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
     return df_ports_stats
 
 
-def tab_perf_export(list_port, file_name):
-    dic_ports_stats = {}
+def tab_ports_perfs(ls_ports, file_name=None):
+    dic_ports_perfs = {}
     j = 1
-    for i in list_port:
-        df_port_perf = i.tab_port_perf().set_index('DATE')['PORT_NAV']
-        dic_ports_stats[str(j) + '_' + i.port_name] = df_port_perf
+    for port in ls_ports:
+        df_port_perf = port.tab_port_perf().set_index('DATE')['PORT_NAV']
+        dic_ports_perfs[str(j) + '_' + port.port_name] = df_port_perf
         j += 1
-    df_ports_perf = pd.concat(dic_ports_stats, axis=1)
-    df_ports_perf.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
-    return df_ports_perf
+    df_ports_perfs = pd.concat(dic_ports_perfs, axis=1)
+
+    if file_name is not None:
+        df_ports_perfs.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
+    return df_ports_perfs
 
 
-def tab_sens_analysis(pct_long_short, file_name):
+def exp_res_analysis(pct_long_short, perf_metric='SHARPE', ascending=False):
+    with open(Path.joinpath(paths.get('tables'), 'df_ports_chars.pkl'), 'rb') as file:
+        df_pc = pickle.load(file)
+    df_pc = df_pc.loc[(df_pc['L_PCT'] == pct_long_short[0]) & (df_pc['S_PCT'] == pct_long_short[1])].sort_values(by=[perf_metric], ascending=ascending)
+
+    # Performance analysis
+    ls_cols = ['NAME', 'SHARPE', 'ANN_MEAN', 'ANN_VOL', 'MAX_DD', 'MAX_DD_PRD', 'CALMAR', 'AVG_TO']
+    df_perf_analysis = pd.DataFrame()
+    ls_port_names = []
+
+    ls_sigs = ['VAL', 'QLT', 'VQ', 'VQAM']
+    for sig in ls_sigs:
+        df_tmp = df_pc.loc[(df_pc['L_SIG'] == sig) & (df_pc['S_SIG'] == sig), ls_cols]
+        ls_port_names += [df_tmp.head(1)['NAME'].values[0]]
+        df_perf_analysis = pd.concat([df_perf_analysis, df_tmp.head(1)], axis=0, ignore_index=True)  # Best for each signal
+
+    # Overall best portfolio
+    df_perf_analysis = pd.concat([df_perf_analysis, df_pc[ls_cols].head(1)], axis=0, ignore_index=True)
+    ls_port_names += [df_pc.head(1)['NAME'].values[0]]
+
+    # Reformatting
+    df_perf_analysis.rename(columns={'ANN_MEAN': 'MEAN', 'ANN_VOL': 'VOL', 'MAX_DD': 'MDD', 'MAX_DD_PRD': 'MDD_PRD'}, inplace=True)
+    for i in range(len(df_perf_analysis)):
+        df_perf_analysis.loc[i, 'NAME'] = df_perf_analysis.loc[i, 'NAME'].replace('_{}'.format(str(int(pct_long_short[0]))), '')
+        df_perf_analysis.loc[i, 'NAME'] = df_perf_analysis.loc[i, 'NAME'].replace('_{}'.format(str(int(pct_long_short[1]))), '')
+        ls_tmp = df_perf_analysis.loc[i, 'MDD_PRD'].split('_')
+        df_perf_analysis.loc[i, 'MDD_PRD'] = ls_tmp[0][2:] + '_' + ls_tmp[1][2:]
+    df_perf_analysis.rename(columns={'NAME': 'NAME ({}/{})'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))}, inplace=True)
+
+    # Export perf table
+    dic_replace = {'_': r'\_', '%': r'\%', '&': r'\&'}
+    for key in list(dic_replace.keys()):
+        df_perf_analysis.columns = df_perf_analysis.columns.str.replace(key, dic_replace[key], regex=True)
+        df_perf_analysis = df_perf_analysis.replace(key, dic_replace[key], regex=True)
+    df_perf_analysis.to_latex(Path.joinpath(paths.get('tables'), 'df_perf_analysis_{}_{}.tex'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))),
+                              float_format='%.3f', index=False)
+
+    # Factors exposure analysis
+    ls_cols = ['NAME', 'SHARPE', 'ANN_ALPHA', 't_ALPHA', 'B_MKTRF', 't_MKTRF', 'B_SMB', 't_SMB', 'B_HML', 't_HML', 'B_UMD', 't_UMD', 'R_SQUARED']
+    df_facs_analysis = pd.DataFrame()
+
+    for port_name in ls_port_names:
+        df_tmp = df_pc.loc[df_pc['NAME'] == port_name, ls_cols]
+        s_tmp_1 = pd.Series({'NAME': df_tmp['NAME'].iloc[0], 'SHARPE': df_tmp['SHARPE'].iloc[0],
+                             'ANN_ALPHA': df_tmp['ANN_ALPHA'].iloc[0], 'B_MKTRF': df_tmp['B_MKTRF'].iloc[0],
+                             'B_SMB': df_tmp['B_SMB'].iloc[0], 'B_HML': df_tmp['B_HML'].iloc[0],
+                             'B_UMD': df_tmp['B_UMD'].iloc[0], 'R_SQUARED': df_tmp['R_SQUARED'].iloc[0]})
+        s_tmp_2 = pd.Series({'NAME': '', 'SHARPE': '',
+                             'ANN_ALPHA': df_tmp['t_ALPHA'].iloc[0], 'B_MKTRF': df_tmp['t_MKTRF'].iloc[0],
+                             'B_SMB': df_tmp['t_SMB'].iloc[0], 'B_HML': df_tmp['t_HML'].iloc[0],
+                             'B_UMD': df_tmp['t_UMD'].iloc[0], 'R_SQUARED': ''})
+        df_facs_analysis = pd.concat([df_facs_analysis, pd.DataFrame(s_tmp_1).T, pd.DataFrame(s_tmp_2).T], axis=0, ignore_index=True)
+
+    # Reformatting
+    df_facs_analysis.rename(columns={'ANN_ALPHA': 'ALPHA', 'R_SQUARED': 'R_SQ'}, inplace=True)
+    for i in range(len(df_facs_analysis)):
+        df_facs_analysis.loc[i, 'NAME'] = df_facs_analysis.loc[i, 'NAME'].replace('_{}'.format(str(int(pct_long_short[0]))), '')
+        df_facs_analysis.loc[i, 'NAME'] = df_facs_analysis.loc[i, 'NAME'].replace('_{}'.format(str(int(pct_long_short[1]))), '')
+    df_facs_analysis.rename(columns={'NAME': 'NAME ({}/{})'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))}, inplace=True)
+
+    # Export facs table
+    dic_replace = {'_': r'\_', '%': r'\%', '&': r'\&'}
+    for key in list(dic_replace.keys()):
+        df_facs_analysis.columns = df_facs_analysis.columns.str.replace(key, dic_replace[key], regex=True)
+        df_facs_analysis = df_facs_analysis.replace(key, dic_replace[key], regex=True)
+    df_facs_analysis.to_latex(Path.joinpath(paths.get('tables'), 'df_facs_analysis_{}_{}.tex'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))),
+                              float_format='%.3f', index=False)
+
+
+def exp_TC_analysis(pct_long_short, perf_metric='SHARPE', ascending=False):
+    with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
+        dic_data = pickle.load(file)
+    with open(Path.joinpath(paths.get('tables'), 'df_ports_chars.pkl'), 'rb') as file:
+        df_pc = pickle.load(file)
+    df_pc = df_pc.loc[(df_pc['L_PCT'] == pct_long_short[0]) & (df_pc['S_PCT'] == pct_long_short[1])].sort_values(by=[perf_metric], ascending=ascending)
+    dic_sigs = {'VAL': 'ZS_VAL', 'QLT': 'ZS_QLT', 'VQ': 'ZS_VAL_QLT', 'VQAM': 'ZS_VAL_QLT_AMOM'}
+
+    ls_idx = []
+    ls_sigs = ['VAL', 'QLT', 'VQ', 'VQAM']
+    for sig in ls_sigs:
+        df_tmp = df_pc[(df_pc['L_SIG'] == sig) & (df_pc['S_SIG'] == sig)]
+        ls_idx += [df_tmp.head(1).index[0]]
+    ls_idx += [df_pc.head(1).index[0]]
+
+    ls_ports = []
+    for i in range(len(ls_idx)):
+        s_tmp = df_pc.loc[ls_idx[i]]
+        for tc_bps, spr_bps in [(0, 0), (20, 0), (20, 50)]:
+            port = Portfolio(dic_data=dic_data, sig_long=dic_sigs[s_tmp['L_SIG']], n_asts_long=s_tmp['L_N_ASTS'], w_meth_long=s_tmp['L_W_METH'], pct_long=s_tmp['L_PCT'],
+                             sig_short=dic_sigs[s_tmp['S_SIG']], n_asts_short=s_tmp['S_N_ASTS'], w_meth_short=s_tmp['S_W_METH'], pct_short=s_tmp['S_PCT'],
+                             ind_const=s_tmp['IND_CONST'], reb_freq=s_tmp['REB_FREQ'], tc_bps=tc_bps, spr_bps=spr_bps)
+            ls_ports += [port]
+
+    df_TC_analysis = tab_ports_stats(ls_ports)
+    df_TC_analysis = df_TC_analysis[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD']]
+
+    # Reformatting
+    df_TC_analysis = df_TC_analysis.reset_index(drop=False)
+    df_TC_analysis.rename(columns={'index': 'NAME', 'ANN_MEAN': 'MEAN', 'ANN_VOL': 'VOL', 'MAX_DD': 'MDD'}, inplace=True)
+    for i in range(len(df_TC_analysis)):
+        df_TC_analysis.loc[i, 'NAME'] = df_TC_analysis.loc[i, 'NAME'].split('_', 1)[1]
+        df_TC_analysis.loc[i, 'NAME'] = df_TC_analysis.loc[i, 'NAME'].replace('_{}'.format(str(int(pct_long_short[0]))), '')
+        df_TC_analysis.loc[i, 'NAME'] = df_TC_analysis.loc[i, 'NAME'].replace('_{}'.format(str(int(pct_long_short[1]))), '')
+        if (i % 3) == 1:
+            df_TC_analysis.loc[i, 'NAME'] += '_TC'
+        elif (i % 3) == 2:
+            df_TC_analysis.loc[i, 'NAME'] += '_TC_BC'
+    df_TC_analysis.rename(columns={'NAME': 'NAME ({}/{})'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))}, inplace=True)
+
+    # Export TC table
+    dic_replace = {'_': r'\_', '%': r'\%', '&': r'\&'}
+    for key in list(dic_replace.keys()):
+        df_TC_analysis.columns = df_TC_analysis.columns.str.replace(key, dic_replace[key], regex=True)
+        df_TC_analysis = df_TC_analysis.replace(key, dic_replace[key], regex=True)
+    df_TC_analysis.to_latex(Path.joinpath(paths.get('tables'), 'df_TC_analysis_{}_{}.tex'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))),
+                            float_format='%.3f', index=False)
+
+
+def exp_sens_analysis(pct_long_short, perf_metric='SHARPE', ascending=False):
     with open(Path.joinpath(paths.get('tables'), 'df_ports_chars.pkl'), 'rb') as file:
         df_pc = pickle.load(file)
     df_pc = df_pc.loc[(df_pc['L_PCT'] == pct_long_short[0]) & (df_pc['S_PCT'] == pct_long_short[1])]
 
     df_sens_analysis = pd.DataFrame()
     ls_sigs = ['VAL', 'QLT', 'VQ', 'VQAM']
-    df_pc_top = df_pc.loc[(df_pc['MIN_PORT_NAV'] > 0)].sort_values(by=['SHARPE'], ascending=False).head(200)
+    df_pc_top = df_pc.loc[(df_pc['MIN_PORT_NAV'] > 0)].sort_values(by=[perf_metric], ascending=ascending).head(200)
 
     i = 0
     for leg in ['L', 'S']:
         for sig in ls_sigs:
             df_sens_analysis.loc[i, 'SIG'] = leg + '_' + sig
             df_sens_analysis.loc[i, 'TOP_COUNT'] = len(df_pc_top.loc[(df_pc_top[(leg + '_SIG')] == sig)])
-            df_sens_analysis.loc[i, 'AVG_SHARPE'] = df_pc_top.loc[(df_pc_top[(leg + '_SIG')] == sig), 'SHARPE'].mean()
             df_sens_analysis.loc[i, 'DEF_COUNT'] = len(df_pc.loc[(df_pc[(leg + '_SIG')] == sig) & (df_pc['MIN_PORT_NAV'] < 0)])
             i += 1
 
@@ -1292,7 +1412,197 @@ def tab_sens_analysis(pct_long_short, file_name):
         for sig in ls_sigs:
             df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(leg + '_' + sig), 'DEF_PCT'] = df_sens_analysis.loc[df_sens_analysis['SIG'].str.contains(leg + '_' + sig), 'DEF_COUNT'] / total_count
 
+    # Reformatting
     df_sens_analysis = df_sens_analysis[['SIG', 'TOP_COUNT', 'TOP_PCT', 'DEF_COUNT', 'DEF_PCT']]
-    df_sens_analysis.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format(file_name)))
-    return df_sens_analysis
+    df_sens_analysis[['TOP_PCT', 'DEF_PCT']] = df_sens_analysis[['TOP_PCT', 'DEF_PCT']].map('{:.3f}'.format)
+
+    # Export sens table
+    dic_replace = {'_': r'\_', '%': r'\%', '&': r'\&'}
+    for key in list(dic_replace.keys()):
+        df_sens_analysis.columns = df_sens_analysis.columns.str.replace(key, dic_replace[key], regex=True)
+        df_sens_analysis = df_sens_analysis.replace(key, dic_replace[key], regex=True)
+    df_sens_analysis.to_latex(Path.joinpath(paths.get('tables'), 'df_sens_analysis_{}_{}.tex'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))),
+                              float_format='%.0f', index=False)
+
+
+# %%
+# DO NOT MODIFY ABOVE!!!
+
+def get_port_stats_graph(dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
+                         sig_short, n_asts_short, w_meth_short, pct_short,
+                         ind_const, reb_freq, min_short_me, max_short_cl, tc_bps, spr_bps):
+    port_1 = Portfolio(dic_data=dic_data, sig_long=sig_long, n_asts_long=n_asts_long, w_meth_long=w_meth_long, pct_long=pct_long,
+                       sig_short=sig_short, n_asts_short=n_asts_short, w_meth_short=w_meth_short, pct_short=pct_short,
+                       ind_const=ind_const, reb_freq=reb_freq, min_short_me=min_short_me, max_short_cl=max_short_cl, tc_bps=0, spr_bps=0)
+    df_port_perf_1 = port_1.tab_port_perf()
+
+    port_2 = Portfolio(dic_data=dic_data, sig_long=sig_long, n_asts_long=n_asts_long, w_meth_long=w_meth_long, pct_long=pct_long,
+                       sig_short=sig_short, n_asts_short=n_asts_short, w_meth_short=w_meth_short, pct_short=pct_short,
+                       ind_const=ind_const, reb_freq=reb_freq, min_short_me=min_short_me, max_short_cl=max_short_cl, tc_bps=tc_bps, spr_bps=0)
+    df_port_perf_2 = port_2.tab_port_perf()
+
+    port_3 = Portfolio(dic_data=dic_data, sig_long=sig_long, n_asts_long=n_asts_long, w_meth_long=w_meth_long, pct_long=pct_long,
+                       sig_short=sig_short, n_asts_short=n_asts_short, w_meth_short=w_meth_short, pct_short=pct_short,
+                       ind_const=ind_const, reb_freq=reb_freq, min_short_me=min_short_me, max_short_cl=max_short_cl, tc_bps=tc_bps, spr_bps=spr_bps)
+    df_port_perf_3 = port_3.tab_port_perf()
+
+    for i in range(len(df_port_perf_1)):
+        if i == 0:
+            df_port_perf_1.loc[i, ['L_NAV']] = 100
+            df_port_perf_1.loc[i, ['S_NAV']] = 100
+            df_port_perf_2.loc[i, ['L_NAV']] = 100
+            df_port_perf_2.loc[i, ['S_NAV']] = 100
+
+            df_port_perf_1.loc[i, ['LA_NAV']] = 100
+            df_port_perf_2.loc[i, ['LA_NAV']] = 100
+            df_port_perf_3.loc[i, ['LA_NAV']] = 100
+
+        else:
+            df_port_perf_1.loc[i, ['L_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['L_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['L_RTNS']])[0])
+            df_port_perf_1.loc[i, ['S_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['S_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['S_RTNS']])[0])
+            df_port_perf_2.loc[i, ['L_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['L_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['L_RTNS']])[0])
+            df_port_perf_2.loc[i, ['S_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['S_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['S_RTNS']])[0])
+
+            df_port_perf_1.loc[i, ['LA_NAV']] = np.array(df_port_perf_1.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_1.loc[i, ['LA_RTNS']])[0])
+            df_port_perf_2.loc[i, ['LA_NAV']] = np.array(df_port_perf_2.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_2.loc[i, ['LA_RTNS']])[0])
+            df_port_perf_3.loc[i, ['LA_NAV']] = np.array(df_port_perf_3.loc[i - 1, ['LA_NAV']])[0] * (1 + np.array(df_port_perf_3.loc[i, ['LA_RTNS']])[0])
+
+    df_tpm_1 = df_port_perf_1.set_index('DATE')
+    df_tpm_2 = df_port_perf_2.set_index('DATE')
+    df_tpm_3 = df_port_perf_3.set_index('DATE')
+
+    sns.set(context='paper', style='ticks', font_scale=2.0)
+    fig, ax = plt.subplots(3, sharex=True, figsize=(12, 15), dpi=300)
+
+    # Plot long vs short performances
+    ax[0].set_title('Long vs Short Leg', size=20)
+    ax[0].axhline(y=100, color='black', ls='--', lw=1)
+    ax[0].plot(df_tpm_1['L_NAV'], label='L_NAV' + ' (' + str(port_1.sig_long) + ', ' + str(port_1.n_asts_long) + ', ' + str(port_1.w_meth_long) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
+    ax[0].plot(df_tpm_1['S_NAV'], label='S_NAV' + ' (' + str(port_1.sig_short) + ', ' + str(port_1.n_asts_short) + ', ' + str(port_1.w_meth_short) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
+    ax[0].plot(df_tpm_2['L_NAV'], label='L_NAV_TC' + ' (' + str(port_2.sig_long) + ', ' + str(port_2.n_asts_long) + ', ' + str(port_2.w_meth_long) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
+    ax[0].plot(df_tpm_2['S_NAV'], label='S_NAV_TC' + ' (' + str(port_2.sig_short) + ', ' + str(port_2.n_asts_short) + ', ' + str(port_2.w_meth_short) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
+    ax[0].tick_params(axis='both', labelsize=18)
+    ax[0].legend(loc='upper left', fontsize=16)
+
+    # Plot portfolio performances
+    ax[1].set_title('Long/Short vs Net Market Exposure Adjusted Long Leg', size=20)
+    ax[1].axhline(y=100, color='black', ls='--', lw=1)
+    ax[1].plot(df_tpm_1['PORT_NAV'], label='PORT_NAV' + ' (L = ' + str(port_1.pct_long) + ', S = ' + str(port_1.pct_short) + ', C = ' + str(100 - (port_1.pct_long - port_1.pct_short)) + ')', lw=3)
+    ax[1].plot(df_tpm_2['PORT_NAV'], label='PORT_NAV_TC' + ' (L = ' + str(port_2.pct_long) + ', S = ' + str(port_2.pct_short) + ', C = ' + str(100 - (port_2.pct_long - port_2.pct_short)) + ')', lw=3)
+    ax[1].plot(df_tpm_3['PORT_NAV'], label='PORT_NAV_TC_BC' + ' (L = ' + str(port_3.pct_long) + ', S = ' + str(port_3.pct_short) + ', C = ' + str(100 - (port_3.pct_long - port_3.pct_short)) + ')', lw=3)
+    ax[1].plot(df_tpm_1['LA_NAV'], label='LA_NAV' + ' (' + str(port_1.sig_long) + ', ' + str(port_1.n_asts_long) + ', ' + str(port_1.w_meth_long) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
+    ax[1].plot(df_tpm_2['LA_NAV'], label='LA_NAV_TC' + ' (' + str(port_2.sig_long) + ', ' + str(port_2.n_asts_long) + ', ' + str(port_2.w_meth_long) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
+    ax[1].tick_params(axis='both', labelsize=18)
+    ax[1].legend(loc='upper left', fontsize=16)
+
+    # Plot portfolio performances
+    ax[2].set_title('Portfolios NAV', size=20)
+    ax[2].axhline(y=0, color='black', ls='--', lw=1)
+    ax[2].plot(df_tpm_1['PORT_NAV'], label='PORT_NAV' + ' (L = ' + str(port_1.pct_long) + ', S = ' + str(port_1.pct_short) + ', C = ' + str(100 - (port_1.pct_long - port_1.pct_short)) + ')', lw=3)
+    ax[2].plot(df_tpm_1['PORT_L'], label='PORT_L', lw=3)
+    ax[2].plot((-1) * df_tpm_1['PORT_S'], label='PORT_S', lw=3)
+    ax[2].plot(df_tpm_1['PORT_C'], label='PORT_C', lw=3)
+    ax[2].tick_params(axis='both', labelsize=18)
+    ax[2].legend(loc='upper left', fontsize=16)
+
+    fig.tight_layout()
+    plt.show()
+    fig.savefig(Path.joinpath(paths.get('figures'), 'port_perfs_' + port_1.port_name + '.png'))
+    plt.close()
+
+    # Table stats long vs short
+    df_port_chars_1 = port_1.tab_port_chars(output_perf=False)
+    df_port_chars_2 = port_2.tab_port_chars(output_perf=False)
+    df_port_chars_3 = port_3.tab_port_chars(output_perf=False)
+    # Port 1
+    df_port_chars_1_L = df_port_chars_1[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO', 'L_NORM_HI']]
+    df_port_chars_1_L = df_port_chars_1_L.rename(columns={'L_ANN_MEAN': 'ANN MEAN', 'L_ANN_VOL': 'ANN VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG TO', 'L_NORM_HI': 'NORM HI'})
+    df_port_chars_1_S = df_port_chars_1[['S_ANN_MEAN', 'S_ANN_VOL', 'S_SHARPE', 'S_MAX_DD', 'S_CALMAR', 'S_AVG_TO', 'S_NORM_HI']]
+    df_port_chars_1_S = df_port_chars_1_S.rename(columns={'S_ANN_MEAN': 'ANN MEAN', 'S_ANN_VOL': 'ANN VOL', 'S_SHARPE': 'SHARPE', 'S_MAX_DD': 'MAX DD', 'S_CALMAR': 'CALMAR', 'S_AVG_TO': 'AVG TO', 'S_NORM_HI': 'NORM HI'})
+    # Port 2
+    df_port_chars_2_L = df_port_chars_2[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO', 'L_NORM_HI']]
+    df_port_chars_2_L = df_port_chars_2_L.rename(columns={'L_ANN_MEAN': 'ANN MEAN', 'L_ANN_VOL': 'ANN VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG TO', 'L_NORM_HI': 'NORM HI'})
+    df_port_chars_2_S = df_port_chars_2[['S_ANN_MEAN', 'S_ANN_VOL', 'S_SHARPE', 'S_MAX_DD', 'S_CALMAR', 'S_AVG_TO', 'S_NORM_HI']]
+    df_port_chars_2_S = df_port_chars_2_S.rename(columns={'S_ANN_MEAN': 'ANN MEAN', 'S_ANN_VOL': 'ANN VOL', 'S_SHARPE': 'SHARPE', 'S_MAX_DD': 'MAX DD', 'S_CALMAR': 'CALMAR', 'S_AVG_TO': 'AVG TO', 'S_NORM_HI': 'NORM HI'})
+
+    dic_port_chars_L = {'L': df_port_chars_1_L, 'L-TC': df_port_chars_2_L}
+    df_port_chars_L = pd.concat(dic_port_chars_L, axis=0).T
+    dic_port_chars_S = {'S': df_port_chars_1_S, 'S-TC': df_port_chars_2_S}
+    df_port_chars_S = pd.concat(dic_port_chars_S, axis=0).T
+    dic_port_chars = {'L': df_port_chars_L, 'S': df_port_chars_S}
+    df_port_table_L_S = pd.concat(dic_port_chars, axis=1).T
+    df_port_table_L_S = df_port_table_L_S.droplevel(2, axis=0).T
+    # df_port_table_L_S.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('stats_L_S_' + port_1.port_name)))
+
+    # Table  stats LS vs LA
+    # Port 1
+    df_port_chars_1_LS = df_port_chars_1[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
+    df_port_chars_1_LS = df_port_chars_1_LS.rename(columns={'ANN_MEAN': 'ANN MEAN', 'ANN_VOL': 'ANN VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG TO'})
+    df_port_chars_1_LA = df_port_chars_1[['LA_ANN_MEAN', 'LA_ANN_VOL', 'LA_SHARPE', 'LA_MAX_DD', 'LA_CALMAR', 'LA_AVG_TO']]
+    df_port_chars_1_LA = df_port_chars_1_L.rename(columns={'LA_ANN_MEAN': 'ANN MEAN', 'LA_ANN_VOL': 'ANN VOL', 'LA_SHARPE': 'SHARPE', 'LA_MAX_DD': 'MAX DD', 'LA_CALMAR': 'CALMAR', 'LA_AVG_TO': 'AVG TO'})
+    # Port 2
+    df_port_chars_2_LS = df_port_chars_2[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
+    df_port_chars_2_LS = df_port_chars_2_LS.rename(columns={'ANN_MEAN': 'ANN MEAN', 'ANN_VOL': 'ANN VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG TO'})
+    df_port_chars_2_LA = df_port_chars_2[['LA_ANN_MEAN', 'LA_ANN_VOL', 'LA_SHARPE', 'LA_MAX_DD', 'LA_CALMAR', 'LA_AVG_TO']]
+    df_port_chars_2_LA = df_port_chars_2_L.rename(columns={'LA_ANN_MEAN': 'ANN MEAN', 'LA_ANN_VOL': 'ANN VOL', 'LA_SHARPE': 'SHARPE', 'LA_MAX_DD': 'MAX DD', 'LA_CALMAR': 'CALMAR', 'LA_AVG_TO': 'AVG TO'})
+    # Port 3
+    df_port_chars_3_LS = df_port_chars_3[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
+    df_port_chars_3_LS = df_port_chars_3_LS.rename(columns={'ANN_MEAN': 'ANN MEAN', 'ANN_VOL': 'ANN VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG TO'})
+
+    dic_port_chars_LS = {'LS': df_port_chars_1_LS, 'LS-TC': df_port_chars_2_LS, 'LS-TC-BC': df_port_chars_3_LS}
+    df_port_chars_LS = pd.concat(dic_port_chars_LS, axis=0).T
+    dic_port_chars_LA = {'LA': df_port_chars_1_LA, 'LA-TC': df_port_chars_2_LA}
+    df_port_chars_LA = pd.concat(dic_port_chars_LA, axis=0).T
+    dic_port_chars = {'LS': df_port_chars_LS, 'LA': df_port_chars_LA}
+    df_port_table_LS_LA = pd.concat(dic_port_chars, axis=1).T
+    df_port_table_LS_LA = df_port_table_LS_LA.droplevel(2, axis=0).T
+    # df_port_table_LS_LA.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('stats_LS_LA_' + port_1.port_name)))
+
+    dic_port_table = {'LS vs Long NME Adjusted': df_port_table_LS_LA, 'Long vs Short': df_port_table_L_S}
+    df_port_table = pd.concat(dic_port_table, axis=1)
+    df_port_table = df_port_table.droplevel(1, axis=1)
+    df_port_table.to_latex(Path.joinpath(paths.get('tables'), '{}.tex'.format('stats_' + port_1.port_name)), float_format='%.4f')
+    return df_port_table
+
+
+def get_stats_stock(PERMNO):
+
+
+    # Merge factors data
+    df_stock = df_data.loc[df_data['PERMNO'] == PERMNO]
+    df_port_perf = pd.merge(df_stock, dic_data['df_facs_data'], on='DATE', how='inner')
+    df_port_perf = df_port_perf.sort_values(by=['DATE'], ascending=[True]).reset_index(drop=True)
+
+    # Initialization
+    df_port_chars = pd.DataFrame()
+    # pd.Series(df_port_perf.loc[1:, 'PORT_RTNS'].tolist(), index=df_port_perf.loc[1:, 'DATE'].tolist(), dtype='float64').rename(None)
+    s_port_rtns = df_port_perf.set_index('DATE')['TRT1M']
+    s_port_losses = (-1) * s_port_rtns
+    df_drawdown = get_drawdown(s_port_rtns)
+    s_max_drawdown = df_drawdown.iloc[df_drawdown['DD'].idxmin()] if not df_drawdown.empty else pd.Series([np.nan], index=['DD'])
+
+    # Portfolio (L/S)
+    df_port_chars.loc[0, 'ANN_MEAN'] = s_port_rtns.mean() * 12
+    df_port_chars.loc[0, 'ANN_VOL'] = np.sqrt(s_port_rtns.var() * 12)
+    df_port_chars.loc[0, 'SHARPE'] = (df_port_chars.loc[0, 'ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'ANN_VOL']
+    df_port_chars.loc[0, 'MIN_RTN'] = s_port_rtns.min()
+    df_port_chars.loc[0, 'MIN_DATE'] = (s_port_rtns.idxmin()).strftime('%Y-%m')
+    df_port_chars.loc[0, 'MAX_RTN'] = s_port_rtns.max()
+    df_port_chars.loc[0, 'MAX_DATE'] = (s_port_rtns.idxmax()).strftime('%Y-%m')
+    df_port_chars.loc[0, 'MAX_DD'] = (-1) * s_max_drawdown['DD']  # Expressed in terms of loss (negative return)
+    df_port_chars.loc[0, 'MAX_DD_PRD'] = s_max_drawdown['START'].strftime('%Y-%m') + '_' + s_max_drawdown['END'].strftime('%Y-%m')
+
+    df_port_chars.loc[0, 'PERMNO'] = df_stock.iloc[0]['PERMNO']
+    with warnings.catch_warnings():
+        warnings.simplefilter(action='ignore', category=FutureWarning)
+        df_port_chars.loc[0, 'TIC'] = df_stock.iloc[0]['TIC']
+    df_port_chars.loc[0, 'RF'] = df_port_perf.iloc[-1]['RF'] * 12
+
+    df_stock = df_stock[['PERMNO', 'DATE', 'TIC', 'TRT1M', 'PRCCM']]
+
+    return df_stock, df_port_chars
+
+
+
+
 
