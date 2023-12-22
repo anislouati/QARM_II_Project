@@ -292,25 +292,17 @@ df_ports_perfs = fn.tab_ports_perfs(ls_ports, 'df_ports_TO_analysis_perfs')
 
 
 # 100/100 portfolio analysis (market-neutral)
-ls_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_AMOM']
-ls_w_meth = ['EW', 'MN', 'RP']
 
-df_port_analysis
-dic_tmp = {}
-for w_meth in ls_w_meth:
-    dic_tmp_1 = {}
-    for sig in ls_sigs:
-        port = Portfolio(dic_data=dic_data, sig_long=sig, n_asts_long=25, w_meth_long=w_meth, pct_long=100,
-                         sig_short=sig, n_asts_short=25, w_meth_short=w_meth, pct_short=100,
-                         ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0)
-        df_port_chars = port.tab_port_chars()
-        df_port_chars = df_port_chars[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'MAX_DD_PRD', 'AVG_TO']]
-        dic_tmp_1[sig] = df_port_chars
-    df_tmp_1 = pd.concat(dic_tmp_1, axis=0).T
-    dic_tmp_0[w_meth] = df_tmp_1
-df_tmp_0 = pd.concat(dic_tmp_0, axis=1).T
-df_tmp_0 = df_tmp_0.droplevel(2, axis=0)
-df_tmp_0.to_latex(Path.joinpath(paths.get('tables'), '{}.tex'.format('stats_100')), float_format='%.4f')
+
+
+
+
+
+
+exp_port_analysis(pct_long_short=(100, 100))
+
+
+# %%
 
 # Results analysis
 fn.exp_res_analysis(pct_long_short=(100, 100))
