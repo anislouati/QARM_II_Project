@@ -9,9 +9,6 @@ import pandas as pd
 import pickle
 import scripts.functions as fn
 import warnings
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Project settings
 pd.set_option('display.width', 400)
@@ -207,10 +204,12 @@ dic_data = {'dic_asts_data': dic_asts_data, 'df_facs_data': df_factors_monthly}
 with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
     dic_data = pickle.load(file)
 
+
 # %%
 # **************************************************
 # *** Branch: PORTFOLIO ANALYSIS                 ***
 # **************************************************
+
 
 # Load data
 with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
@@ -218,8 +217,10 @@ with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
 with open(Path.joinpath(paths.get('output'), 'tables', 'df_ports_chars.pkl'), 'rb') as file:
     df_ports_chars = pickle.load(file)
 
+
 # %%
 # *** Branch: Presentation ***
+
 
 # Sector average counts
 port = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=20, w_meth_long='EW', pct_long=120,
@@ -256,17 +257,15 @@ for i in range(len(ls_keys)):
 df_ports_stats = fn.tab_ports_stats(ls_ports, 'df_ports_stats')
 df_ports_perfs = fn.tab_ports_perfs(ls_ports, 'df_ports_perfs')
 
-# *** Turnover analysis ***
+# Turnover analysis
 
 # Best portfolio without transactions cost: VQAM_25_EW_300_QLT_15_EW_200_I_1000_50_M
 port_1 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_long=25, w_meth_long='EW', pct_long=300,
                    sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=200,
                    ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=0)
-
 port_1_TC = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_long=25, w_meth_long='EW', pct_long=300,
                       sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=200,
                       ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0)
-
 port_1_TC_BC = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_long=25, w_meth_long='EW', pct_long=300,
                          sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=200,
                          ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=50)
@@ -275,11 +274,9 @@ port_1_TC_BC = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT_AMOM', n_asts_l
 port_2 = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=300,
                    sig_short='ZS_QLT', n_asts_short=20, w_meth_short='EW', pct_short=200,
                    ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=0, spr_bps=0)
-
 port_2_TC = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=300,
                       sig_short='ZS_QLT', n_asts_short=20, w_meth_short='EW', pct_short=200,
                       ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=0)
-
 port_2_TC_BC = Portfolio(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=300,
                          sig_short='ZS_QLT', n_asts_short=20, w_meth_short='EW', pct_short=200,
                          ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=50)
@@ -290,22 +287,11 @@ df_ports_stats = fn.tab_ports_stats(ls_ports, 'df_ports_TO_analysis_stats')
 df_ports_perfs = fn.tab_ports_perfs(ls_ports, 'df_ports_TO_analysis_perfs')
 
 
-
-
 # %%
 # *** Branch: Report ***
 
 
-test = get_port_stats_graph(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=120,
-                            sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
-                            ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=50)
-
-# Berkshire Hathaway comp
-df_stock_perfs, df_stock_stats = get_stats_stock(PERMNO=17778)
-df_stock_perfs.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_ports_BRK.B_perfs')))
-df_stock_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_ports_BRK.B_stats')))
-
-# 100/100 portfolio analysis
+# 100/100 portfolio analysis (market-neutral)
 ls_sigs = ['ZS_VAL', 'ZS_QLT', 'ZS_VAL_QLT', 'ZS_VAL_QLT_AMOM']
 ls_w_meth = ['EW', 'MN', 'RP']
 
@@ -326,11 +312,6 @@ df_tmp_0 = pd.concat(dic_tmp_0, axis=1).T
 df_tmp_0 = df_tmp_0.droplevel(2, axis=0)
 df_tmp_0.to_latex(Path.joinpath(paths.get('tables'), '{}.tex'.format('stats_100')), float_format='%.4f')
 
-
-
-
-
-
 # Results analysis
 fn.exp_res_analysis(pct_long_short=(100, 100))
 fn.exp_res_analysis(pct_long_short=(130, 30))
@@ -348,4 +329,30 @@ fn.exp_sens_analysis(pct_long_short=(100, 100))
 fn.exp_sens_analysis(pct_long_short=(130, 30))
 fn.exp_sens_analysis(pct_long_short=(120, 50))
 fn.exp_sens_analysis(pct_long_short=(300, 200))
+
+
+
+
+# %%
+# DO NOT MODIFY ABOVE!
+
+
+
+test = fn.get_port_stats_graph(dic_data=dic_data, sig_long='ZS_VAL_QLT', n_asts_long=25, w_meth_long='EW', pct_long=120,
+                               sig_short='ZS_QLT', n_asts_short=15, w_meth_short='EW', pct_short=50,
+                               ind_const='I', reb_freq='M', min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=50)
+
+# Berkshire Hathaway comp
+df_stock_perfs, df_stock_stats = fn.get_stats_stock(PERMNO=17778)
+df_stock_perfs.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_ports_BRK.B_perfs')))
+df_stock_stats.to_excel(Path.joinpath(paths.get('tables'), '{}.xlsx'.format('df_ports_BRK.B_stats')))
+
+
+
+
+
+
+
+
+
 

@@ -567,10 +567,10 @@ class Portfolio:
 
         elif self.ind_const == 'NI':
             if leg == 'L':
-                ls_asts = df_tmp.loc[df_tmp[self.sig_long].nlargest(n_asts).index, 'PERMNO'].tolist()
+                ls_asts = df_tmp.loc[df_tmp[self.sig_long].nlargest(int(n_asts)).index, 'PERMNO'].tolist()
             elif leg == 'S':
                 df_tmp = df_tmp[(df_tmp['ME'] >= self.min_short_me) & (df_tmp['CTRT1M_1'] >= -self.max_short_cl)]
-                ls_asts = df_tmp.loc[df_tmp[self.sig_short].nsmallest(n_asts).index, 'PERMNO'].tolist()
+                ls_asts = df_tmp.loc[df_tmp[self.sig_short].nsmallest(int(n_asts)).index, 'PERMNO'].tolist()
 
         ls_asts = sorted(ls_asts)  # Sort PERMNO
         return ls_asts
@@ -986,12 +986,12 @@ def plot_zscores(date, ls_zscores, leg):
     dic_s_zscores = {}
     if leg == 'L':
         for i in range(len(ls_zscores)):
-            dic_s_zscores[i] = pd.Series(list(df_zscores[ls_zscores[i]]), index=ls_permnos, dtype='float64').nlargest(n_asts).sort_values(ascending=False)
-        dic_s_zscores[len(ls_zscores)] = pd.Series(list(df_zscores['ZS_INT']), index=ls_permnos, dtype='float64').nlargest(n_asts).sort_values(ascending=False)
+            dic_s_zscores[i] = pd.Series(list(df_zscores[ls_zscores[i]]), index=ls_permnos, dtype='float64').nlargest(int(n_asts)).sort_values(ascending=False)
+        dic_s_zscores[len(ls_zscores)] = pd.Series(list(df_zscores['ZS_INT']), index=ls_permnos, dtype='float64').nlargest(int(n_asts)).sort_values(ascending=False)
     elif leg == 'S':
         for i in range(len(ls_zscores)):
-            dic_s_zscores[i] = pd.Series(list(df_zscores[ls_zscores[i]]), index=ls_permnos, dtype='float64').nsmallest(n_asts).sort_values(ascending=True)
-        dic_s_zscores[len(ls_zscores)] = pd.Series(list(df_zscores['ZS_INT']), index=ls_permnos, dtype='float64').nsmallest(n_asts).sort_values(ascending=True)
+            dic_s_zscores[i] = pd.Series(list(df_zscores[ls_zscores[i]]), index=ls_permnos, dtype='float64').nsmallest(int(n_asts)).sort_values(ascending=True)
+        dic_s_zscores[len(ls_zscores)] = pd.Series(list(df_zscores['ZS_INT']), index=ls_permnos, dtype='float64').nsmallest(int(n_asts)).sort_values(ascending=True)
 
     if len(ls_zscores) == 2:
         ls_asts_0 = sorted(dic_s_zscores[0].index.tolist())  # ZS_0
@@ -1565,8 +1565,11 @@ def get_port_stats_graph(dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
     return df_port_table
 
 
-def get_stats_stock(PERMNO):
-
+def get_stock_stats(PERMNO):
+    with open(Path.joinpath(paths.get('data'), 'df_data.pkl'), 'rb') as file:
+        df_data = pickle.load(file)
+    with open(Path.joinpath(paths.get('data'), 'dic_data.pkl'), 'rb') as file:
+        dic_data = pickle.load(file)
 
     # Merge factors data
     df_stock = df_data.loc[df_data['PERMNO'] == PERMNO]
@@ -1596,10 +1599,9 @@ def get_stats_stock(PERMNO):
     with warnings.catch_warnings():
         warnings.simplefilter(action='ignore', category=FutureWarning)
         df_port_chars.loc[0, 'TIC'] = df_stock.iloc[0]['TIC']
+
     df_port_chars.loc[0, 'RF'] = df_port_perf.iloc[-1]['RF'] * 12
-
     df_stock = df_stock[['PERMNO', 'DATE', 'TIC', 'TRT1M', 'PRCCM']]
-
     return df_stock, df_port_chars
 
 
