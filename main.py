@@ -332,8 +332,3 @@ for pct_long_short in ls_pct_long_short:
     test = fn.get_port_stats_graph(dic_data=dic_data, sig_long=sig_long, n_asts_long=df_tmp['L_N_ASTS'], w_meth_long=df_tmp['L_W_METH'], pct_long=df_tmp['L_PCT'],
                                    sig_short=sig_short, n_asts_short=df_tmp['S_N_ASTS'], w_meth_short=df_tmp['S_W_METH'], pct_short=df_tmp['S_PCT'],
                                    ind_const=df_tmp['IND_CONST'], reb_freq=df_tmp['REB_FREQ'], min_short_me=1000, max_short_cl=0.5, tc_bps=20, spr_bps=50)
-
-# Portfolio default illustration
-
-
-
