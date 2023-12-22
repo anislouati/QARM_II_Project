@@ -1415,6 +1415,7 @@ def exp_sens_analysis(pct_long_short, perf_metric='SHARPE', ascending=False):
     # Reformatting
     df_sens_analysis = df_sens_analysis[['SIG', 'TOP_COUNT', 'TOP_PCT', 'DEF_COUNT', 'DEF_PCT']]
     df_sens_analysis[['TOP_PCT', 'DEF_PCT']] = df_sens_analysis[['TOP_PCT', 'DEF_PCT']].map('{:.3f}'.format)
+    df_sens_analysis.rename(columns={'SIG': 'SIG ({}/{})'.format(str(int(pct_long_short[0])), str(int(pct_long_short[1])))}, inplace=True)
 
     # Export sens table
     dic_replace = {'_': r'\_', '%': r'\%', '&': r'\&'}
@@ -1603,8 +1604,3 @@ def get_stock_stats(PERMNO):
     df_port_chars.loc[0, 'RF'] = df_port_perf.iloc[-1]['RF'] * 12
     df_stock = df_stock[['PERMNO', 'DATE', 'TIC', 'TRT1M', 'PRCCM']]
     return df_stock, df_port_chars
-
-
-
-
-
