@@ -952,7 +952,7 @@ class Portfolio:
         df_port_chars.loc[0, 'LA_SHARPE'] = (df_port_chars.loc[0, 'LA_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'LA_ANN_VOL']
         df_port_chars.loc[0, 'LA_MAX_DD'] = (-1) * s_max_drawdown['DD']
         df_port_chars.loc[0, 'LA_CALMAR'] = (df_port_chars.loc[0, 'LA_ANN_MEAN'] - (df_port_perf.iloc[-1]['RF'] * 12)) / df_port_chars.loc[0, 'LA_MAX_DD']
-        df_port_chars.loc[0, 'LA_AVG_TO'] = df_port_perf.loc[1:, 'L_TO'].mean() * (self.pct_long - self.pct_short)
+        df_port_chars.loc[0, 'LA_AVG_TO'] = df_port_perf.loc[1:, 'L_TO'].mean() * (self.pct_long - self.pct_short) / 100
         df_port_chars.loc[0, 'LA_NORM_HI'] = get_norm_herfindahl_idx(np.array(list(df_port_perf.iloc[-1]['L_WT'].values())))
         return df_port_chars
 
@@ -1538,7 +1538,7 @@ def get_port_stats_graph(dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
     ax[0].plot(df_tpm_2['L_NAV'], label='L_NAV_TC' + ' (' + str(port_2.sig_long) + ', ' + str(port_2.n_asts_long) + ', ' + str(port_2.w_meth_long) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
     ax[0].plot(df_tpm_2['S_NAV'], label='S_NAV_TC' + ' (' + str(port_2.sig_short) + ', ' + str(port_2.n_asts_short) + ', ' + str(port_2.w_meth_short) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
     ax[0].tick_params(axis='both', labelsize=18)
-    ax[0].legend(loc='upper left', fontsize=16)
+    ax[0].legend(loc='upper left', fontsize=12)
 
     # Plot portfolio performances
     ax[1].set_title('Long/Short vs Net Market Exposure Adjusted Long Leg', size=20)
@@ -1549,7 +1549,7 @@ def get_port_stats_graph(dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
     ax[1].plot(df_tpm_1['LA_NAV'], label='LA_NAV' + ' (' + str(port_1.sig_long) + ', ' + str(port_1.n_asts_long) + ', ' + str(port_1.w_meth_long) + ', ' + str(port_1.ind_const) + ', ' + str(port_1.reb_freq) + ')', lw=3)
     ax[1].plot(df_tpm_2['LA_NAV'], label='LA_NAV_TC' + ' (' + str(port_2.sig_long) + ', ' + str(port_2.n_asts_long) + ', ' + str(port_2.w_meth_long) + ', ' + str(port_2.ind_const) + ', ' + str(port_2.reb_freq) + ')', lw=3)
     ax[1].tick_params(axis='both', labelsize=18)
-    ax[1].legend(loc='upper left', fontsize=16)
+    ax[1].legend(loc='upper left', fontsize=12)
 
     # Plot portfolio performances
     ax[2].set_title('Portfolios NAV', size=20)
@@ -1559,7 +1559,7 @@ def get_port_stats_graph(dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
     ax[2].plot((-1) * df_tpm_1['PORT_S'], label='PORT_S', lw=3)
     ax[2].plot(df_tpm_1['PORT_C'], label='PORT_C', lw=3)
     ax[2].tick_params(axis='both', labelsize=18)
-    ax[2].legend(loc='upper left', fontsize=16)
+    ax[2].legend(loc='upper left', fontsize=12)
 
     fig.tight_layout()
     plt.show()
@@ -1572,18 +1572,18 @@ def get_port_stats_graph(dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
     df_port_chars_3 = port_3.tab_port_chars(output_perf=False)
     # Port 1
     df_port_chars_1_L = df_port_chars_1[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO', 'L_NORM_HI']]
-    df_port_chars_1_L = df_port_chars_1_L.rename(columns={'L_ANN_MEAN': 'ANN MEAN', 'L_ANN_VOL': 'ANN VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG TO', 'L_NORM_HI': 'NORM HI'})
+    df_port_chars_1_L = df_port_chars_1_L.rename(columns={'L_ANN_MEAN': 'ANN_MEAN', 'L_ANN_VOL': 'ANN_VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX_DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG_TO', 'L_NORM_HI': 'NORM_HI'})
     df_port_chars_1_S = df_port_chars_1[['S_ANN_MEAN', 'S_ANN_VOL', 'S_SHARPE', 'S_MAX_DD', 'S_CALMAR', 'S_AVG_TO', 'S_NORM_HI']]
-    df_port_chars_1_S = df_port_chars_1_S.rename(columns={'S_ANN_MEAN': 'ANN MEAN', 'S_ANN_VOL': 'ANN VOL', 'S_SHARPE': 'SHARPE', 'S_MAX_DD': 'MAX DD', 'S_CALMAR': 'CALMAR', 'S_AVG_TO': 'AVG TO', 'S_NORM_HI': 'NORM HI'})
+    df_port_chars_1_S = df_port_chars_1_S.rename(columns={'S_ANN_MEAN': 'ANN_MEAN', 'S_ANN_VOL': 'ANN_VOL', 'S_SHARPE': 'SHARPE', 'S_MAX_DD': 'MAX_DD', 'S_CALMAR': 'CALMAR', 'S_AVG_TO': 'AVG_TO', 'S_NORM_HI': 'NORM_HI'})
     # Port 2
     df_port_chars_2_L = df_port_chars_2[['L_ANN_MEAN', 'L_ANN_VOL', 'L_SHARPE', 'L_MAX_DD', 'L_CALMAR', 'L_AVG_TO', 'L_NORM_HI']]
-    df_port_chars_2_L = df_port_chars_2_L.rename(columns={'L_ANN_MEAN': 'ANN MEAN', 'L_ANN_VOL': 'ANN VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG TO', 'L_NORM_HI': 'NORM HI'})
+    df_port_chars_2_L = df_port_chars_2_L.rename(columns={'L_ANN_MEAN': 'ANN_MEAN', 'L_ANN_VOL': 'ANN_VOL', 'L_SHARPE': 'SHARPE', 'L_MAX_DD': 'MAX_DD', 'L_CALMAR': 'CALMAR', 'L_AVG_TO': 'AVG_TO', 'L_NORM_HI': 'NORM_HI'})
     df_port_chars_2_S = df_port_chars_2[['S_ANN_MEAN', 'S_ANN_VOL', 'S_SHARPE', 'S_MAX_DD', 'S_CALMAR', 'S_AVG_TO', 'S_NORM_HI']]
-    df_port_chars_2_S = df_port_chars_2_S.rename(columns={'S_ANN_MEAN': 'ANN MEAN', 'S_ANN_VOL': 'ANN VOL', 'S_SHARPE': 'SHARPE', 'S_MAX_DD': 'MAX DD', 'S_CALMAR': 'CALMAR', 'S_AVG_TO': 'AVG TO', 'S_NORM_HI': 'NORM HI'})
+    df_port_chars_2_S = df_port_chars_2_S.rename(columns={'S_ANN_MEAN': 'ANN_MEAN', 'S_ANN_VOL': 'ANN_VOL', 'S_SHARPE': 'SHARPE', 'S_MAX_DD': 'MAX_DD', 'S_CALMAR': 'CALMAR', 'S_AVG_TO': 'AVG_TO', 'S_NORM_HI': 'NORM_HI'})
 
-    dic_port_chars_L = {'L': df_port_chars_1_L, 'L-TC': df_port_chars_2_L}
+    dic_port_chars_L = {'L': df_port_chars_1_L, 'L_TC': df_port_chars_2_L}
     df_port_chars_L = pd.concat(dic_port_chars_L, axis=0).T
-    dic_port_chars_S = {'S': df_port_chars_1_S, 'S-TC': df_port_chars_2_S}
+    dic_port_chars_S = {'S': df_port_chars_1_S, 'S_TC': df_port_chars_2_S}
     df_port_chars_S = pd.concat(dic_port_chars_S, axis=0).T
     dic_port_chars = {'L': df_port_chars_L, 'S': df_port_chars_S}
     df_port_table_L_S = pd.concat(dic_port_chars, axis=1).T
@@ -1593,21 +1593,21 @@ def get_port_stats_graph(dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
     # Table  stats LS vs LA
     # Port 1
     df_port_chars_1_LS = df_port_chars_1[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
-    df_port_chars_1_LS = df_port_chars_1_LS.rename(columns={'ANN_MEAN': 'ANN MEAN', 'ANN_VOL': 'ANN VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG TO'})
+    df_port_chars_1_LS = df_port_chars_1_LS.rename(columns={'ANN_MEAN': 'ANN_MEAN', 'ANN_VOL': 'ANN_VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX_DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG_TO'})
     df_port_chars_1_LA = df_port_chars_1[['LA_ANN_MEAN', 'LA_ANN_VOL', 'LA_SHARPE', 'LA_MAX_DD', 'LA_CALMAR', 'LA_AVG_TO']]
-    df_port_chars_1_LA = df_port_chars_1_L.rename(columns={'LA_ANN_MEAN': 'ANN MEAN', 'LA_ANN_VOL': 'ANN VOL', 'LA_SHARPE': 'SHARPE', 'LA_MAX_DD': 'MAX DD', 'LA_CALMAR': 'CALMAR', 'LA_AVG_TO': 'AVG TO'})
+    df_port_chars_1_LA = df_port_chars_1_LA.rename(columns={'LA_ANN_MEAN': 'ANN_MEAN', 'LA_ANN_VOL': 'ANN_VOL', 'LA_SHARPE': 'SHARPE', 'LA_MAX_DD': 'MAX_DD', 'LA_CALMAR': 'CALMAR', 'LA_AVG_TO': 'AVG_TO'})
     # Port 2
     df_port_chars_2_LS = df_port_chars_2[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
-    df_port_chars_2_LS = df_port_chars_2_LS.rename(columns={'ANN_MEAN': 'ANN MEAN', 'ANN_VOL': 'ANN VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG TO'})
+    df_port_chars_2_LS = df_port_chars_2_LS.rename(columns={'ANN_MEAN': 'ANN_MEAN', 'ANN_VOL': 'ANN_VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX_DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG_TO'})
     df_port_chars_2_LA = df_port_chars_2[['LA_ANN_MEAN', 'LA_ANN_VOL', 'LA_SHARPE', 'LA_MAX_DD', 'LA_CALMAR', 'LA_AVG_TO']]
-    df_port_chars_2_LA = df_port_chars_2_L.rename(columns={'LA_ANN_MEAN': 'ANN MEAN', 'LA_ANN_VOL': 'ANN VOL', 'LA_SHARPE': 'SHARPE', 'LA_MAX_DD': 'MAX DD', 'LA_CALMAR': 'CALMAR', 'LA_AVG_TO': 'AVG TO'})
+    df_port_chars_2_LA = df_port_chars_2_LA.rename(columns={'LA_ANN_MEAN': 'ANN_MEAN', 'LA_ANN_VOL': 'ANN_VOL', 'LA_SHARPE': 'SHARPE', 'LA_MAX_DD': 'MAX_DD', 'LA_CALMAR': 'CALMAR', 'LA_AVG_TO': 'AVG_TO'})
     # Port 3
     df_port_chars_3_LS = df_port_chars_3[['ANN_MEAN', 'ANN_VOL', 'SHARPE', 'MAX_DD', 'CALMAR', 'AVG_TO']]
-    df_port_chars_3_LS = df_port_chars_3_LS.rename(columns={'ANN_MEAN': 'ANN MEAN', 'ANN_VOL': 'ANN VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG TO'})
+    df_port_chars_3_LS = df_port_chars_3_LS.rename(columns={'ANN_MEAN': 'ANN_MEAN', 'ANN_VOL': 'ANN_VOL', 'SHARPE': 'SHARPE', 'MAX_DD': 'MAX_DD', 'CALMAR': 'CALMAR', 'AVG_TO': 'AVG_TO'})
 
-    dic_port_chars_LS = {'LS': df_port_chars_1_LS, 'LS-TC': df_port_chars_2_LS, 'LS-TC-BC': df_port_chars_3_LS}
+    dic_port_chars_LS = {'LS': df_port_chars_1_LS, 'LS_TC': df_port_chars_2_LS, 'LS_TC_BC': df_port_chars_3_LS}
     df_port_chars_LS = pd.concat(dic_port_chars_LS, axis=0).T
-    dic_port_chars_LA = {'LA': df_port_chars_1_LA, 'LA-TC': df_port_chars_2_LA}
+    dic_port_chars_LA = {'LA': df_port_chars_1_LA, 'LA_TC': df_port_chars_2_LA}
     df_port_chars_LA = pd.concat(dic_port_chars_LA, axis=0).T
     dic_port_chars = {'LS': df_port_chars_LS, 'LA': df_port_chars_LA}
     df_port_table_LS_LA = pd.concat(dic_port_chars, axis=1).T
@@ -1617,7 +1617,7 @@ def get_port_stats_graph(dic_data, sig_long, n_asts_long, w_meth_long, pct_long,
     dic_port_table = {'LS vs Long NME Adjusted': df_port_table_LS_LA, 'Long vs Short': df_port_table_L_S}
     df_port_table = pd.concat(dic_port_table, axis=1)
     df_port_table = df_port_table.droplevel(1, axis=1)
-    df_port_table.to_latex(Path.joinpath(paths.get('tables'), '{}.tex'.format('stats_' + port_1.port_name)), float_format='%.4f')
+    df_port_table.to_latex(Path.joinpath(paths.get('tables'), '{}.tex'.format('df_port_stats_' + port_1.port_name)), float_format='%.3f')
     return df_port_table
 
 
